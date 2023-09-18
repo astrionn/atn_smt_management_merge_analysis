@@ -1,0 +1,54 @@
+from pprint import pprint as pp
+from . models import *
+from rest_framework import serializers
+# created by todo.org tangle
+# Create your serializers here.
+
+class ManufacturerSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Manufacturer
+        fields = "__all__"
+class ProviderSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Provider
+        fields = "__all__"
+class ArticleSerializer(serializers.ModelSerializer):
+    manufacturer = ManufacturerSerializer(read_only=True)
+    provider = ProviderSerializer(read_only=True)
+    class Meta:
+        model = Article
+        fields = "__all__"
+class BoardSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Board
+        fields = "__all__"
+class BoardArticleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BoardArticle
+        fields = "__all__"
+class CarrierSerializer(serializers.ModelSerializer):
+    article = serializers.PrimaryKeyRelatedField(many=False,queryset=Article.objects.all())
+    
+    class Meta:
+        model = Carrier
+        fields = "__all__"
+class JobSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Job
+        fields = "__all__"
+class MachineSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Machine
+        fields = "__all__"
+class MachineSlotSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MachineSlot
+        fields = "__all__"
+class StorageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Storage
+        fields = "__all__"
+class StorageSlotSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = StorageSlot
+        fields = "__all__"

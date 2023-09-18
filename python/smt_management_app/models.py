@@ -1,0 +1,176 @@
+from pprint import pprint as pp
+import os
+from django.db import models
+from django.db.models import Q
+from django.urls import reverse
+# created by todo.org tangle
+# Create your models here.
+
+#this comment was appended to models.py by tangle !
+
+class AbstractBaseModel(models.Model):
+
+    name = models.CharField(primary_key=True,unique=True, max_length=50,null=False,blank=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    archived = models.BooleanField(default=False)
+
+    def __str__(self):
+        return self.name
+
+    def save(self, *args, **kwargs):
+        if not self.name:
+            raise ValueError("Name field must be set.")
+        super().save(*args, **kwargs)
+
+    class Meta:
+        abstract = True
+        ordering = ('name',)
+
+class LocalFile(models.Model):
+     def get_upload_path(self,filename):
+          return os.path.join('./pfile',self.upload_type,filename)
+     UPLOAD_TYPE_CHOICES = [(1,'article'),(2,'carrier'),(3,'board')]
+     name = models.BigAutoField(primary_key=True,unique=True,null=False,blank=False)
+     upload_type = models.CharField(max_length=50,choices=UPLOAD_TYPE_CHOICES,null=False,blank=False)
+     file_object = models.FileField(upload_to=get_upload_path)
+     headers = models.CharField(max_length=5000,null=True,blank=True)
+
+class Manufacturer(AbstractBaseModel):
+    def get_absolute_url(self):
+        return reverse("smt_management_app:manufacturer-detail",kwargs={"name":self.name})
+
+class Provider(AbstractBaseModel):
+    def get_absolute_url(self):
+        return reverse("smt_management_app:provider-detail",kwargs={"name":self.name})
+
+class Article(AbstractBaseModel):
+  provider = models.ManyToManyField(Provider,null=True,blank=True)
+  provider_description = models.CharField(max_length=50,null=True,blank=True)
+  manufacturer = models.ForeignKey(Manufacturer, on_delete=models.CASCADE,null=True,blank=True)
+  manufacturer_description = models.CharField(max_length=50,null=True,blank=True)
+  description = models.TextField(null=True,blank=True)
+  sap_number = models.CharField(max_length=50,null=True,blank=True)
+
+  def get_absolute_url(self):
+    return reverse("smt_management_app:article-detail",kwargs={"name":self.name})
+
+class Carrier(AbstractBaseModel):
+    DIAMETER_CHOICES = [
+        (7,'7"'),
+        (13,'13"'),
+    ]
+
+    WIDTH_CHOICES = [
+        (8, '8 mm'),
+        (12, '12 mm'),
+        (16, '16 mm'),
+        (24, '24 mm'),
+        (32, '32 mm'),
+        (44, '44 mm'),
+        (56, '56 mm'),
+    ]
+
+    TYPE_CHOICES = [
+        (0, 'Reel'),
+        (1, 'Tray'),
+        (2, 'Bag'),
+        (3, 'Single'),
+    ]
+
+    article = models.ForeignKey(Article,on_delete=models.CASCADE,null=False,blank=False)
+    diameter = models.IntegerField(default=7, choices=DIAMETER_CHOICES,null=True,blank=True)
+    width = models.IntegerField(default=12, choices=WIDTH_CHOICES,null=True,blank=True)
+    container_type = models.IntegerField(default=0, choices=TYPE_CHOICES,null=True,blank=True)
+    quantity_original = models.IntegerField(blank=True,null=True)
+    quantity_current = models.IntegerField()
+    lot_number = models.CharField(max_length=20,blank=True,null=True)
+
+
+    reserved = models.BooleanField(default=False)
+    delivered = models.BooleanField(default=False)
+    collecting = models.BooleanField(default=False)
+    storage_slot = models.OneToOneField("StorageSlot", on_delete=models.CASCADE,null=True,blank=True)
+    machine_slot = models.OneToOneField("MachineSlot", on_delete=models.CASCADE,null=True,blank=True)
+
+    def get_absolute_url(self):
+        return reverse("smt_management_app:carrier-detail",kwargs={"name":self.name})
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                check = Q(storage_slot__isnull=True) | Q(machine_slot__isnull=True),
+                name = 'at_most_one_field_not_null'
+            )
+        ]
+
+class Machine(AbstractBaseModel):
+
+    capacity = models.IntegerField()
+    location = models.CharField(max_length=50,null=True,blank=True)
+
+    def get_absolute_url(self):
+        return reverse("smt_management_app:machine-detail",kwargs={"name":self.name})
+
+class MachineSlot(AbstractBaseModel):
+    machine = models.ForeignKey(Machine,on_delete=models.CASCADE)
+
+    def get_absolute_url(self):
+        return reverse("smt_management_app:machineslot-detail",kwargs={"name":self.name})
+
+class Storage(AbstractBaseModel):
+
+    capacity = models.IntegerField()
+    location = models.CharField(max_length=50,null=True,blank=True)
+
+    def get_absolute_url(self):
+        return reverse("smt_management_app:storage-detail",kwargs={"name":self.name})
+
+class StorageSlot(AbstractBaseModel):
+    STATE_CHOICES = [
+        (0,"off"),
+        (1,"green"),
+        (2,"yellow"),
+        (3,"blue"),
+        (4,"red")
+    ]
+    storage = models.ForeignKey(Storage,on_delete=models.CASCADE)
+    led_state = models.IntegerField(default=0,choices=STATE_CHOICES)
+
+    def get_absolute_url(self):
+        return reverse("smt_management_app:storageslot-detail",kwargs={"name":self.name})
+
+class Job(AbstractBaseModel):
+
+    STATUS_CHOICES = [
+        (0,'created'),
+        (1,'carriers_assigned'),
+        (2,'finished'),
+    ]
+
+    board = models.ForeignKey("Board", on_delete=models.CASCADE)
+    machine = models.ForeignKey(Machine, on_delete=models.CASCADE,null=True,blank=True)
+    project = models.CharField(max_length=50,null=True,blank=True)
+    customer = models.CharField(max_length=50,null=True,blank=True)
+    count = models.IntegerField()
+    start_at = models.DateTimeField()
+    finish_at = models.DateTimeField()
+    status = models.IntegerField(default=0, choices=STATUS_CHOICES)
+
+    def get_absolute_url(self):
+        return reverse("smt_management_app:job-detail",kwargs={"name":self.name})
+
+class Board(AbstractBaseModel):
+    articles = models.ManyToManyField(Article, through='BoardArticle')
+
+    def get_absolute_url(self):
+        return reverse("smt_management_app:board-detail",kwargs={"name":self.name})
+
+class BoardArticle(AbstractBaseModel):
+    article = models.OneToOneField(Article, on_delete=models.CASCADE)
+    board = models.ForeignKey(Board, on_delete=models.CASCADE)
+    count = models.PositiveIntegerField()
+    carrier = models.ForeignKey(Carrier, on_delete=models.SET_NULL, null=True, blank=True)
+
+    def get_absolute_url(self):
+        return reverse("smt_management_app:boardarticle-detail",kwargs={"name":self.name})

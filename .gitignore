@@ -1,7 +1,9 @@
 *.zip
-./python/venv
+**/venv
 *.sqlite3
 .vscode
 **/__pycache__
 *.~undo-tree~
-*.org~
+*.*~
+.\#*.*
+**/pfile/**

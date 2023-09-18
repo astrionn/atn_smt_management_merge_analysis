@@ -1,0 +1,2118 @@
+
+
+*** atn smt management software project
+#+EXPORT_FILE_NAME: README.html
+#+SETUPFILE: https://fniessen.github.io/org-html-themes/org/theme-readtheorg.setup
+
+This application assists three real life workflows to receive, store and use SMD materials in an industrial SMT process to manufacture *boards*.
+
+
+*Boards* are manufactured in a *machine* from multiple *carriers* each storing an amount of an *article*.
+
+
+Each *board* is represented as a a list of *article*-count pairs, this is also called bill of materials.
+
+
+*Carriers* need to be ordered from a *provider*, received, stored and collected for a *job*, used in a *job* and re-stored or discarded.
+The ordering part is outside the scope of this application. The user imports orders of *carriers* after the order process has been done in real life. 
+
+
+*Carriers* usually have the dimension of a cylinder and have properties like diameter and width. This is relevant for storing in a *storage* or a *machine* .
+A *carrier* is identified by its UID, a sticker/label containg the UID and a QR Code of the UID is placed on the carrier by the user after an order of *carriers* is delivered at the manufacturing facility but before they are stored..
+
+
+A *provider* is the entity that delivers *carriers* to the manufacturing facility.
+
+
+A *manufacturer* is the entity that produces *carriers* that are delivered by a *provider*.
+
+
+A *carrier* can be stored in the *storage* *slot* of a *storage* or the *machine* *slot* of a *machine*.
+
+
+A *job* is manufacturing a *board* a number of times in a certain time frame. A *job* can be part of a *project* and can have *customers*.
+
+
+A *machine* is a pick'n'place machine it produces *boards* from *carriers*. Akin to a 3D printer, which uses filament to print objects layer by layer, a pick'n'place *machine* "prints" *boards* *article* by *article*.
+Like *storage*, a *machine* has *machine* *slots*.
+
+A *storage* is a shelf with *storage* *slots*, each slot has an LED that can be activated by this application.
+
+**** Backend                                                    
+
+The backend will be provided with the django library in python 3.11 64bit
+It is contained in the www\python folder.
+***** set up
+How to install the backend
+- Open Powershell
+  #+begin_src
+  cd www\python
+#+end_src
+- create a venv for python 3.11
+   #+begin_src 
+  py -3.11 -m venv venv
+  .\venv\Scrips\activate
+#+end_src
+- install django and drf
+  #+begin_src
+    .\venv\Scripts\python.exe -m pip install --upgrade pip
+    .\venv\Scripts\python.exe -m pip install django
+    .\venv\Scripts\python.exe -m pip install djangorestframework
+  #+end_src
+- start django project and create app
+  #+begin_src
+    .\venv\Scripts\python.exe -m django startproject atn_smt_management
+    .\venv\Scripts\python.exe -m django startapp atn_smt_management_app
+  #+end_src
+- created files
+  #+begin_src
+
+\WWW\PYTHON\
+│   manage.py
+│
+├───atn_smt_management
+│       asgi.py
+│       settings.py
+│       urls.py
+│       wsgi.py
+│       __init__.py
+│
+└───smt_management_app
+    │   admin.py
+    │   apps.py
+    │   models.py
+    │   tests.py
+    │   views.py
+    │   __init__.py
+    │
+    └───migrations
+            __init__.py
+  #+end_src
+- modify settings.py
+  #+CAPTION: =add rest_framework to settings.py=
+  #+begin_src python
+    INSTALLED_APPS.append("rest_framework")
+    INSTALLED_APPS.append("smt_management_app.apps.SmtManagementAppConfig")
+
+
+    #only needed in developement in this project
+    TEMPLATES['DIRS'].append(os.path.join(BASE_DIR, 'templates')) 
+
+  #+end_src
+- setup blank emacs export for views.py, models.py, serializers.py, tests.py
+  Tangeling overwrites files with the same name.
+  - models.py
+    #+CAPTION: =./python/smt_management_app/models.py=
+    #+begin_src python :tangle ./python/smt_management_app/models.py
+      from pprint import pprint as pp
+      import os
+      from django.db import models
+      from django.db.models import Q
+      from django.urls import reverse
+      # created by todo.org tangle
+      # Create your models here.
+
+  #+end_src
+  - views.py
+    #+CAPTION: =./python/smt_management_app/views.py=
+    #+begin_src python :tangle ./python/smt_management_app/views.py
+      import json
+      import csv
+      from pprint import pprint as pp
+
+      from rest_framework import viewsets
+      from django.http import JsonResponse
+      from django.core.files import File
+
+
+
+      from . serializers import *
+
+      from . models import AbstractBaseModel, Manufacturer, Provider, Article, Carrier, Machine, MachineSlot, Storage, StorageSlot, Job, Board, BoardArticle, LocalFile
+      # created by todo.org tangle
+      # Create your views here.
+    #+end_src
+  - serializers.py
+    #+CAPTION: =./python/smt_management_app/serializers.py=
+    #+begin_src python :tangle ./python/smt_management_app/serializers.py
+      from pprint import pprint as pp
+      from . models import *
+      from rest_framework import serializers
+      # created by todo.org tangle
+      # Create your serializers here.
+      #+end_src
+  - tests.py
+    #+CAPTION: =./python/smt_management_app/tests.py=
+    #+begin_src python :tangle ./python/smt_management_app/tests.py
+      from pprint import pprint as pp
+      import os 
+      import json
+      import datetime
+      import pytz
+      from logging import getLogger, DEBUG
+      from random import randint
+
+
+      from django.test import TestCase
+      from django.test.client import Client
+      from django.utils.timezone import get_default_timezone
+      from django.contrib.auth import get_user_model
+      from django.core.exceptions import ObjectDoesNotExist
+      from django.core.files.uploadedfile import SimpleUploadedFile
+
+      from . models import AbstractBaseModel, Manufacturer, Provider, Article, Carrier, Machine, MachineSlot, Storage, StorageSlot, Job, Board, BoardArticle
+
+      # Create your tests here.
+      # created by todo.org tangle
+        #+end_src
+- setup admin.py
+  This snippet grants basic editing of model instances via the admin panel.
+  Usefull for configuring objects that are not accessible trough the frontend.
+  
+  #+CAPTION: =./python/smt_management_app/admin.py=
+  #+begin_src python :tangle ./python/smt_management_app/admin.py
+    from django.contrib import admin
+    from django.apps import apps
+    from smt_management_app.models import *
+
+    class ListAdminMixin(object):
+        def __init__(self, model, admin_site):
+            self.list_display = [field.name for field in model._meta.fields]
+            super(ListAdminMixin, self).__init__(model, admin_site)
+
+    #make sure this is at the end of admin.py
+    models = apps.get_models()
+    for model in models:
+        #print(model)
+        if model.__module__ != 'smt_management_app.models': continue
+        admin_class = type('AdminClass', (ListAdminMixin, admin.ModelAdmin), {})
+        try:
+            admin.site.register(model, admin_class)
+        except admin.sites.AlreadyRegistered:
+            pass
+#+end_src
+  - testing tangle append for models.py
+    #+begin_src python :tangle ./python/smt_management_app/models.py :tangle-mode (append)
+      #this comment was appended to models.py by tangle !
+    #+end_src
+
+***** models
+
+
+Abstract Base Class for all models holding fields like, primary key, created_time, updated_time,...
+
+  #+begin_src python :tangle ./python/smt_management_app/models.py :tangle-mode (append)
+
+    class AbstractBaseModel(models.Model):
+
+        name = models.CharField(primary_key=True,unique=True, max_length=50,null=False,blank=False)
+        created_at = models.DateTimeField(auto_now_add=True)
+        updated_at = models.DateTimeField(auto_now=True)
+        archived = models.BooleanField(default=False)
+
+        def __str__(self):
+            return self.name
+
+        def save(self, *args, **kwargs):
+            if not self.name:
+                raise ValueError("Name field must be set.")
+            super().save(*args, **kwargs)
+
+        class Meta:
+            abstract = True
+            ordering = ('name',)
+ #+end_src
+
+****** LocalFile
+#+begin_src python :tangle ./python/smt_management_app/models.py :tangle-mode (append)
+  class LocalFile(models.Model):
+       def get_upload_path(self,filename):
+            return os.path.join('./pfile',self.upload_type,filename)
+       UPLOAD_TYPE_CHOICES = [(1,'article'),(2,'carrier'),(3,'board')]
+       name = models.BigAutoField(primary_key=True,unique=True,null=False,blank=False)
+       upload_type = models.CharField(max_length=50,choices=UPLOAD_TYPE_CHOICES,null=False,blank=False)
+       file_object = models.FileField(upload_to=get_upload_path)
+       headers = models.CharField(max_length=5000,null=True,blank=True)
+       
+#+end_src
+****** Manufacturer
+#+begin_src python :tangle ./python/smt_management_app/models.py :tangle-mode (append)
+  class Manufacturer(AbstractBaseModel):
+      def get_absolute_url(self):
+          return reverse("smt_management_app:manufacturer-detail",kwargs={"name":self.name})
+#+end_src
+****** Provider
+#+begin_src python :tangle ./python/smt_management_app/models.py :tangle-mode (append)
+  class Provider(AbstractBaseModel):
+      def get_absolute_url(self):
+          return reverse("smt_management_app:provider-detail",kwargs={"name":self.name})
+#+end_src
+****** Article
+#+begin_src python :tangle ./python/smt_management_app/models.py :tangle-mode (append)
+  class Article(AbstractBaseModel):
+    provider = models.ManyToManyField(Provider,null=True,blank=True)
+    provider_description = models.CharField(max_length=50,null=True,blank=True)
+    manufacturer = models.ForeignKey(Manufacturer, on_delete=models.CASCADE,null=True,blank=True)
+    manufacturer_description = models.CharField(max_length=50,null=True,blank=True)
+    description = models.TextField(null=True,blank=True)
+    sap_number = models.CharField(max_length=50,null=True,blank=True)
+
+    def get_absolute_url(self):
+      return reverse("smt_management_app:article-detail",kwargs={"name":self.name})
+
+#+end_src
+****** Carrier
+#+begin_src python :tangle ./python/smt_management_app/models.py :tangle-mode (append)
+  class Carrier(AbstractBaseModel):
+      DIAMETER_CHOICES = [
+          (7,'7"'),
+          (13,'13"'),
+      ]
+
+      WIDTH_CHOICES = [
+          (8, '8 mm'),
+          (12, '12 mm'),
+          (16, '16 mm'),
+          (24, '24 mm'),
+          (32, '32 mm'),
+          (44, '44 mm'),
+          (56, '56 mm'),
+      ]
+
+      TYPE_CHOICES = [
+          (0, 'Reel'),
+          (1, 'Tray'),
+          (2, 'Bag'),
+          (3, 'Single'),
+      ]
+
+      article = models.ForeignKey(Article,on_delete=models.CASCADE,null=False,blank=False)
+      diameter = models.IntegerField(default=7, choices=DIAMETER_CHOICES,null=True,blank=True)
+      width = models.IntegerField(default=12, choices=WIDTH_CHOICES,null=True,blank=True)
+      container_type = models.IntegerField(default=0, choices=TYPE_CHOICES,null=True,blank=True)
+      quantity_original = models.IntegerField(blank=True,null=True)
+      quantity_current = models.IntegerField()
+      lot_number = models.IntegerField(blank=True,null=True)
+
+
+      reserved = models.BooleanField(default=False)
+      delivered = models.BooleanField(default=False)
+      collecting = models.BooleanField(default=False)
+      storage_slot = models.OneToOneField("StorageSlot", on_delete=models.CASCADE,null=True)
+      machine_slot = models.OneToOneField("MachineSlot", on_delete=models.CASCADE,null=True)
+
+      def get_absolute_url(self):
+          return reverse("smt_management_app:carrier-detail",kwargs={"name":self.name})
+
+      class Meta:
+          constraints = [
+              models.CheckConstraint(
+                  check = Q(storage_slot__isnull=True) | Q(machine_slot__isnull=True),
+                  name = 'at_most_one_field_not_null'
+              )
+          ]
+#+end_src
+****** Machine
+  #+begin_src python :tangle ./python/smt_management_app/models.py :tangle-mode (append)
+    class Machine(AbstractBaseModel):
+
+        capacity = models.IntegerField()
+        location = models.CharField(max_length=50,null=True,blank=True)
+
+        def get_absolute_url(self):
+            return reverse("smt_management_app:machine-detail",kwargs={"name":self.name})
+  #+end_src
+****** MachineSlot
+  #+begin_src python :tangle ./python/smt_management_app/models.py :tangle-mode (append)
+    class MachineSlot(AbstractBaseModel):
+        machine = models.ForeignKey(Machine,on_delete=models.CASCADE)
+
+        def get_absolute_url(self):
+            return reverse("smt_management_app:machineslot-detail",kwargs={"name":self.name})
+  #+end_src
+****** Storage
+  #+begin_src python :tangle ./python/smt_management_app/models.py :tangle-mode (append)
+    class Storage(AbstractBaseModel):
+
+        capacity = models.IntegerField()
+        location = models.CharField(max_length=50,null=True,blank=True)
+
+        def get_absolute_url(self):
+            return reverse("smt_management_app:storage-detail",kwargs={"name":self.name})
+  #+end_src
+ 
+****** StorageSlot
+#+begin_src python :tangle ./python/smt_management_app/models.py :tangle-mode (append)
+  class StorageSlot(AbstractBaseModel):
+      STATE_CHOICES = [
+          (0,"off"),
+          (1,"green"),
+          (2,"yellow"),
+          (3,"blue"),
+          (4,"red")
+      ]
+      storage = models.ForeignKey(Storage,on_delete=models.CASCADE)
+      led_state = models.IntegerField(default=0,choices=STATE_CHOICES)
+
+      def get_absolute_url(self):
+          return reverse("smt_management_app:storageslot-detail",kwargs={"name":self.name})
+  #+end_src
+****** Job
+#+begin_src python :tangle ./python/smt_management_app/models.py :tangle-mode (append)
+  class Job(AbstractBaseModel):
+
+      STATUS_CHOICES = [
+          (0,'created'),
+          (1,'carriers_assigned'),
+          (2,'finished'),
+      ]
+
+      board = models.ForeignKey("Board", on_delete=models.CASCADE)
+      machine = models.ForeignKey(Machine, on_delete=models.CASCADE,null=True,blank=True)
+      project = models.CharField(max_length=50,null=True,blank=True)
+      customer = models.CharField(max_length=50,null=True,blank=True)
+      count = models.IntegerField()
+      start_at = models.DateTimeField()
+      finish_at = models.DateTimeField()
+      status = models.IntegerField(default=0, choices=STATUS_CHOICES)
+
+      def get_absolute_url(self):
+          return reverse("smt_management_app:job-detail",kwargs={"name":self.name})
+
+#+end_src
+****** Board
+#+begin_src python :tangle ./python/smt_management_app/models.py :tangle-mode (append)
+  class Board(AbstractBaseModel):
+      articles = models.ManyToManyField(Article, through='BoardArticle')
+
+      def get_absolute_url(self):
+          return reverse("smt_management_app:board-detail",kwargs={"name":self.name})
+#+end_src
+****** BoardArticle
+#+begin_src python :tangle ./python/smt_management_app/models.py :tangle-mode (append)
+  class BoardArticle(AbstractBaseModel):
+      article = models.OneToOneField(Article, on_delete=models.CASCADE)
+      board = models.ForeignKey(Board, on_delete=models.CASCADE)
+      count = models.PositiveIntegerField()
+      carrier = models.ForeignKey(Carrier, on_delete=models.SET_NULL, null=True, blank=True)
+
+      def get_absolute_url(self):
+          return reverse("smt_management_app:boardarticle-detail",kwargs={"name":self.name})
+
+#+end_src
+
+***** serializers
+  #+begin_src python :tangle ./python/smt_management_app/serializers.py :tangle-mode (append)
+    
+class ArticleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Article
+        fields = "__all__"
+class BoardSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Board
+        fields = "__all__"
+class BoardArticleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BoardArticle
+        fields = "__all__"
+class CarrierSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Carrier
+        fields = "__all__"
+class JobSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Job
+        fields = "__all__"
+class MachineSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Machine
+        fields = "__all__"
+class MachineSlotSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MachineSlot
+        fields = "__all__"
+class ManufacturerSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Manufacturer
+        fields = "__all__"
+class ProviderSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Provider
+        fields = "__all__"
+class StorageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Storage
+        fields = "__all__"
+class StorageSlotSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = StorageSlot
+        fields = "__all__"
+
+
+  #+end_src
+
+***** urls
+****** project urls
+#+begin_src python :tangle ./python/atn_smt_management/urls.py :tangle-mode (append)
+  from django.contrib import admin
+  from django.urls import path, include, reverse
+  from django.contrib.auth import views as auth_views
+
+
+  
+  urlpatterns = [
+      path('admin/', admin.site.urls),
+      path('login/', auth_views.LoginView.as_view(next_page='/admin'),name='login'),#requires /templates/registration/login.html for GET ; login.html needs to POST username, password, csrfmiddlewaretoken and next
+      path('api/', include('smt_management_app.urls')),
+
+  ]
+#+end_src
+****** app urls
+
+#+begin_src python :tangle ./python/smt_management_app/urls.py :tangle-mode (append)
+  from django.urls import path
+  from . import views
+  from rest_framework.routers import DefaultRouter
+
+  router = DefaultRouter()
+
+  router.register(r'article', views.ArticleViewSet,'article')
+  router.register(r'board', views.BoardViewSet,'board')
+  router.register(r'boardarticle', views.BoardArticleViewSet,'boardarticle')
+  router.register(r'carrier', views.CarrierViewSet,'carrier')
+  router.register(r'job', views.JobViewSet,'job')
+  router.register(r'machine', views.MachineViewSet,'machine')
+  router.register(r'machineslot', views.MachineSlotViewSet,'machineslot')
+  router.register(r'manufacturer', views.ManufacturerViewSet,'manufacturer')
+  router.register(r'provider', views.ProviderViewSet,'provider')
+  router.register(r'storage', views.StorageViewSet,'storage')
+  router.register(r'storageslot', views.StorageSlotViewSet,'storageslot')
+
+  name = "smt_management_app"
+  urlpatterns = router.urls
+  urlpatterns.append(path("save_file_and_get_headers/",views.save_file_and_get_headers, name='save_file_and_get_headers'))
+  urlpatterns.append(path("user_mapping_and_file_processing/",views.user_mapping_and_file_processing, name='user_mapping_and_file_processing'))
+#+end_src
+***** views
+#+begin_src python :tangle ./python/smt_management_app/views.py :tangle-mode (append)
+
+  def user_mapping_and_file_processing(request):
+    if request.POST:
+      file_name = request.POST['file_name']
+      map_ = request.POST['map']
+      map_ = json.loads(map_)
+      map_l = [(k,v) for k,v in map_.items()]
+
+
+      lf = LocalFile.objects.get(name=file_name)
+      msg = {'created':[],'fail':[]}
+      with open(lf.file_object.name) as f:
+        csv_reader = csv.reader(f,delimiter=',')
+        a_headers = csv_reader.__next__()
+        index_map = {value: index for index, value in enumerate(a_headers)}
+        map_ordered_l = sorted(map_l,key=lambda x:index_map[x[1]])
+
+        for l in csv_reader:
+          if lf.upload_type == 'article':
+            article_dict = {k[0]:l[a_headers.index(k[1])] for k in map_ordered_l}
+
+            if article_dict['manufacturer']:
+              o_m,c_m = Manufacturer.objects.get_or_create(name=article_dict['manufacturer'])
+              if c_m: 
+                article_dict['manufacturer'] = o_m
+                msg['created'].append(o_m.name)
+
+              if article_dict['provider']:
+                pps = article_dict['provider'].split(',')
+                del article_dict['provider']
+                providers = []
+                for p in pps:
+                  o_p,c_p = Provider.objects.get_or_create(name=p)
+                  if c_p:
+                    providers.append(o_p)
+                    msg['created'].append(o_p.name)
+              if article_dict['boardarticle']:
+                del article_dict['boardarticle']
+
+              c = Article.objects.create(**article_dict)
+              if c : msg['created'].append(c.name)
+              for p in providers:
+                c.provider.add(p)
+              c.save()
+
+        msg_j = json.dumps(msg)
+        return JsonResponse(msg_j,safe=False)
+
+  def save_file_and_get_headers(request):
+      if request.FILES and request.POST:
+          lf = LocalFile.objects.create(file_object=File(request.FILES["file"]), upload_type=request.POST["upload_type"])
+          #open file
+          with open(lf.file_object.path,newline='') as f:
+              csv_reader = csv.reader(f,delimiter=',')
+              lf.headers = list(csv_reader.__next__())
+              lf.save()
+          if lf.upload_type == 'article':
+              model_fields = [f.name for f in Article._meta.get_fields()]
+          elif lf.upload_type == 'carrier':
+              model_fields = [f.name for f in Carrier._meta.get_fields()]
+
+          return JsonResponse({
+              "object_fields":sorted(model_fields),
+              "header_fields":sorted(lf.headers),
+              "file_name":lf.name
+          })
+
+  class ArticleViewSet(viewsets.ModelViewSet):
+      queryset = Article.objects.all()
+      serializer_class = ArticleSerializer
+
+  class BoardViewSet(viewsets.ModelViewSet):
+      queryset = Board.objects.all()
+      serializer_class = BoardSerializer
+
+  class BoardArticleViewSet(viewsets.ModelViewSet):
+      queryset = BoardArticle.objects.all()
+      serializer_class = BoardArticleSerializer
+
+  class CarrierViewSet(viewsets.ModelViewSet):
+      queryset = Carrier.objects.all()
+      serializer_class = CarrierSerializer
+
+  class JobViewSet(viewsets.ModelViewSet):
+      queryset = Job.objects.all()
+      serializer_class = JobSerializer
+
+  class MachineViewSet(viewsets.ModelViewSet):
+      queryset = Machine.objects.all()
+      serializer_class = MachineSerializer
+
+  class MachineSlotViewSet(viewsets.ModelViewSet):
+      queryset = MachineSlot.objects.all()
+      serializer_class = MachineSlotSerializer
+
+  class ManufacturerViewSet(viewsets.ModelViewSet):
+      queryset = Manufacturer.objects.all()
+      serializer_class = ManufacturerSerializer
+
+  class ProviderViewSet(viewsets.ModelViewSet):
+      queryset = Provider.objects.all()
+      serializer_class = ProviderSerializer
+
+  class StorageViewSet(viewsets.ModelViewSet):
+      queryset = Storage.objects.all()
+      serializer_class = StorageSerializer
+
+  class StorageSlotViewSet(viewsets.ModelViewSet):
+      queryset = StorageSlot.objects.all()
+      serializer_class = StorageSlotSerializer
+
+
+
+#+end_src
+***** tests
+Testing will be done in two parts.
+
+
+Intergations testing is testing the http endpoints, sending actual requests like a webbrowser to verify that the different userflows work from the frontend perspective.
+
+
+Unittesting the models of the application is done to verify integrity of the data.
+****** integration
+see API description
+****** units
+Unittests are generally a class inherited from django.test.TestCase with a setUp function and test functions.
+The setUp function creates data that's shared across test functions.
+The test functions should test valid cases and invalid cases via assertions.
+#+begin_src python :tangle ./python/smt_management_app/tests.py :tangle-mode (append)
+  UserModel = get_user_model()
+
+  class CommonSetUpTestCase(TestCase):
+
+    user_model = None,
+    CLIENT = None,
+    TZ = None,
+    USER_EMAIL = None,
+    PASSWORD = None,
+    USERNAME = None,
+    logger = None
+
+    @classmethod
+    def setUp(cls) -> None:
+
+      cls.logger = getLogger(__name__)
+      cls.logger.setLevel(level=DEBUG)
+      cls.USERNAME = 'testuser'
+      cls.PASSWORD = 'NeverUseThisPassword12345'
+      cls.USER_EMAIL = 'test@storageguide.com'
+      cls.TZ = get_default_timezone()
+      cls.CLIENT = Client(enforce_csrf_checks=False)
+
+      try:
+        cls.user_model = UserModel.objects.get(username=cls.USERNAME)
+      except ObjectDoesNotExist:
+        cls.user_model = UserModel.objects.create_user(
+          username=cls.USERNAME,
+          password=cls.PASSWORD,
+          email=cls.USER_EMAIL,
+        )
+
+
+
+
+      printing = False  
+      #verfiy setup worked and display all fields and method in the class dict of the testcase
+      if printing:
+        from pprint import pprint as pp
+        print("\n\n",cls,"\n\n",cls.__dict__,"\n\n")
+        for name,att in cls.__dict__.items():
+          print(name,att)
+          print(f"\n\nMy Name is \"{name}\" !\nMy class is \"{att.__class__}\" It's name is \"{att.name if isinstance(att,AbstractBaseModel) else att}\"\n")
+          if isinstance(att,AbstractBaseModel):
+            pp(att.__dict__)
+            pass
+
+    @classmethod
+    def print_qs(cls,qs):
+      #print the dict of every object return in the queryset
+      if not qs: return
+      for o in qs:
+        print(o,o.__dict__,'\n')
+        pass
+
+    @classmethod
+    def get_random_name(cls,prefix=None):
+      return f"{prefix}_{randint(1,1000)}"
+
+    @classmethod
+    def login_client(cls):
+      cls.logger.info('Logging in client...')
+      cls.CLIERNT.login(
+        username=cls.USERNAME,
+        password=cls.PASSWORD
+      )
+
+    @classmethod
+    def logout_client(cls):
+      cls.logger.info("Logging out client...")
+      cls.CLIENT.logout()
+
+
+    def test_view_creating_article(cls):
+      rand_name = cls.get_random_name("article")
+      resp_create = cls.CLIENT.post("/api/article/",{
+        "name":rand_name,
+        "description":"123123123123123"
+      })
+      jdata = resp_create.json()
+      resp_display = cls.CLIENT.get(f"/api/article/{rand_name}/?format=json")
+
+      jdata2 = resp_display.json()
+      #pp(jdata)
+      #pp(jdata2)
+      cls.assertEqual(jdata,jdata2)
+
+    def test_view_creating_carrier(cls):
+      pass
+    #Article.objects.create
+    #create_carrier()
+    #Carrier.objects.get
+
+    def test_view_creating_articles_from_file(cls):
+      """tests a 2-step workflow:
+          - uploading a csv file and getting the userspace headers and getting the file name returned
+          - sending a mapping from user space to internal space of headers along with the filename and getting success or failure message of creation 
+      """
+
+      #all fields and relations of Article model
+      headers = ["name","provider","provider_description","manufacturer","manufacturer_description","description","sap_number","created_at","updated_at","archived",'board','boardarticle','carrier']
+
+      #add some random to it to simulate the user having different names to our internal representation
+      headers_salted = [k+cls.get_random_name("_aaaa") for k in headers]
+
+      #build csv file
+      file_content = ",".join(headers_salted)
+      file_content += '\n'
+
+      for i in range(5):
+        values = []
+        for h in headers:
+          if h == 'provider':
+            values.append(f"\"{cls.get_random_name(h)},{cls.get_random_name(h)}\"")
+          elif h in ["archived"]:
+            values.append(str(True))
+          else:
+            values.append(cls.get_random_name(h))
+
+        file_content += ",".join(values)
+        file_content += '\n'
+
+
+      f = SimpleUploadedFile("file.csv",bytes(file_content,encoding="utf8"), content_type='text/plain')
+
+      #upload csv file 
+      resp_create = cls.CLIENT.post("/api/save_file_and_get_headers/",{'file':f,'upload_type':'article'})
+      resp_create_json = resp_create.json()
+
+      headers_salted2 = resp_create_json["header_fields"]
+      headers2 = resp_create_json["object_fields"]
+      file_name = resp_create_json["file_name"]
+
+      cls.assertEqual(sorted(headers_salted),sorted(headers_salted2))
+      cls.assertEqual(sorted(headers),sorted(headers2))
+
+      #provide user mapping
+      map_ = {k:v for k,v in zip(sorted(headers),sorted(headers_salted2))}
+
+      #post
+      resp_map = cls.CLIENT.post("/api/user_mapping_and_file_processing/",{'file_name':file_name,'map':json.dumps(map_)})
+      msg = resp_map.json()
+
+
+
+    def test_view_creating_carriers_from_file(cls):
+      pass
+    #create a csv file with bunch of articles
+    #get_csv_headers(file) -> file_name
+    #create_articles_from_file(file_name,headers) -> created X didnt create Y
+    #Articles.objects.all
+    #assert equal
+
+    def test_view_displaying_carriers(cls):
+      pass
+    #Article.objects.create
+    #Carrier.objects.create
+    #get_carriers()
+    #assertEqual
+
+    def test_view_deleting_carriers(cls):
+      pass
+    #Article.objects.create
+    #Carrier.objects.create
+    #delete_carrier()
+    #Carrier.objects.get
+    #assert fail
+
+    def test_view_delivering_carriers(cls):
+      pass
+    #Article.objects.create
+    #Carrier.objects.create
+    #edit_carrier()
+    #Carrier.objects.all
+    #assertEqual
+    #assert fail for old data
+
+
+    def test_view_QR_printing_carriers(cls):
+      pass
+    #Article.objects.create
+    #Carrier.objects.create
+    #print_label()
+
+    def test_view_displaying_storages(cls):
+      pass
+    #Article.objects.create
+    #Carrier.objects.create
+    #Storage.objects.create
+    #StorageSlot.objects.create
+    #get_carriers(storage)
+
+    def test_view_collect_carriers(cls):
+      pass
+    #Article.objects.create
+    #Carrier.objects.create
+    #Storage.objects.create
+    #StorageSlot.objects.create
+    #collect_carrier(carrier) -> storage, slot, carrier, queue
+    #collect carrier_confirm_slot(slot, carrier) -> storage, slot, carrier, queue
+
+    def test_view_collect_carriers_job(cls):
+      pass
+    #Article.objects.create
+    #Carrier.objects.create
+    #Storage.objects.create
+    #StorageSlot.objects.create
+    #Board.objects.create
+    #Job.objects.create
+    #collect_carriers_job(job) -> queue
+    #collect_carrier_confirm_slot(slot, carrier) -> storage, slot, carrier, queue
+
+
+
+    def test_view_storing_carrier(cls):
+      pass
+    #Article.objects.create
+    #Carrier.objects.create
+    #Storage.objects.create
+    #StorageSlot.objects.create
+    #store_carrier(carrier) -> storage, slot, carrier
+    #store_carrier_confirm_slot
+
+    def test_view_resetting_leds(cls):
+      pass
+    #Storage.objects.create
+    #StorageSlot.objects.create
+    #reset_leds_for_storage(storage)
+
+
+    def test_view_creating_job(cls):
+      pass
+    #Article.objects.create
+    #Carrier.objects.create
+    #Storage.objects.create
+    #StorageSlot.objects.create
+    #Board.objects.create
+    #Job.objects.create
+
+    def test_view_creating_board_from_file(cls):
+      pass
+    #Article.objects.create
+    #Carrier.objects.create
+    #Storage.objects.create
+    #StorageSlot.objects.create
+    #Board.objects.create
+    #Job.objects.create
+
+    #create a csv file with bunch of article names and counts
+    #get_csv_headers(file) -> file_name
+    #create_board_from_file(file_name,headers) -> created X didnt create Y
+    #Jobs.objects.get(name) -> Job
+    #Job.board.articles
+    #assert equal
+
+    def test_view_displaying_boards(cls):
+      pass
+    #Article.objects.create
+    #Carrier.objects.create
+    #Storage.objects.create
+    #StorageSlot.objects.create
+    #Board.objects.create
+
+    def test_view_printing_job(cls):
+      pass
+    #Article.objects.create
+    #Carrier.objects.create
+    #Storage.objects.create
+    #StorageSlot.objects.create
+    #Board.objects.create
+    #Job.objects.create
+    #print_job_bom()
+
+    def test_view_displaying_jobs(cls):
+      pass
+        #Article.objects.create
+    #Carrier.objects.create
+    #Storage.objects.create
+    #StorageSlot.objects.create
+    #Board.objects.create
+    #Job.objects.create
+    #get_jobs()
+
+    def test_view_displaying_articles(cls):
+      pass
+    #Article.objects.create
+    #get_articles()
+#+end_src
+***** notes for refactoring
+does carrier fit into slot for storage?
+**** Frontend
+***** Initial Draft containing description of functionality, API templates, Screenshots
+****** login
+The user starts with a simple login form.
+******* plain
+[[./1.PNG]]
+******* login failed
+[[./2.PNG]]
+****** dashboard
+Upon login the user gets to the dashboard which presents usefull data like outstanding deliveries, storage capacity and the number of open jobs.
+
+From there the user can navigate to the 4 main pages: dashboard, material entry, material storage and setup center.
+
+The admin tile wont be required.
+
+The tiles should be clickable and redirect to the other pages.
+
+The left sidebar contains routing buttons to the 4 pages(dashboard,material entry, material storge, setup center).
+
+
+[[./3.PNG]]
+[[./3a.PNG]]
+
+****** material entry
+This page facilitates three main functions, entering new orders into the system, tracking order status and marking carriers as delivered.
+
+
+An order is usually a comma seperated list of carriers, rarely it is a singular carrier.
+
+
+The user can enter an order into the system by uploading a csv file containing the ordered carriers row by row, each row representing one carrier.
+The first row, as an exception, should contain the column headers names of the file, which do not have to match the form fields.
+
+
+If the user uploads a csv file via the import button, he is then tasked to map the form field names to the column headers of the csv file.
+
+
+This mapping is remembered and will be provided as default values for future mappings.
+
+
+The user can also add a singular carrier via a form.
+
+
+One carrier always only carries one type of article.
+Therefore before a carrier can be created the article needs to be created.
+
+
+The main body of the page is a table displaying all carriers even the ones that have been ordered and not yet delivered.
+The table supports filtering by column criteria like delivery status or lot number.
+
+In the header of the table is a field which would usually be a search bar but it provides a way to tick the selection box of a row.
+
+#+begin_example
+If there is a value entered and confirmed with return, the row which has the entered value as the carrier uid field is added to the selection, i.e. the selection box of that row is ticked.
+
+Entering the carrier UID and pressing enter will be beformed by a handheld scanner, this enables quickly selecting carriers in the table by scanning their QR Codes in real life.
+#+end_example
+
+The header of the table also provides 3 actions for the selected rows and 2 general actions.
+
+- The selection can be set as delivered.
+- The selection can be printed. (labels containg the carrier UID as a QRCode)
+- The selection can be deleted.
+
+
+
+
+The next table header button allows hiding/showing the columns of the table.
+The final button exports the current view of the table, kind of like a screenshot, has nothing to do with the selection.
+
+
+The workflow is as follows:
+
+1. Order carriers and receive an order number outside of this application
+2. Add carriers via form or file, supplying the order number as lot number
+3. Wait for arrival of order
+4. Filter carriers by ~lotnumber=order number~ and ~delivered=False~
+
+   The user will upon receiving a delivery filter for the delivery number, or lotnumber.
+   He may narrow it down further by filtering for e.g. manufacturer or provider.
+   If a delivery only has been partially processed the user may filter for delivery status.
+5. Select all and print the labels.
+
+   Printing a selection deselects all carriers and places the cursor in the "search box".
+6. Stick a label on the carrier and scan it (row gets selected)
+   The user steps away from the application only having a handheld scanner as remaining input device to the application.
+   The user then proceeds to stick a sticker on the corresponding carrier.
+   The user uses the scanner and scans the qr code on the label that just has been placed on the carrier, this selects the row of the carrier in the application.
+7. repeat 6. until all labels are used
+8. set selection as delivered
+   The user returns to the application and sees all teh carriers he has just labelled selected in the table.
+   The user presses the icon with the little arrow in the toolbar of the table, this changes the status of delivered from False to True.
+   Delivering a selection resets all filters of the table.
+******* screens
+******** plain
+
+[[./4.PNG]]
+
+******** add single article
+[[./5.PNG]]
+********* success
+no screenshot : snackbar notification in green with success message
+
+********* fail - form
+[[./5a.PNG]]
+********* fail - server
+no screenshot : snackbar notification in red with error message
+
+******** add csv articles
+The first click opens a file upload window, afterewards the column selector.
+[[./8.PNG]]
+********* success
+im open for a better way to design the notification
+[[./8a.PNG]]
+
+********* fail - file upload
+general file upload error
+********* fail - server
+error while processing the file since data is malformed or not well defined
+
+
+
+******** add single carrier 
+see add single article
+********* success
+********* fail - form
+********* fail - server
+
+******** add csv carriers 
+see add csv carriers
+********* success
+********* fail - file
+
+********* fail - server
+
+
+******** with data 
+ignore the snackbar notification on the bottom
+[[./8a.PNG]]
+
+****** material storage
+This page facilitates the users physical interaction with the storages. Mainly adding a carrier to a storage, collecting a carrier from a storage, deleting a carrier and collecting multiple carriers at once.
+
+
+A storage consists of storage slots each with an unique id, each slot also has an LED and a qrcode with the storageslot ID.
+
+
+Delivered carriers can be stored in the selected storage by entering their UID into the add field and pressing return.
+
+
+The user is then presented with a popup, within the ID of a storageslot is displayed.
+The LED of that storageslot is blinking green while the popup is displayed.
+
+
+The user is expected to put the carrier into the slot with the blinking LED and is expected to scan the QR code of the slot, containing its ID.
+The scanning action is the same as the user inputing the slots ID via the keyboard and pressing enter.
+
+
+Closing the popup cancels the attempt to add to storage and kills teh LED.
+If the user scans/enters the wrong slot ID, he can try again until success. 
+
+
+A carrier can be displayed via the display field. The carrier data is editable and saveable. The label is printable from here. The LED is turned green while displaying component is mounted.
+
+
+A carrier can be retrieved from storage by entering their UID in the collect field.
+
+
+The corresponding storage and storageslot will be displayed to the user and the LED will start blinking blue until its storageslot ID has been scanned.
+
+
+If there are multiple carriers being collected a queue is displayed showing the storage slots which have not been scanned.
+This queue can also be filled with the collect job field after finishing the pre-setup step of the setup center workflow.
+
+
+The queue should be a collapsable text field containing carrier UIDs - storage slot IDs pairs.
+It displays all the carriers that have been added to the queue whose corresponding storage slot ID has not been scanned.
+
+
+Scanning a storage slot ID removes it from the queue and kills the LED.
+
+
+A carrier can also be deleted from the system - when its discarded in real life.
+
+
+The main body of the page shows the different storages and machines and their contents in collapsable tables.
+
+
+The tables support the same functionality as the previous tables including the not-search-but-select box and header buttons to collect, delete or display(just LEDs) the selection.
+
+
+
+******* plain
+[[./9.PNG]]
+
+[[./10.PNG]]
+******* plain with some data in a shelf
+
+[[./11.PNG]]
+
+******* display carrier 
+[[./12.PNG]]
+
+******** edit carrier
+no screenshots, editable fields, some with suggestions others type restrictions
+success and fail messages via colored snackbar
+********* success
+********* fail
+
+******* add
+
+******** confirm slot
+no screenshot, popup component indicating the storage and slot to scan.
+
+******** success
+
+[[./14.PNG]]
+
+******** fail
+
+[[./13.PNG]]
+[[./15.PNG]]
+
+******* collect
+In this example at least 3 carriers are in the collect queue, if any of the corresponding storageslot IDs is scanned it is taken from the queue and the correspondance is lifted.
+
+If another carrier UID would be entered the queuecount would increase to 5 and a snackbar notification with the storageslot info gets shown.
+
+A way to list the actual UIDs in the queue would be nice, refer to above.
+
+Just for clarification: it is not an actual queue but a set, but the terminology is established already.
+
+[[./18.PNG]]
+******** success
+no screenshot.
+green snackbar notification that indicates scanning of the correct slot,  table update
+
+
+******** fail
+********* carrier not found
+
+[[./17.PNG]]
+
+********* wrong slot scanned try again
+
+slot contains no carrier in the collect queue 
+
+******* delete
+******** success
+[[./16.PNG]]
+
+******** fail 
+********* carrier doesnt exist
+[[./17.PNG]]
+****** setup_center
+This page facilitates creating jobs, allocating carriers to them and finishing them.
+
+The basis of each job or board is a list of article-count pairs.
+
+This list can be provided as a csv file or entered manually.
+
+Additionally a job has an assigned machine, time slot, a count and a status.
+
+After a job with his parameters has been created a carrier for each article needs to be chosen which will be marked as reserved - this is called pre-setup.
+
+Once the pre-setup is complete the carriers of a job can be collected from the material_storage page.
+
+After that the production process in the real world happens.
+After the job is finished the user provides the actual usage of articles for each carrier and an optional note.
+By marking a jopb conpleted the carriers are no longer marked as reserved and need to be restored, discarded or left on the machine for the next job if applicable.
+
+
+The typical user workflow looks like this:
+
+1. create job
+2. assign carriers to job
+3. collect carriers
+4. do the production process in the real world
+5. mark job as completed and note usage
+6. re-store the carriers
+
+
+******* plain
+
+[[./20.PNG]]
+
+******* create job
+[[./21.PNG]]
+[[./22.PNG]]
+[[./25.PNG]]
+******** time and date picker
+[[./23.PNG]]
+
+
+******** timeline of scheduled jobs
+
+[[./31.png]]
+
+******** upload csv
+
+no screenshot, but same as on material entry: first the user uploads a file and then a component is mounted so the user can map column headers to field names
+with according snackbar notifications
+******** fail
+
+********* input error
+
+[[./24.PNG]]
+
+********* server file error
+
+notification with error
+
+******* pre setup
+add  progressbar
+
+entry = article entry on the left side
+******** BOM no entry selected
+
+[[./26.PNG]]
+
+******** BOM entry selected 
+shows available carriers
+********* carriers displayed, some with warning
+[[./27.PNG]]
+
+********* no carriers available
+[[./1.gif]]
+
+********* carrier selected
+[[./28.PNG]]
+********* all carriers selected
+[[./32.PNG]]
+
+
+******* finish job
+
+[[./29.PNG]]
+
+******* multiple jobs with different color coding based on state: scheduled, pre-setup-done, collected, finished
+
+[[./30.PNG]]
+
+**** API description
+***** login
+- /api/token/obtain
+  #+begin_src js
+{"method": "POST",
+ "url":"/api/token/obtain",
+ "headers":[
+   "request": [
+     "Accept": "application/json, text/plain, */*",
+     "Content-Type": "application/json",
+   ],
+   "response": [
+    "Content-Type": "application/json",
+   ]
+ ],
+ "contents": [
+   "request": [
+    "username":{ "type": "string" },
+    "password":{ "type": "string" }
+   ],
+   "response":[
+    "refresh":{ "type": "string" },
+    "access":{ "type": "string" },
+    "user_id":{ "type": "integer" },
+    "username":{ "type": "string" },
+    "user_role":{ "type": "string" }
+   ]
+ ]
+}
+#+end_src
+- /api/token/refresh
+    #+begin_src js
+      {"method": "POST",
+       "url":"/api/token/refresh",
+       "headers":[
+         "request": [
+           "Accept": "application/json, text/plain, */*",
+           "Content-Type": "application/json",
+         ],
+         "response": [
+          "Content-Type": "application/json",
+
+         ]
+       ],
+       "contents": [
+         "request": [
+          "refresh":{ "type": "string" },
+         ],
+         "response":[
+          "refresh":{ "type": "string" },
+          "access":{ "type": "string" },
+         ]
+       ]
+      }
+#+end_src
+
+***** dashboard
+- get_dashboard_data
+   #+begin_src js
+     {"method": "GET",
+      "url":"/api/get_dashboard_data",
+      "headers":[
+        "request": [
+          "Accept": "application/json, text/plain, */*",
+          "Authorization":{ "type": "string"}, 
+        ],
+        "response": [
+         "Content-Type": "application/json",
+        ]
+      ],
+      "contents": [
+        "request": [],
+        "response":[
+         "carrier_count_no_archived":      { "type": "integer"},
+         "carrier_count_transit":          { "type": "integer"},
+         "carrier_count_reserved_for_job": { "type": "integer"},   
+         "carrier_count_no_delivered":     { "type": "integer"},
+         "storage_total_capacity":{ "type": "integer"},
+         "storage_used_capacity":{ "type": "integer"},
+         "setup_center_count_finished":{ "type": "integer"},
+         "setup_center_count_unfinished":{ "type": "integer"},
+         "setup_center_count_unfinished_no_pre_setup":{ "type": "integer"},
+         "setup_center_count_unfinished_not_collected":{ "type": "integer"},
+        ]
+      ]
+     }
+#+end_src
+***** material entry
+- get_carriers
+  #+begin_src js
+    {"method": "GET",
+     "url":"/api/get_carriers",
+     "url_args": {
+         "page" :{"type":"integer"},
+         "page_size":{"type":"integer"},
+         "ordering":{"type":"string"},
+         "uid":{"type":"string"},
+         "article_name":{"type":"string"},
+         "description":{"type":"string"},
+         "provider":{"type":"string"},
+         "manufacturer":{"type":"string"},
+         "lot_number":{"type":"integer"},
+         "container_type":{"type":"integer"},
+         "sap_number":{"type":"string"},
+         "diameter":{"type":"integer"},
+         "width":{"type":"integer"},
+         "delivered":{"type":"boolean"},
+         "storage":{"type":"string"},
+         "machine":{"type":"string"},
+         }
+     ,
+     "headers":[
+       "request": [
+         "Accept": "application/json, text/plain, */*",
+         "Content-Type": "application/json",
+         "Authorization":{ "type": "string"}, 
+       ],
+       "response": [
+        "Content-Type": "application/json",
+       ]
+     ],
+     "contents": [
+       "request": [ ],
+       "response":[
+        "count":{ "type": "integer" },
+        "next":{ "type": "string" },
+        "previous":{ "type": "string" },
+        "results":[{"uid":{ "type": "string" },
+                    "article":["name":{ "type": "string" },
+                               "description":{ "type": "string" },
+                               "provider":{ "type": "string" },
+                               "manufacturer":{ "type": "string" },
+                               "sap_number":{ "type": "string" },
+                               ],
+                    "container_type":{ "type": "integer" },
+                    "quantity_original":{ "type": "integer" },
+                    "quantity_current":{ "type": "integer" },
+                    "diameter":{ "type": "integer" },
+                    "width":{ "type": "integer" },
+                    "lot_number":{ "type": "integer" },
+                    "reserved":{ "type": "boolean" },
+                    "archived":{ "type": "boolean"},
+                    "delivered":{ "type": "boolean" },
+                    "storage":{"type":"string"},
+                    "machine":{"type":"string"},
+                   },
+                   ...
+                  ],
+
+       ],
+     ],
+    }
+#+end_src
+- get_articles
+  #+begin_src js
+    {"method": "GET",
+     "url":"/api/get_articles",
+     "url_args": [
+         "page" :{"type":"integer"},
+         "page_size":{"type":"integer"},
+         "ordering":{"type":"string"},
+         "name":{"type":"string"},
+         "description":{"type":"string"},
+         "provider":{"type":"string"},
+         "manufacturer":{"type":"string"},
+         "sap_number":{"type":"string"},
+     ]
+     "headers":[
+         "request": [
+             "Accept": "application/json, text/plain, */*",
+             "Content-Type": "application/json",
+             "Authorization":{ "type": "string"}, 
+         ],
+         "response": [
+             "Content-Type": "application/json",
+         ]
+     ],
+     "contents": [
+         "request": [ ],
+         "response":[
+             "count":{ "type": "integer" },
+             "next":{ "type": "string" },
+             "previous":{ "type": "string" },
+             "results":["name":{ "type": "string" },
+                        "description":{ "type": "string" },
+                        "provider":{ "type": "string" },
+                        "manufacturer":{ "type": "string" },
+                        "sap_number":{ "type": "string" },
+                       ],
+         ],
+     ],
+    }
+    #+end_src
+- is_article_name_unique
+   #+begin_src js
+     {"method": "GET",
+      "url":"/api/is_article_name_unique",
+      "url_args":["name":{ "type": "string" },]
+      "headers":[
+        "request": [
+          "Accept": "application/json, text/plain, */*",
+          "Authorization":{ "type": "string"}, 
+        ],
+        "response": [
+         "Content-Type": "application/json",
+        ]
+      ],
+      "contents": [
+        "request": [],
+        "response":[
+        "unique":{ "type": "boolean" },
+        ]
+      ]
+     }
+#+end_src
+- is_carrier_uid_unique
+   #+begin_src js
+     {"method": "GET",
+      "url":"/api/is_carrier_uid_unique",
+      "url_args":["uid":{ "type": "string" },]
+      "headers":[
+        "request": [
+          "Accept": "application/json, text/plain, */*",
+          "Authorization":{ "type": "string"}, 
+        ],
+        "response": [
+         "Content-Type": "application/json",
+        ]
+      ],
+      "contents": [
+        "request": [],
+        "response":[
+        "unique":{ "type": "boolean" },
+        ]
+      ]
+     }
+#+end_src
+- import_article
+   #+begin_src js
+     {"method": "POST",
+      "url":"/api/import_article",
+      "headers":[
+        "request": [
+          "Accept": "application/json, text/plain, */*",
+          "Authorization":{ "type": "string"}, 
+                   ],
+        "response": [
+         "Content-Type": "application/json",
+                    ],
+      ],
+      "contents": [
+        "request": ["name":{ "type": "string" },
+                    "description":{ "type": "string" },
+                    "manufacturer":{ "type": "string" },
+                    "provider":{ "type": "string" },
+                    "sap_number":{ "type": "string" },
+                   ],
+        "response":[ "success":{ "type": "boolean" },
+                     "message":{ "type": "string" },
+                   ],
+      ],
+     }
+#+end_src
+- import_carrier
+   #+begin_src js
+     {"method": "POST",
+      "url":"/api/import_carrier",
+      "headers":[
+        "request": [
+          "Accept": "application/json, text/plain, */*",
+          "Authorization":{ "type": "string"}, 
+                   ],
+        "response": [
+         "Content-Type": "application/json",
+                    ],
+      ],
+      "contents": [
+        "request": ["uid":{ "type": "string" },
+                    "article_name":{ "type": "string" },
+                    "container_type":{ "type": "integer" },
+                    "quantity_original":{ "type": "integer" },
+                    "quantity_current":{ "type": "integer" },
+                    "diameter":{ "type": "integer" },
+                    "width":{ "type": "integer" },
+                    "lot_number":{ "type": "integer" },
+                    "reserved":{ "type": "boolean" },
+                    "archived":{ "type": "boolean"},
+                    "delivered":{ "type": "boolean" },
+                    "storage":{"type":"string"},
+                    "machine":{"type":"string"},
+                   ],
+        "response":[ "success":{ "type": "boolean" },
+                     "message":{ "type": "string" },
+                   ],
+      ],
+     }
+#+end_src
+- import_articles_file
+   #+begin_src js
+     {"method": "POST",
+      "url":"/api/import_articles_file",
+      "headers":[
+          "request": [
+              "Accept": "application/json, text/plain, */*",
+              "Authorization":{ "type": "string"},
+              "Connection":"keep-alive",
+              "Content-Type":"multipart/form-data"
+          ],
+          "response": [
+              "Content-Type": "application/json",
+          ],
+      ],
+      "contents": [
+          "request": file/payload,
+          "response":[ "success":{ "type": "boolean" },
+                       "file_name":{"type":"string"},
+                       "file_headers":{ "type": "string" },
+                     ],
+      ],
+     }
+#+end_src
+- import_carriers_file
+  #+begin_src js
+    {"method": "POST",
+     "url":"/api/import_carriers_file",
+     "headers":[
+         "request": [
+             "Accept": "application/json, text/plain, */*",
+             "Authorization":{ "type": "string"},
+             "Connection":"keep-alive",
+             "Content-Type":"multipart/form-data"
+         ],
+         "response": [
+             "Content-Type": "application/json",
+         ],
+     ],
+     "contents": [
+         "request": file/payload,
+         "response":[ "success":{ "type": "boolean" },
+                      "file_name":{"type":"string"},
+                      "file_headers":{ "type": "string" },
+                    ],
+     ],
+    }
+#+end_src
+- import_articles_confirm
+     #+begin_src js
+       {"method": "POST",
+        "url":"/api/import_articles_confirm",
+        "headers":[
+            "request": [
+                "Accept": "application/json, text/plain, */*",
+                "Authorization":{ "type": "string"}, 
+            ],
+            "response": [
+                "Content-Type": "application/json",
+            ],
+        ],
+        "contents": [
+            "request": ["file_name":{ "type": "string" },
+                        "mapping":{"field1":"form1",
+                                   "field2":"form2",
+                                   ...
+                                  }
+                       ],
+            "response":[ "success":{ "type": "boolean" },
+                         "message":{ "type": "string" },
+                       ],
+        ],
+       }
+#+end_src
+- import_carriers_confirm
+  #+begin_src js
+    {"method": "POST",
+       "url":"/api/import_articles_confirm",
+       "headers":[
+         "request": [
+           "Accept": "application/json, text/plain, */*",
+           "Authorization":{ "type": "string"}, 
+                    ],
+         "response": [
+          "Content-Type": "application/json",
+                     ],
+       ],
+       "contents": [
+           "request": [
+               "file_name":{ "type": "string" },
+               "mapping":{
+                   "field1":"form1",
+                   "field2":"form2",
+                   ...
+               }
+           ],
+           "response":[ "success":{ "type": "boolean" },
+                        "message":{ "type": "string" },
+                      ],
+       ],
+    }
+#+end_src
+- print_carrier_selection
+  #+begin_src js
+    {"method": "POST",
+     "url":"/api/print_carrier_selection",
+     "headers":[
+         "request": [
+             "Accept": "application/json, text/plain, */*",
+             "Content-Type": "application/json",
+             "Authorization":{ "type": "string"}, 
+         ],
+         "response": [
+             "Content-Type": "application/json",
+         ],
+     ],
+     "contents": [
+         "request": [
+             {"carrier_uid":{"type":"string"}},
+             ...
+         ]:{"type":"list"},
+         "response":[
+             "success":{ "type": "boolean" },
+             "message":{ "type": "string" },
+         ],
+     ],
+    }
+#+end_src
+- deliver_carrier_selection
+    #+begin_src js
+      {"method": "POST",
+       "url":"/api/deliver_carrier_selection",
+       "headers":[
+           "request": [
+               "Accept": "application/json, text/plain, */*",
+               "Content-Type": "application/json",
+               "Authorization":{ "type": "string"}, 
+           ],
+           "response": [
+               "Content-Type": "application/json",
+           ],
+       ],
+       "contents": [
+           "request": [
+               {"carrier_uid":{"type":"string"}},
+               ...
+           ]:{"type":"list"},
+           "response":[
+               "success":{ "type": "boolean" },
+               "message":{ "type": "string" },
+           ],
+       ],
+      }
+#+end_src
+- delete_carrier_selection
+  #+begin_src js
+    {"method": "DELETE",
+     "url":"/api/delete_carrier_selection",
+     "headers":[
+         "request": [
+             "Accept": "application/json, text/plain, */*",
+             "Content-Type": "application/json",
+             "Authorization":{ "type": "string"}, 
+         ],
+         "response": [
+             "Content-Type": "application/json",
+         ],
+     ],
+     "contents": [
+         "request": [
+             {"carrier_uid":{"type":"string"}},
+             ...
+         ]:{"type":"list"},
+         "response":[
+             "success":{ "type": "boolean" },
+             "message":{ "type": "string" },
+         ],
+     ],
+    }
+#+end_src
+***** material storage
+- get_storages
+    #+begin_src js
+      {"method": "GET",
+       "url":"/api/get_storages",
+       "headers":[
+           "request": [
+               "Accept": "application/json, text/plain, */*",
+               "Content-Type": "application/json",
+               "Authorization":{ "type": "string"}, 
+           ],
+           "response": [
+               "Content-Type": "application/json",
+           ],
+       ],
+       "contents": [
+           "request": [],
+           "response":[
+               "success":{ "type": "boolean" },
+               "storages":[
+                   {"name":{"type":"string"},
+                    "description":{"type":"string"},
+                    "capacity":{"type":"integer"},
+                    "used_slots":{"type":"integer"},
+                    "storage type":{"type":"integer"}
+                   },
+               ],
+           ],
+       ],
+      }
+#+end_src
+- edit_carrier
+    #+begin_src js
+      {"method": "EDIT",
+       "url":"/api/edit_carrier",
+       "headers":[
+           "request": [
+               "Accept": "application/json, text/plain, */*",
+               "Content-Type": "application/json",
+               "Authorization":{ "type": "string"}, 
+           ],
+           "response": [
+               "Content-Type": "application/json",
+           ],
+       ],
+       "contents": [
+           "request": {
+               "carrier_uid":{ "type": "string" },
+               "container_type":{ "type": "string" },
+               "quantity_original":{ "type": "integer" },
+               "quantity_current":{ "type": "integer" },
+               "diameter":{ "type": "integer" },
+               "width":{ "type": "integer" },
+               "lot_number":{ "type": "string" },
+               "delivered":{ "type": "boolean" },
+               "archived":{ "type": "boolean" },
+               "reserved":{ "type": "boolean" },
+           },
+           "response":[
+               "success":{ "type": "boolean" },
+               "message":{ "type": "string" },
+           ],
+       ],
+      }
+#+end_src
+- store_carrier
+      #+begin_src js
+        {"method": "POST",
+         "url":"/api/store_carrier",
+         "headers":[
+             "request": [
+                 "Accept": "application/json, text/plain, */*",
+                 "Content-Type": "application/json",
+                 "Authorization":{ "type": "string"}, 
+             ],
+             "response": [
+                 "Content-Type": "application/json",
+             ],
+         ],
+         "contents": [
+             "request": {
+                 "uid":{"type":"string"},
+                 "storage":{"type":"string"},
+                         },
+             "response":[
+                 "success":{ "type": "boolean" },
+                 "storage_slot":{ "type": "string" },
+             ],
+         ],
+        }
+#+end_src
+- store_carrier_confirm_slot
+      #+begin_src js
+      {"method": "POST",
+       "url":"/api/store_carrier_confirm_slot",
+       "headers":[
+           "request": [
+               "Accept": "application/json, text/plain, */*",
+               "Content-Type": "application/json",
+               "Authorization":{ "type": "string"}, 
+           ],
+           "response": [
+               "Content-Type": "application/json",
+           ],
+       ],
+       "contents": [
+           "request": {"slot":{"type":"string"}},
+           "response":[
+               "success":{ "type": "boolean" },
+               "message":{ "type": "string" },
+           ],
+       ],
+      }
+#+end_src
+- add_carrier_to_collect_queue
+    #+begin_src js
+      {"method": "POST",
+       "url":"/api/add_carrier_to_collect_queue",
+       "headers":[
+           "request": [
+               "Accept": "application/json, text/plain, */*",
+               "Content-Type": "application/json",
+               "Authorization":{ "type": "string"}, 
+           ],
+           "response": [
+               "Content-Type": "application/json",
+           ],
+       ],
+       "contents": [
+           "request": {
+               "uid":{"type":"string"},
+           },
+           "response":[
+               "success":{ "type": "boolean" },
+               "storage":{ "type": "string" },
+               "slot":{ "type": "string" },
+               "queue":[
+                   {{"carrier_uid":{"type":"string"},"storage":{"type":"string"},"storage_slot":{"type":"string"}}},
+                   ...
+               ]
+           ],
+       ],
+      }
+#+end_src
+- remove_carrier_from_collect_queue_trough_storage_slot
+      #+begin_src js
+        {"method": "POST",
+         "url":"/api/remove_carrier_from_collect_queue_trough_storage_slot",
+         "headers":[
+             "request": [
+                 "Accept": "application/json, text/plain, */*",
+                 "Content-Type": "application/json",
+                 "Authorization":{ "type": "string"}, 
+             ],
+             "response": [
+                 "Content-Type": "application/json",
+             ],
+         ],
+         "contents": [
+             "request": {
+                 "slot":{"type":"string"},
+             },
+             "response":[
+                 "success":{ "type": "boolean" },
+                 "queue":[
+                     {{"carrier_uid":{"type":"string"},"storage":{"type":"string"},"storage_slot":{"type":"string"}}},
+                     ...
+                 ]
+
+             ],
+         ],
+        }
+#+end_src
+- get_jobs
+      #+begin_src js
+        {"method": "GET",
+         "url":"/api/get_jobs",
+         "url_args": {"page" :{"type":"integer"},
+                      "page_size":{"type":"integer"},
+                      "ordering":{"type":"string"},
+                      "name":{ "type": "string" },
+                      "board":{ "type": "string" },
+                      "machine":{ "type": "string" },
+                      "project":{ "type": "string" },
+                      "description":{ "type": "string" },
+                      "customer":{ "type": "string" },
+                      "count":{ "type": "integer" },
+                      "start_at":{ "type": "string" },
+                      "finish_at":{ "type": "string" },
+                      "status":{ "type": "string" },
+                     },
+         "headers":[
+             "request": [
+                 "Accept": "application/json, text/plain, */*",
+                 "Content-Type": "application/json",
+                 "Authorization":{ "type": "string"}, 
+             ],
+             "response": [
+                 "Content-Type": "application/json",
+             ],
+         ],
+         "contents": [
+             "request": {},
+             "response":[
+                 "count":{ "type": "integer" },
+                 "next":{ "type": "string" },
+                 "previous":{ "type": "string" },
+                 "results":{
+                     "name":{ "type": "string" },
+                     "board":{ "type": "string" },
+                     "project":{ "type": "string" },
+                     "description":{ "type": "string" },
+                     "customer":{ "type": "string" },
+                     "count":{ "type": "integer" },
+                     "start_at":{ "type": "string" },
+                     "finish_at":{ "type": "string" },
+                     "machine":{ "type": "string" },
+                     "status":{ "type": "string" },
+                 },
+             ],
+         ],
+        }
+#+end_src
+- reset_all_leds
+
+***** setup center
+- get_machines
+      #+begin_src js
+      {"method": "GET",
+       "url":"/api/get_machines",
+       "headers":[
+           "request": [
+               "Accept": "application/json, text/plain, */*",
+               "Content-Type": "application/json",
+               "Authorization":{ "type": "string"}, 
+           ],
+           "response": [
+               "Content-Type": "application/json",
+           ],
+       ],
+       "contents": [
+           "request": {},
+           "response":[
+               "machines":[{"type":"string"}],
+           ],
+       ],
+      }
+#+end_src
+
+- import_job_file
+      #+begin_src js
+        {"method": "EDIT",
+         "url":"/api/import_job_file",
+         "headers":[
+             "request": [
+                 "Accept": "application/json, text/plain, */*",
+                 "Authorization":{ "type": "string"},
+                 "Connection":"keep-alive",
+                 "Content-Type":"multipart/form-data"
+             ],
+             "response": [
+                 "Content-Type": "application/json",
+             ],
+         ],
+         "contents": [
+             "request": file/payload,
+             "response":
+             [ "success":{ "type": "boolean" },
+               "file_headers":{ "type": "string" },
+             ],
+         ],
+        }
+#+end_src
+
+- create_job
+       #+begin_src js
+         {"method": "POST",
+          "url":"/api/create_job",
+          "headers":[
+            "request": [
+              "Accept": "application/json, text/plain, */*",
+              "Authorization":{ "type": "string"}, 
+                       ],
+            "response": [
+             "Content-Type": "application/json",
+                        ],
+          ],
+          "contents": [
+            "request": [
+                "name":{ "type": "string" },
+                "board":{ "type": "string" },
+                "project":{ "type": "string" },
+                "description":{ "type": "string" },
+                "customer":{ "type": "string" },
+                "count":{ "type": "integer" },
+                "commission_date":{ "type": "string" },
+                "finish_date":{ "type": "string" },
+
+                       ],
+            "response":[ "success":{ "type": "boolean" },
+                         "message":{ "type": "string" },
+                       ],
+          ],
+         }
+#+end_src
+
+- pre_setup_job
+       #+begin_src js
+         {"method": "POST",
+          "url":"/api/pre_setup_job",
+          "headers":[
+              "request": [
+                  "Accept": "application/json, text/plain, */*",
+                  "Authorization":{ "type": "string"}, 
+              ],
+              "response": [
+                  "Content-Type": "application/json",
+              ],
+          ],
+          "contents": [
+              "request": [
+                  "job_name":{ "type": "string" },
+                  "article_carrier_map":[
+                      "article_name":"carrier_uid"
+                  ],
+                         ],
+              "response":[ "success":{ "type": "boolean" },
+                           "message":{ "type": "string" },
+                         ],
+          ],
+         }
+#+end_src
+
+- finish_job
+       #+begin_src js
+         {"method": "POST",
+          "url":"/api/finish_job",
+          "headers":[
+            "request": [
+              "Accept": "application/json, text/plain, */*",
+              "Authorization":{ "type": "string"}, 
+                       ],
+            "response": [
+             "Content-Type": "application/json",
+                        ],
+          ],
+          "contents": [
+            "request":{
+                "carrier_usage":{[
+                    {{"carrier":{"type":"string"}}:{"usage":{"type":"string"}}},
+                ]},
+                "note":{"type":"string"}
+            },
+            "response":[ "success":{ "type": "boolean" },
+                         "message":{ "type": "string" },
+                       ],
+          ],
+         }
+#+end_src
+
+- delete_job
+     #+begin_src js
+       {"method": "DELETE",
+        "url":"/api/delete_job",
+        "headers":[
+          "request": [
+            "Accept": "application/json, text/plain, */*",
+            "Authorization":{ "type": "string"}, 
+                     ],
+          "response": [
+           "Content-Type": "application/json",
+                      ],
+        ],
+        "contents": [
+            "request": ["job_name":{"type_string"}
+                       ],
+            "response":[ "success":{ "type": "boolean" },
+                         "message":{ "type": "string" },
+                       ],
+        ],
+       }
+#+end_src

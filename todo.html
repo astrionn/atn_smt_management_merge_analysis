@@ -1,0 +1,1864 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+<!-- 2023-09-02 Sat 18:25 -->
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>&lrm;</title>
+<meta name="generator" content="Org Mode" />
+<link rel="stylesheet" type="text/css" href="https://fniessen.github.io/org-html-themes/src/readtheorg_theme/css/htmlize.css"/>
+<link rel="stylesheet" type="text/css" href="https://fniessen.github.io/org-html-themes/src/readtheorg_theme/css/readtheorg.css"/>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
+<script type="text/javascript" src="https://fniessen.github.io/org-html-themes/src/lib/js/jquery.stickytableheaders.min.js"></script>
+<script type="text/javascript" src="https://fniessen.github.io/org-html-themes/src/readtheorg_theme/js/readtheorg.js"></script>
+</head>
+<body>
+<div id="content" class="content">
+<div id="table-of-contents" role="doc-toc">
+<h2>Table of Contents</h2>
+<div id="text-table-of-contents" role="doc-toc">
+<ul>
+<li><a href="#org5f1ad9f">1. atn smt management software project</a>
+<ul>
+<li><a href="#org24cfc56">1.1. Frontend</a>
+<ul>
+<li><a href="#orgee0fed3">1.1.1. Initial Draft containing description of functionality, API templates, Screenshots</a></li>
+</ul>
+</li>
+<li><a href="#org43256a8">1.2. API description</a>
+<ul>
+<li><a href="#orgf501e27">1.2.1. login</a></li>
+<li><a href="#org817618f">1.2.2. dashboard</a></li>
+<li><a href="#orga417128">1.2.3. material entry</a></li>
+<li><a href="#org582e6a4">1.2.4. material storage</a></li>
+<li><a href="#org2975220">1.2.5. setup center</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+<div id="outline-container-org5f1ad9f" class="outline-2">
+<h2 id="org5f1ad9f"><span class="section-number-2">1.</span> atn smt management software project</h2>
+<div class="outline-text-2" id="text-1">
+<p>
+This application assists three real life workflows to receive, store and use SMD materials in an industrial SMT process to manufacture <b>boards</b>.
+</p>
+
+
+<p>
+<b>Boards</b> are manufactured in a <b>machine</b> from multiple <b>carriers</b> each storing an amount of an <b>article</b>.
+</p>
+
+
+<p>
+Each <b>board</b> is represented as a a list of <b>article</b>-count pairs, this is also called bill of materials.
+</p>
+
+
+<p>
+<b>Carriers</b> need to be ordered from a <b>provider</b>, received, stored and collected for a <b>job</b>, used in a <b>job</b> and re-stored or discarded.
+The ordering part is outside the scope of this application. The user imports orders of <b>carriers</b> after the order process has been done in real life. 
+</p>
+
+
+<p>
+<b>Carriers</b> usually have the dimension of a cylinder and have properties like diameter and width. This is relevant for storing in a <b>storage</b> or a <b>machine</b> .
+A <b>carrier</b> is identified by its UID, a sticker/label containg the UID and a QR Code of the UID is placed on the carrier by the user after an order of <b>carriers</b> is delivered at the manufacturing facility but before they are stored..
+</p>
+
+
+<p>
+A <b>provider</b> is the entity that delivers <b>carriers</b> to the manufacturing facility.
+</p>
+
+
+<p>
+A <b>manufacturer</b> is the entity that produces <b>carriers</b> that are delivered by a <b>provider</b>.
+</p>
+
+
+<p>
+A <b>carrier</b> can be stored in the <b>storage</b> <b>slot</b> of a <b>storage</b> or the <b>machine</b> <b>slot</b> of a <b>machine</b>.
+</p>
+
+
+<p>
+A <b>job</b> is manufacturing a <b>board</b> a number of times in a certain time frame. A <b>job</b> can be part of a <b>project</b> and can have <b>customers</b>.
+</p>
+
+
+<p>
+A <b>machine</b> is a pick&rsquo;n&rsquo;place machine it produces <b>boards</b> from <b>carriers</b>. Akin to a 3D printer, which uses filament to print objects layer by layer, a pick&rsquo;n&rsquo;place <b>machine</b> &ldquo;prints&rdquo; <b>boards</b> <b>article</b> by <b>article</b>.
+Like <b>storage</b>, a <b>machine</b> has <b>machine</b> <b>slots</b>.
+</p>
+
+<p>
+A <b>storage</b> is a shelf with <b>storage</b> <b>slots</b>, each slot has an LED that can be activated by this application.
+</p>
+</div>
+
+<div id="outline-container-org24cfc56" class="outline-3">
+<h3 id="org24cfc56"><span class="section-number-3">1.1.</span> Frontend</h3>
+<div class="outline-text-3" id="text-1-1">
+</div>
+<div id="outline-container-orgee0fed3" class="outline-4">
+<h4 id="orgee0fed3"><span class="section-number-4">1.1.1.</span> Initial Draft containing description of functionality, API templates, Screenshots</h4>
+<div class="outline-text-4" id="text-1-1-1">
+</div>
+<ol class="org-ol">
+<li><a id="org7d5fb85"></a>login<br />
+<div class="outline-text-5" id="text-1-1-1-1">
+<p>
+The user starts with a simple login form.
+</p>
+</div>
+<ol class="org-ol">
+<li><a id="org391319a"></a>plain<br />
+<div class="outline-text-6" id="text-1-1-1-1-1">
+
+<div id="org84eed79" class="figure">
+<p><img src="./1.PNG" alt="1.PNG" />
+</p>
+</div>
+</div>
+</li>
+<li><a id="org116ea5b"></a>login failed<br />
+<div class="outline-text-6" id="text-1-1-1-1-2">
+
+<div id="orgd49a2e6" class="figure">
+<p><img src="./2.PNG" alt="2.PNG" />
+</p>
+</div>
+</div>
+</li>
+</ol>
+</li>
+<li><a id="org67dfa3d"></a>dashboard<br />
+<div class="outline-text-5" id="text-1-1-1-2">
+<p>
+Upon login the user gets to the dashboard which presents usefull data like outstanding deliveries, storage capacity and the number of open jobs.
+</p>
+
+<p>
+From there the user can navigate to the 4 main pages: dashboard, material entry, material storage and setup center.
+</p>
+
+<p>
+The admin tile wont be required.
+</p>
+
+<p>
+The tiles should be clickable and redirect to the other pages.
+</p>
+
+<p>
+The left sidebar contains routing buttons to the 4 pages(dashboard,material entry, material storge, setup center).
+</p>
+
+
+<p>
+<img src="./3.PNG" alt="3.PNG" />
+<img src="./3a.PNG" alt="3a.PNG" />
+</p>
+</div>
+</li>
+
+<li><a id="org0f9bb48"></a>material entry<br />
+<div class="outline-text-5" id="text-1-1-1-3">
+<p>
+This page facilitates three main functions, entering new orders into the system, tracking order status and marking carriers as delivered.
+</p>
+
+
+<p>
+An order is usually a comma seperated list of carriers, rarely it is a singular carrier.
+</p>
+
+
+<p>
+The user can enter an order into the system by uploading a csv file containing the ordered carriers row by row, each row representing one carrier.
+The first row, as an exception, should contain the column headers names of the file, which do not have to match the form fields.
+</p>
+
+
+<p>
+If the user uploads a csv file via the import button, he is then tasked to map the form field names to the column headers of the csv file.
+</p>
+
+
+<p>
+This mapping is remembered and will be provided as default values for future mappings.
+</p>
+
+
+<p>
+The user can also add a singular carrier via a form.
+</p>
+
+
+<p>
+One carrier always only carries one type of article.
+Therefore before a carrier can be created the article needs to be created.
+</p>
+
+
+<p>
+The main body of the page is a table displaying all carriers even the ones that have been ordered and not yet delivered.
+The table supports filtering by column criteria like delivery status or lot number.
+</p>
+
+<p>
+In the header of the table is a field which would usually be a search bar but it provides a way to tick the selection box of a row.
+</p>
+
+<pre class="example" id="org3b62254">
+If there is a value entered and confirmed with return, the row which has the entered value as the carrier uid field is added to the selection, i.e. the selection box of that row is ticked.
+
+Entering the carrier UID and pressing enter will be beformed by a handheld scanner, this enables quickly selecting carriers in the table by scanning their QR Codes in real life.
+</pre>
+
+<p>
+The header of the table also provides 3 actions for the selected rows and 2 general actions.
+</p>
+
+<ul class="org-ul">
+<li>The selection can be set as delivered.</li>
+<li>The selection can be printed. (labels containg the carrier UID as a QRCode)</li>
+<li>The selection can be deleted.</li>
+</ul>
+
+
+
+
+<p>
+The next table header button allows hiding/showing the columns of the table.
+The final button exports the current view of the table, kind of like a screenshot, has nothing to do with the selection.
+</p>
+
+
+<p>
+The workflow is as follows:
+</p>
+
+<ol class="org-ol">
+<li>Order carriers and receive an order number outside of this application</li>
+<li>Add carriers via form or file, supplying the order number as lot number</li>
+<li>Wait for arrival of order</li>
+<li><p>
+Filter carriers by <code>lotnumber=order number</code> and <code>delivered=False</code>
+</p>
+
+<p>
+The user will upon receiving a delivery filter for the delivery number, or lotnumber.
+He may narrow it down further by filtering for e.g. manufacturer or provider.
+If a delivery only has been partially processed the user may filter for delivery status.
+</p></li>
+<li><p>
+Select all and print the labels.
+</p>
+
+<p>
+Printing a selection deselects all carriers and places the cursor in the &ldquo;search box&rdquo;.
+</p></li>
+<li>Stick a label on the carrier and scan it (row gets selected)
+The user steps away from the application only having a handheld scanner as remaining input device to the application.
+The user then proceeds to stick a sticker on the corresponding carrier.
+The user uses the scanner and scans the qr code on the label that just has been placed on the carrier, this selects the row of the carrier in the application.</li>
+<li>repeat 6. until all labels are used</li>
+<li>set selection as delivered
+The user returns to the application and sees all teh carriers he has just labelled selected in the table.
+The user presses the icon with the little arrow in the toolbar of the table, this changes the status of delivered from False to True.
+Delivering a selection resets all filters of the table.</li>
+</ol>
+</div>
+<ol class="org-ol">
+<li><a id="org71893e6"></a>screens<br />
+<ol class="org-ol">
+<li><a id="orga11850c"></a>plain<br />
+<div class="outline-text-7" id="text-1-1-1-3-1-1">
+
+<div id="org459ea76" class="figure">
+<p><img src="./4.PNG" alt="4.PNG" />
+</p>
+</div>
+</div>
+</li>
+
+<li><a id="org8e8ea6a"></a>add single article<br />
+<div class="outline-text-7" id="text-1-1-1-3-1-2">
+
+<div id="orgac559f8" class="figure">
+<p><img src="./5.PNG" alt="5.PNG" />
+</p>
+</div>
+</div>
+<ol class="org-ol">
+<li><a id="org5c9c22d"></a>success<br />
+<div class="outline-text-8" id="text-1-1-1-3-1-2-1">
+<p>
+no screenshot : snackbar notification in green with success message
+</p>
+</div>
+</li>
+
+<li><a id="org1986cb2"></a>fail - form<br />
+<div class="outline-text-8" id="text-1-1-1-3-1-2-2">
+
+<div id="orga79f867" class="figure">
+<p><img src="./5a.PNG" alt="5a.PNG" />
+</p>
+</div>
+</div>
+</li>
+<li><a id="org5b1e745"></a>fail - server<br />
+<div class="outline-text-8" id="text-1-1-1-3-1-2-3">
+<p>
+no screenshot : snackbar notification in red with error message
+</p>
+</div>
+</li>
+</ol>
+</li>
+
+<li><a id="org0be6627"></a>add csv articles<br />
+<div class="outline-text-7" id="text-1-1-1-3-1-3">
+<p>
+The first click opens a file upload window, afterewards the column selector.
+<img src="./8.PNG" alt="8.PNG" />
+</p>
+</div>
+<ol class="org-ol">
+<li><a id="org159cb3e"></a>success<br />
+<div class="outline-text-8" id="text-1-1-1-3-1-3-1">
+<p>
+im open for a better way to design the notification
+<img src="./8a.PNG" alt="8a.PNG" />
+</p>
+</div>
+</li>
+
+<li><a id="org75a57e5"></a>fail - file upload<br />
+<div class="outline-text-8" id="text-1-1-1-3-1-3-2">
+<p>
+general file upload error
+</p>
+</div>
+</li>
+<li><a id="orgf8814a4"></a>fail - server<br />
+<div class="outline-text-8" id="text-1-1-1-3-1-3-3">
+<p>
+error while processing the file since data is malformed or not well defined
+</p>
+</div>
+</li>
+</ol>
+</li>
+
+
+
+<li><a id="org97c7b64"></a>add single carrier<br />
+<div class="outline-text-7" id="text-1-1-1-3-1-4">
+<p>
+see add single article
+</p>
+</div>
+<ol class="org-ol">
+<li><a id="org9c1118a"></a>success<br /></li>
+<li><a id="org1280cf3"></a>fail - form<br /></li>
+<li><a id="orgbe895ee"></a>fail - server<br /></li>
+</ol>
+</li>
+
+<li><a id="org8637dce"></a>add csv carriers<br />
+<div class="outline-text-7" id="text-1-1-1-3-1-5">
+<p>
+see add csv carriers
+</p>
+</div>
+<ol class="org-ol">
+<li><a id="org50816b4"></a>success<br /></li>
+<li><a id="org49f2b37"></a>fail - file<br /></li>
+
+<li><a id="orgcae1e7c"></a>fail - server<br /></li>
+</ol>
+</li>
+
+
+<li><a id="orgf7ae96e"></a>with data<br />
+<div class="outline-text-7" id="text-1-1-1-3-1-6">
+<p>
+ignore the snackbar notification on the bottom
+<img src="./8a.PNG" alt="8a.PNG" />
+</p>
+</div>
+</li>
+</ol>
+</li>
+</ol>
+</li>
+
+<li><a id="orga7262b4"></a>material storage<br />
+<div class="outline-text-5" id="text-1-1-1-4">
+<p>
+This page facilitates the users physical interaction with the storages. Mainly adding a carrier to a storage, collecting a carrier from a storage, deleting a carrier and collecting multiple carriers at once.
+</p>
+
+
+<p>
+A storage consists of storage slots each with an unique id, each slot also has an LED and a qrcode with the storageslot ID.
+</p>
+
+
+<p>
+Delivered carriers can be stored in the selected storage by entering their UID into the add field and pressing return.
+</p>
+
+
+<p>
+The user is then presented with a popup, within the ID of a storageslot is displayed.
+The LED of that storageslot is blinking green while the popup is displayed.
+</p>
+
+
+<p>
+The user is expected to put the carrier into the slot with the blinking LED and is expected to scan the QR code of the slot, containing its ID.
+The scanning action is the same as the user inputing the slots ID via the keyboard and pressing enter.
+</p>
+
+
+<p>
+Closing the popup cancels the attempt to add to storage and kills teh LED.
+If the user scans/enters the wrong slot ID, he can try again until success. 
+</p>
+
+
+<p>
+A carrier can be displayed via the display field. The carrier data is editable and saveable. The label is printable from here. The LED is turned green while displaying component is mounted.
+</p>
+
+
+<p>
+A carrier can be retrieved from storage by entering their UID in the collect field.
+</p>
+
+
+<p>
+The corresponding storage and storageslot will be displayed to the user and the LED will start blinking blue until its storageslot ID has been scanned.
+</p>
+
+
+<p>
+If there are multiple carriers being collected a queue is displayed showing the storage slots which have not been scanned.
+This queue can also be filled with the collect job field after finishing the pre-setup step of the setup center workflow.
+</p>
+
+
+<p>
+The queue should be a collapsable text field containing carrier UIDs - storage slot IDs pairs.
+It displays all the carriers that have been added to the queue whose corresponding storage slot ID has not been scanned.
+</p>
+
+
+<p>
+Scanning a storage slot ID removes it from the queue and kills the LED.
+</p>
+
+
+<p>
+A carrier can also be deleted from the system - when its discarded in real life.
+</p>
+
+
+<p>
+The main body of the page shows the different storages and machines and their contents in collapsable tables.
+</p>
+
+
+<p>
+The tables support the same functionality as the previous tables including the not-search-but-select box and header buttons to collect, delete or display(just LEDs) the selection.
+</p>
+</div>
+
+
+
+<ol class="org-ol">
+<li><a id="orgbd51150"></a>plain<br />
+<div class="outline-text-6" id="text-1-1-1-4-1">
+
+<div id="org4fe79a1" class="figure">
+<p><img src="./9.PNG" alt="9.PNG" />
+</p>
+</div>
+
+
+<div id="org982fa7d" class="figure">
+<p><img src="./10.PNG" alt="10.PNG" />
+</p>
+</div>
+</div>
+</li>
+<li><a id="org9d9f462"></a>plain with some data in a shelf<br />
+<div class="outline-text-6" id="text-1-1-1-4-2">
+
+<div id="orge62ae44" class="figure">
+<p><img src="./11.PNG" alt="11.PNG" />
+</p>
+</div>
+</div>
+</li>
+
+<li><a id="orgfb4042c"></a>display carrier<br />
+<div class="outline-text-6" id="text-1-1-1-4-3">
+
+<div id="org4b8f215" class="figure">
+<p><img src="./12.PNG" alt="12.PNG" />
+</p>
+</div>
+</div>
+
+<ol class="org-ol">
+<li><a id="orgda7a3ef"></a>edit carrier<br />
+<div class="outline-text-7" id="text-1-1-1-4-3-1">
+<p>
+no screenshots, editable fields, some with suggestions others type restrictions
+success and fail messages via colored snackbar
+</p>
+</div>
+<ol class="org-ol">
+<li><a id="orge15308a"></a>success<br /></li>
+<li><a id="org50be665"></a>fail<br /></li>
+</ol>
+</li>
+</ol>
+</li>
+
+<li><a id="org1da0871"></a>add<br />
+<ol class="org-ol">
+<li><a id="org6a0ac0f"></a>confirm slot<br />
+<div class="outline-text-7" id="text-1-1-1-4-4-1">
+<p>
+no screenshot, popup component indicating the storage and slot to scan.
+</p>
+</div>
+</li>
+
+<li><a id="orga55a8c8"></a>success<br />
+<div class="outline-text-7" id="text-1-1-1-4-4-2">
+
+<div id="orge634c3f" class="figure">
+<p><img src="./14.PNG" alt="14.PNG" />
+</p>
+</div>
+</div>
+</li>
+
+<li><a id="org016af83"></a>fail<br />
+<div class="outline-text-7" id="text-1-1-1-4-4-3">
+<p>
+<img src="./13.PNG" alt="13.PNG" />
+<img src="./15.PNG" alt="15.PNG" />
+</p>
+</div>
+</li>
+</ol>
+</li>
+
+<li><a id="orgcced921"></a>collect<br />
+<div class="outline-text-6" id="text-1-1-1-4-5">
+<p>
+In this example at least 3 carriers are in the collect queue, if any of the corresponding storageslot IDs is scanned it is taken from the queue and the correspondance is lifted.
+</p>
+
+<p>
+If another carrier UID would be entered the queuecount would increase to 5 and a snackbar notification with the storageslot info gets shown.
+</p>
+
+<p>
+A way to list the actual UIDs in the queue would be nice, refer to above.
+</p>
+
+<p>
+Just for clarification: it is not an actual queue but a set, but the terminology is established already.
+</p>
+
+
+<div id="org254c1a2" class="figure">
+<p><img src="./18.PNG" alt="18.PNG" />
+</p>
+</div>
+</div>
+<ol class="org-ol">
+<li><a id="orgbdacda6"></a>success<br />
+<div class="outline-text-7" id="text-1-1-1-4-5-1">
+<p>
+no screenshot.
+green snackbar notification that indicates scanning of the correct slot,  table update
+</p>
+</div>
+</li>
+
+
+<li><a id="orge4c9aac"></a>fail<br />
+<ol class="org-ol">
+<li><a id="org37f0dd8"></a>carrier not found<br />
+<div class="outline-text-8" id="text-1-1-1-4-5-2-1">
+
+<div id="org40cd739" class="figure">
+<p><img src="./17.PNG" alt="17.PNG" />
+</p>
+</div>
+</div>
+</li>
+
+<li><a id="org9458847"></a>wrong slot scanned try again<br />
+<div class="outline-text-8" id="text-1-1-1-4-5-2-2">
+<p>
+slot contains no carrier in the collect queue 
+</p>
+</div>
+</li>
+</ol>
+</li>
+</ol>
+</li>
+
+<li><a id="org87590df"></a>delete<br />
+<ol class="org-ol">
+<li><a id="org5baf241"></a>success<br />
+<div class="outline-text-7" id="text-1-1-1-4-6-1">
+
+<div id="org25ed1ad" class="figure">
+<p><img src="./16.PNG" alt="16.PNG" />
+</p>
+</div>
+</div>
+</li>
+
+<li><a id="org2559fae"></a>fail<br />
+<ol class="org-ol">
+<li><a id="orgf009087"></a>carrier doesnt exist<br />
+<div class="outline-text-8" id="text-1-1-1-4-6-2-1">
+
+<div id="org8b002ea" class="figure">
+<p><img src="./17.PNG" alt="17.PNG" />
+</p>
+</div>
+</div>
+</li>
+</ol>
+</li>
+</ol>
+</li>
+</ol>
+</li>
+<li><a id="orgacd6279"></a>setup<sub>center</sub><br />
+<div class="outline-text-5" id="text-1-1-1-5">
+<p>
+This page facilitates creating jobs, allocating carriers to them and finishing them.
+</p>
+
+<p>
+The basis of each job or board is a list of article-count pairs.
+</p>
+
+<p>
+This list can be provided as a csv file or entered manually.
+</p>
+
+<p>
+Additionally a job has an assigned machine, time slot, a count and a status.
+</p>
+
+<p>
+After a job with his parameters has been created a carrier for each article needs to be chosen which will be marked as reserved - this is called pre-setup.
+</p>
+
+<p>
+Once the pre-setup is complete the carriers of a job can be collected from the material<sub>storage</sub> page.
+</p>
+
+<p>
+After that the production process in the real world happens.
+After the job is finished the user provides the actual usage of articles for each carrier and an optional note.
+By marking a jopb conpleted the carriers are no longer marked as reserved and need to be restored, discarded or left on the machine for the next job if applicable.
+</p>
+
+
+<p>
+The typical user workflow looks like this:
+</p>
+
+<ol class="org-ol">
+<li>create job</li>
+<li>assign carriers to job</li>
+<li>collect carriers</li>
+<li>do the production process in the real world</li>
+<li>mark job as completed and note usage</li>
+<li>re-store the carriers</li>
+</ol>
+</div>
+
+
+<ol class="org-ol">
+<li><a id="org5509cb0"></a>plain<br />
+<div class="outline-text-6" id="text-1-1-1-5-1">
+
+<div id="orgde65fa5" class="figure">
+<p><img src="./20.PNG" alt="20.PNG" />
+</p>
+</div>
+</div>
+</li>
+
+<li><a id="orgbd62edf"></a>create job<br />
+<div class="outline-text-6" id="text-1-1-1-5-2">
+<p>
+<img src="./21.PNG" alt="21.PNG" />
+<img src="./22.PNG" alt="22.PNG" />
+<img src="./25.PNG" alt="25.PNG" />
+</p>
+</div>
+<ol class="org-ol">
+<li><a id="org25927d2"></a>time and date picker<br />
+<div class="outline-text-7" id="text-1-1-1-5-2-1">
+
+<div id="orgf4c32a9" class="figure">
+<p><img src="./23.PNG" alt="23.PNG" />
+</p>
+</div>
+</div>
+</li>
+
+
+<li><a id="org32f558d"></a>timeline of scheduled jobs<br />
+<div class="outline-text-7" id="text-1-1-1-5-2-2">
+
+<div id="orgb084b9b" class="figure">
+<p><img src="./31.png" alt="31.png" />
+</p>
+</div>
+</div>
+</li>
+
+<li><a id="orgef27b43"></a>upload csv<br />
+<div class="outline-text-7" id="text-1-1-1-5-2-3">
+<p>
+no screenshot, but same as on material entry: first the user uploads a file and then a component is mounted so the user can map column headers to field names
+with according snackbar notifications
+</p>
+</div>
+</li>
+<li><a id="org33862d2"></a>fail<br />
+<ol class="org-ol">
+<li><a id="org057e77a"></a>input error<br />
+<div class="outline-text-8" id="text-1-1-1-5-2-4-1">
+
+<div id="org0be4f02" class="figure">
+<p><img src="./24.PNG" alt="24.PNG" />
+</p>
+</div>
+</div>
+</li>
+
+<li><a id="org55c2635"></a>server file error<br />
+<div class="outline-text-8" id="text-1-1-1-5-2-4-2">
+<p>
+notification with error
+</p>
+</div>
+</li>
+</ol>
+</li>
+</ol>
+</li>
+
+<li><a id="org287d14e"></a>pre setup<br />
+<div class="outline-text-6" id="text-1-1-1-5-3">
+<p>
+add  progressbar
+</p>
+
+<p>
+entry = article entry on the left side
+</p>
+</div>
+<ol class="org-ol">
+<li><a id="orge4e3d59"></a>BOM no entry selected<br />
+<div class="outline-text-7" id="text-1-1-1-5-3-1">
+
+<div id="org28262c3" class="figure">
+<p><img src="./26.PNG" alt="26.PNG" />
+</p>
+</div>
+</div>
+</li>
+
+<li><a id="org431074a"></a>BOM entry selected<br />
+<div class="outline-text-7" id="text-1-1-1-5-3-2">
+<p>
+shows available carriers
+</p>
+</div>
+<ol class="org-ol">
+<li><a id="org7051c38"></a>carriers displayed, some with warning<br />
+<div class="outline-text-8" id="text-1-1-1-5-3-2-1">
+
+<div id="orgddc8ae4" class="figure">
+<p><img src="./27.PNG" alt="27.PNG" />
+</p>
+</div>
+</div>
+</li>
+
+<li><a id="orgbe37a6d"></a>no carriers available<br />
+<div class="outline-text-8" id="text-1-1-1-5-3-2-2">
+
+<div id="orge2cee8f" class="figure">
+<p><img src="./1.gif" alt="1.gif" />
+</p>
+</div>
+</div>
+</li>
+
+<li><a id="org20dbf3d"></a>carrier selected<br />
+<div class="outline-text-8" id="text-1-1-1-5-3-2-3">
+
+<div id="orgc7d5868" class="figure">
+<p><img src="./28.PNG" alt="28.PNG" />
+</p>
+</div>
+</div>
+</li>
+<li><a id="orgec50d16"></a>all carriers selected<br />
+<div class="outline-text-8" id="text-1-1-1-5-3-2-4">
+
+<div id="org34c78ed" class="figure">
+<p><img src="./32.PNG" alt="32.PNG" />
+</p>
+</div>
+</div>
+</li>
+</ol>
+</li>
+</ol>
+</li>
+
+
+<li><a id="org447e3ff"></a>finish job<br />
+<div class="outline-text-6" id="text-1-1-1-5-4">
+
+<div id="org927e7c7" class="figure">
+<p><img src="./29.PNG" alt="29.PNG" />
+</p>
+</div>
+</div>
+</li>
+
+<li><a id="org63ca3dd"></a>multiple jobs with different color coding based on state: scheduled, pre-setup-done, collected, finished<br />
+<div class="outline-text-6" id="text-1-1-1-5-5">
+
+<div id="orge3e9003" class="figure">
+<p><img src="./30.PNG" alt="30.PNG" />
+</p>
+</div>
+</div>
+</li>
+</ol>
+</li>
+</ol>
+</div>
+</div>
+
+<div id="outline-container-org43256a8" class="outline-3">
+<h3 id="org43256a8"><span class="section-number-3">1.2.</span> API description</h3>
+<div class="outline-text-3" id="text-1-2">
+</div>
+<div id="outline-container-orgf501e27" class="outline-4">
+<h4 id="orgf501e27"><span class="section-number-4">1.2.1.</span> login</h4>
+<div class="outline-text-4" id="text-1-2-1">
+<ul class="org-ul">
+<li><p>
+/api/token/obtain
+</p>
+<div class="org-src-container">
+<pre class="src src-js"><span style="color: #0000cd; font-weight: bold;">{</span><span style="color: #ff4ea3;">"method"</span>: <span style="color: #ff4ea3;">"POST"</span>,
+ <span style="color: #ff4ea3;">"url"</span>:<span style="color: #ff4ea3;">"/api/token/obtain"</span>,
+ <span style="color: #ff4ea3;">"headers"</span>:<span style="color: #5fafd7; font-weight: bold;">[</span>
+   <span style="color: #ff4ea3;">"request"</span>: <span style="color: #a1db00; font-weight: bold;">[</span>
+     <span style="color: #ff4ea3;">"Accept"</span>: <span style="color: #ff4ea3;">"application/json, text/plain, */*"</span>,
+     <span style="color: #ff4ea3;">"Content-Type"</span>: <span style="color: #ff4ea3;">"application/json"</span>,
+   <span style="color: #a1db00; font-weight: bold;">]</span>,
+   <span style="color: #ff4ea3;">"response"</span>: <span style="color: #a1db00; font-weight: bold;">[</span>
+    <span style="color: #ff4ea3;">"Content-Type"</span>: <span style="color: #ff4ea3;">"application/json"</span>,
+   <span style="color: #a1db00; font-weight: bold;">]</span>
+ <span style="color: #5fafd7; font-weight: bold;">]</span>,
+ <span style="color: #ff4ea3;">"contents"</span>: <span style="color: #5fafd7; font-weight: bold;">[</span>
+   <span style="color: #ff4ea3;">"request"</span>: <span style="color: #a1db00; font-weight: bold;">[</span>
+    <span style="color: #ff4ea3;">"username"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+    <span style="color: #ff4ea3;">"password"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>
+   <span style="color: #a1db00; font-weight: bold;">]</span>,
+   <span style="color: #ff4ea3;">"response"</span>:<span style="color: #a1db00; font-weight: bold;">[</span>
+    <span style="color: #ff4ea3;">"refresh"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+    <span style="color: #ff4ea3;">"access"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+    <span style="color: #ff4ea3;">"user_id"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"integer"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+    <span style="color: #ff4ea3;">"username"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+    <span style="color: #ff4ea3;">"user_role"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>
+   <span style="color: #a1db00; font-weight: bold;">]</span>
+ <span style="color: #5fafd7; font-weight: bold;">]</span>
+<span style="color: #0000cd; font-weight: bold;">}</span>
+</pre>
+</div></li>
+<li><p>
+/api/token/refresh
+</p>
+<div class="org-src-container">
+<pre class="src src-js"><span style="color: #0000cd; font-weight: bold;">{</span><span style="color: #ff4ea3;">"method"</span>: <span style="color: #ff4ea3;">"POST"</span>,
+ <span style="color: #ff4ea3;">"url"</span>:<span style="color: #ff4ea3;">"/api/token/refresh"</span>,
+ <span style="color: #ff4ea3;">"headers"</span>:<span style="color: #5fafd7; font-weight: bold;">[</span>
+   <span style="color: #ff4ea3;">"request"</span>: <span style="color: #a1db00; font-weight: bold;">[</span>
+     <span style="color: #ff4ea3;">"Accept"</span>: <span style="color: #ff4ea3;">"application/json, text/plain, */*"</span>,
+     <span style="color: #ff4ea3;">"Content-Type"</span>: <span style="color: #ff4ea3;">"application/json"</span>,
+   <span style="color: #a1db00; font-weight: bold;">]</span>,
+   <span style="color: #ff4ea3;">"response"</span>: <span style="color: #a1db00; font-weight: bold;">[</span>
+    <span style="color: #ff4ea3;">"Content-Type"</span>: <span style="color: #ff4ea3;">"application/json"</span>,
+
+   <span style="color: #a1db00; font-weight: bold;">]</span>
+ <span style="color: #5fafd7; font-weight: bold;">]</span>,
+ <span style="color: #ff4ea3;">"contents"</span>: <span style="color: #5fafd7; font-weight: bold;">[</span>
+   <span style="color: #ff4ea3;">"request"</span>: <span style="color: #a1db00; font-weight: bold;">[</span>
+    <span style="color: #ff4ea3;">"refresh"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+   <span style="color: #a1db00; font-weight: bold;">]</span>,
+   <span style="color: #ff4ea3;">"response"</span>:<span style="color: #a1db00; font-weight: bold;">[</span>
+    <span style="color: #ff4ea3;">"refresh"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+    <span style="color: #ff4ea3;">"access"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+   <span style="color: #a1db00; font-weight: bold;">]</span>
+ <span style="color: #5fafd7; font-weight: bold;">]</span>
+<span style="color: #0000cd; font-weight: bold;">}</span>
+</pre>
+</div></li>
+</ul>
+</div>
+</div>
+
+<div id="outline-container-org817618f" class="outline-4">
+<h4 id="org817618f"><span class="section-number-4">1.2.2.</span> dashboard</h4>
+<div class="outline-text-4" id="text-1-2-2">
+<ul class="org-ul">
+<li><p>
+get<sub>dashboard</sub><sub>data</sub>
+</p>
+<div class="org-src-container">
+<pre class="src src-js"><span style="color: #0000cd; font-weight: bold;">{</span><span style="color: #ff4ea3;">"method"</span>: <span style="color: #ff4ea3;">"GET"</span>,
+ <span style="color: #ff4ea3;">"url"</span>:<span style="color: #ff4ea3;">"/api/get_dashboard_data"</span>,
+ <span style="color: #ff4ea3;">"headers"</span>:<span style="color: #5fafd7; font-weight: bold;">[</span>
+   <span style="color: #ff4ea3;">"request"</span>: <span style="color: #a1db00; font-weight: bold;">[</span>
+     <span style="color: #ff4ea3;">"Accept"</span>: <span style="color: #ff4ea3;">"application/json, text/plain, */*"</span>,
+     <span style="color: #ff4ea3;">"Authorization"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span><span style="color: #ff4ea3; font-weight: bold;">}</span>, 
+   <span style="color: #a1db00; font-weight: bold;">]</span>,
+   <span style="color: #ff4ea3;">"response"</span>: <span style="color: #a1db00; font-weight: bold;">[</span>
+    <span style="color: #ff4ea3;">"Content-Type"</span>: <span style="color: #ff4ea3;">"application/json"</span>,
+   <span style="color: #a1db00; font-weight: bold;">]</span>
+ <span style="color: #5fafd7; font-weight: bold;">]</span>,
+ <span style="color: #ff4ea3;">"contents"</span>: <span style="color: #5fafd7; font-weight: bold;">[</span>
+   <span style="color: #ff4ea3;">"request"</span>: <span style="color: #a1db00; font-weight: bold;">[]</span>,
+   <span style="color: #ff4ea3;">"response"</span>:<span style="color: #a1db00; font-weight: bold;">[</span>
+    <span style="color: #ff4ea3;">"carrier_count_no_archived"</span>:      <span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"integer"</span><span style="color: #ff4ea3; font-weight: bold;">}</span>,
+    <span style="color: #ff4ea3;">"carrier_count_transit"</span>:          <span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"integer"</span><span style="color: #ff4ea3; font-weight: bold;">}</span>,
+    <span style="color: #ff4ea3;">"carrier_count_reserved_for_job"</span>: <span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"integer"</span><span style="color: #ff4ea3; font-weight: bold;">}</span>,   
+    <span style="color: #ff4ea3;">"carrier_count_no_delivered"</span>:     <span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"integer"</span><span style="color: #ff4ea3; font-weight: bold;">}</span>,
+    <span style="color: #ff4ea3;">"storage_total_capacity"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"integer"</span><span style="color: #ff4ea3; font-weight: bold;">}</span>,
+    <span style="color: #ff4ea3;">"storage_used_capacity"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"integer"</span><span style="color: #ff4ea3; font-weight: bold;">}</span>,
+    <span style="color: #ff4ea3;">"setup_center_count_finished"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"integer"</span><span style="color: #ff4ea3; font-weight: bold;">}</span>,
+    <span style="color: #ff4ea3;">"setup_center_count_unfinished"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"integer"</span><span style="color: #ff4ea3; font-weight: bold;">}</span>,
+    <span style="color: #ff4ea3;">"setup_center_count_unfinished_no_pre_setup"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"integer"</span><span style="color: #ff4ea3; font-weight: bold;">}</span>,
+    <span style="color: #ff4ea3;">"setup_center_count_unfinished_not_collected"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"integer"</span><span style="color: #ff4ea3; font-weight: bold;">}</span>,
+   <span style="color: #a1db00; font-weight: bold;">]</span>
+ <span style="color: #5fafd7; font-weight: bold;">]</span>
+<span style="color: #0000cd; font-weight: bold;">}</span>
+</pre>
+</div></li>
+</ul>
+</div>
+</div>
+<div id="outline-container-orga417128" class="outline-4">
+<h4 id="orga417128"><span class="section-number-4">1.2.3.</span> material entry</h4>
+<div class="outline-text-4" id="text-1-2-3">
+<ul class="org-ul">
+<li><p>
+get<sub>carriers</sub>
+</p>
+<div class="org-src-container">
+<pre class="src src-js"><span style="color: #0000cd; font-weight: bold;">{</span><span style="color: #ff4ea3;">"method"</span>: <span style="color: #ff4ea3;">"GET"</span>,
+ <span style="color: #ff4ea3;">"url"</span>:<span style="color: #ff4ea3;">"/api/get_carriers"</span>,
+ <span style="color: #ff4ea3;">"url_args"</span>: <span style="color: #5fafd7; font-weight: bold;">{</span>
+     <span style="color: #ff4ea3;">"page"</span> :<span style="color: #a1db00; font-weight: bold;">{</span><span style="color: #ff4ea3;">"type"</span>:<span style="color: #ff4ea3;">"integer"</span><span style="color: #a1db00; font-weight: bold;">}</span>,
+     <span style="color: #ff4ea3;">"page_size"</span>:<span style="color: #a1db00; font-weight: bold;">{</span><span style="color: #ff4ea3;">"type"</span>:<span style="color: #ff4ea3;">"integer"</span><span style="color: #a1db00; font-weight: bold;">}</span>,
+     <span style="color: #ff4ea3;">"ordering"</span>:<span style="color: #a1db00; font-weight: bold;">{</span><span style="color: #ff4ea3;">"type"</span>:<span style="color: #ff4ea3;">"string"</span><span style="color: #a1db00; font-weight: bold;">}</span>,
+     <span style="color: #ff4ea3;">"uid"</span>:<span style="color: #a1db00; font-weight: bold;">{</span><span style="color: #ff4ea3;">"type"</span>:<span style="color: #ff4ea3;">"string"</span><span style="color: #a1db00; font-weight: bold;">}</span>,
+     <span style="color: #ff4ea3;">"article_name"</span>:<span style="color: #a1db00; font-weight: bold;">{</span><span style="color: #ff4ea3;">"type"</span>:<span style="color: #ff4ea3;">"string"</span><span style="color: #a1db00; font-weight: bold;">}</span>,
+     <span style="color: #ff4ea3;">"description"</span>:<span style="color: #a1db00; font-weight: bold;">{</span><span style="color: #ff4ea3;">"type"</span>:<span style="color: #ff4ea3;">"string"</span><span style="color: #a1db00; font-weight: bold;">}</span>,
+     <span style="color: #ff4ea3;">"provider"</span>:<span style="color: #a1db00; font-weight: bold;">{</span><span style="color: #ff4ea3;">"type"</span>:<span style="color: #ff4ea3;">"string"</span><span style="color: #a1db00; font-weight: bold;">}</span>,
+     <span style="color: #ff4ea3;">"manufacturer"</span>:<span style="color: #a1db00; font-weight: bold;">{</span><span style="color: #ff4ea3;">"type"</span>:<span style="color: #ff4ea3;">"string"</span><span style="color: #a1db00; font-weight: bold;">}</span>,
+     <span style="color: #ff4ea3;">"lot_number"</span>:<span style="color: #a1db00; font-weight: bold;">{</span><span style="color: #ff4ea3;">"type"</span>:<span style="color: #ff4ea3;">"integer"</span><span style="color: #a1db00; font-weight: bold;">}</span>,
+     <span style="color: #ff4ea3;">"container_type"</span>:<span style="color: #a1db00; font-weight: bold;">{</span><span style="color: #ff4ea3;">"type"</span>:<span style="color: #ff4ea3;">"integer"</span><span style="color: #a1db00; font-weight: bold;">}</span>,
+     <span style="color: #ff4ea3;">"sap_number"</span>:<span style="color: #a1db00; font-weight: bold;">{</span><span style="color: #ff4ea3;">"type"</span>:<span style="color: #ff4ea3;">"string"</span><span style="color: #a1db00; font-weight: bold;">}</span>,
+     <span style="color: #ff4ea3;">"diameter"</span>:<span style="color: #a1db00; font-weight: bold;">{</span><span style="color: #ff4ea3;">"type"</span>:<span style="color: #ff4ea3;">"integer"</span><span style="color: #a1db00; font-weight: bold;">}</span>,
+     <span style="color: #ff4ea3;">"width"</span>:<span style="color: #a1db00; font-weight: bold;">{</span><span style="color: #ff4ea3;">"type"</span>:<span style="color: #ff4ea3;">"integer"</span><span style="color: #a1db00; font-weight: bold;">}</span>,
+     <span style="color: #ff4ea3;">"delivered"</span>:<span style="color: #a1db00; font-weight: bold;">{</span><span style="color: #ff4ea3;">"type"</span>:<span style="color: #ff4ea3;">"boolean"</span><span style="color: #a1db00; font-weight: bold;">}</span>,
+     <span style="color: #ff4ea3;">"storage"</span>:<span style="color: #a1db00; font-weight: bold;">{</span><span style="color: #ff4ea3;">"type"</span>:<span style="color: #ff4ea3;">"string"</span><span style="color: #a1db00; font-weight: bold;">}</span>,
+     <span style="color: #ff4ea3;">"machine"</span>:<span style="color: #a1db00; font-weight: bold;">{</span><span style="color: #ff4ea3;">"type"</span>:<span style="color: #ff4ea3;">"string"</span><span style="color: #a1db00; font-weight: bold;">}</span>,
+     <span style="color: #5fafd7; font-weight: bold;">}</span>
+ ,
+ <span style="color: #ff4ea3;">"headers"</span>:<span style="color: #5fafd7; font-weight: bold;">[</span>
+   <span style="color: #ff4ea3;">"request"</span>: <span style="color: #a1db00; font-weight: bold;">[</span>
+     <span style="color: #ff4ea3;">"Accept"</span>: <span style="color: #ff4ea3;">"application/json, text/plain, */*"</span>,
+     <span style="color: #ff4ea3;">"Content-Type"</span>: <span style="color: #ff4ea3;">"application/json"</span>,
+     <span style="color: #ff4ea3;">"Authorization"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span><span style="color: #ff4ea3; font-weight: bold;">}</span>, 
+   <span style="color: #a1db00; font-weight: bold;">]</span>,
+   <span style="color: #ff4ea3;">"response"</span>: <span style="color: #a1db00; font-weight: bold;">[</span>
+    <span style="color: #ff4ea3;">"Content-Type"</span>: <span style="color: #ff4ea3;">"application/json"</span>,
+   <span style="color: #a1db00; font-weight: bold;">]</span>
+ <span style="color: #5fafd7; font-weight: bold;">]</span>,
+ <span style="color: #ff4ea3;">"contents"</span>: <span style="color: #5fafd7; font-weight: bold;">[</span>
+   <span style="color: #ff4ea3;">"request"</span>: <span style="color: #a1db00; font-weight: bold;">[</span> <span style="color: #a1db00; font-weight: bold;">]</span>,
+   <span style="color: #ff4ea3;">"response"</span>:<span style="color: #a1db00; font-weight: bold;">[</span>
+    <span style="color: #ff4ea3;">"count"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"integer"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+    <span style="color: #ff4ea3;">"next"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+    <span style="color: #ff4ea3;">"previous"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+    <span style="color: #ff4ea3;">"results"</span>:<span style="color: #ff4ea3; font-weight: bold;">[</span><span style="color: #00d7af; font-weight: bold;">{</span><span style="color: #ff4ea3;">"uid"</span>:<span style="color: #ff8700; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #ff8700; font-weight: bold;">}</span>,
+                <span style="color: #ff4ea3;">"article"</span>:<span style="color: #ff8700; font-weight: bold;">[</span><span style="color: #ff4ea3;">"name"</span>:<span style="color: #af5fff; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #af5fff; font-weight: bold;">}</span>,
+                           <span style="color: #ff4ea3;">"description"</span>:<span style="color: #af5fff; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #af5fff; font-weight: bold;">}</span>,
+                           <span style="color: #ff4ea3;">"provider"</span>:<span style="color: #af5fff; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #af5fff; font-weight: bold;">}</span>,
+                           <span style="color: #ff4ea3;">"manufacturer"</span>:<span style="color: #af5fff; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #af5fff; font-weight: bold;">}</span>,
+                           <span style="color: #ff4ea3;">"sap_number"</span>:<span style="color: #af5fff; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #af5fff; font-weight: bold;">}</span>,
+                           <span style="color: #ff8700; font-weight: bold;">]</span>,
+                <span style="color: #ff4ea3;">"container_type"</span>:<span style="color: #ff8700; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"integer"</span> <span style="color: #ff8700; font-weight: bold;">}</span>,
+                <span style="color: #ff4ea3;">"quantity_original"</span>:<span style="color: #ff8700; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"integer"</span> <span style="color: #ff8700; font-weight: bold;">}</span>,
+                <span style="color: #ff4ea3;">"quantity_current"</span>:<span style="color: #ff8700; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"integer"</span> <span style="color: #ff8700; font-weight: bold;">}</span>,
+                <span style="color: #ff4ea3;">"diameter"</span>:<span style="color: #ff8700; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"integer"</span> <span style="color: #ff8700; font-weight: bold;">}</span>,
+                <span style="color: #ff4ea3;">"width"</span>:<span style="color: #ff8700; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"integer"</span> <span style="color: #ff8700; font-weight: bold;">}</span>,
+                <span style="color: #ff4ea3;">"lot_number"</span>:<span style="color: #ff8700; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"integer"</span> <span style="color: #ff8700; font-weight: bold;">}</span>,
+                <span style="color: #ff4ea3;">"reserved"</span>:<span style="color: #ff8700; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"boolean"</span> <span style="color: #ff8700; font-weight: bold;">}</span>,
+                <span style="color: #ff4ea3;">"archived"</span>:<span style="color: #ff8700; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"boolean"</span><span style="color: #ff8700; font-weight: bold;">}</span>,
+                <span style="color: #ff4ea3;">"delivered"</span>:<span style="color: #ff8700; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"boolean"</span> <span style="color: #ff8700; font-weight: bold;">}</span>,
+                <span style="color: #ff4ea3;">"storage"</span>:<span style="color: #ff8700; font-weight: bold;">{</span><span style="color: #ff4ea3;">"type"</span>:<span style="color: #ff4ea3;">"string"</span><span style="color: #ff8700; font-weight: bold;">}</span>,
+                <span style="color: #ff4ea3;">"machine"</span>:<span style="color: #ff8700; font-weight: bold;">{</span><span style="color: #ff4ea3;">"type"</span>:<span style="color: #ff4ea3;">"string"</span><span style="color: #ff8700; font-weight: bold;">}</span>,
+               <span style="color: #00d7af; font-weight: bold;">}</span>,
+               ...
+              <span style="color: #ff4ea3; font-weight: bold;">]</span>,
+
+   <span style="color: #a1db00; font-weight: bold;">]</span>,
+ <span style="color: #5fafd7; font-weight: bold;">]</span>,
+<span style="color: #0000cd; font-weight: bold;">}</span>
+</pre>
+</div></li>
+<li><p>
+get<sub>articles</sub>
+</p>
+<div class="org-src-container">
+<pre class="src src-js"><span style="color: #0000cd; font-weight: bold;">{</span><span style="color: #ff4ea3;">"method"</span>: <span style="color: #ff4ea3;">"GET"</span>,
+ <span style="color: #ff4ea3;">"url"</span>:<span style="color: #ff4ea3;">"/api/get_articles"</span>,
+ <span style="color: #ff4ea3;">"url_args"</span>: <span style="color: #5fafd7; font-weight: bold;">[</span>
+     <span style="color: #ff4ea3;">"page"</span> :<span style="color: #a1db00; font-weight: bold;">{</span><span style="color: #ff4ea3;">"type"</span>:<span style="color: #ff4ea3;">"integer"</span><span style="color: #a1db00; font-weight: bold;">}</span>,
+     <span style="color: #ff4ea3;">"page_size"</span>:<span style="color: #a1db00; font-weight: bold;">{</span><span style="color: #ff4ea3;">"type"</span>:<span style="color: #ff4ea3;">"integer"</span><span style="color: #a1db00; font-weight: bold;">}</span>,
+     <span style="color: #ff4ea3;">"ordering"</span>:<span style="color: #a1db00; font-weight: bold;">{</span><span style="color: #ff4ea3;">"type"</span>:<span style="color: #ff4ea3;">"string"</span><span style="color: #a1db00; font-weight: bold;">}</span>,
+     <span style="color: #ff4ea3;">"name"</span>:<span style="color: #a1db00; font-weight: bold;">{</span><span style="color: #ff4ea3;">"type"</span>:<span style="color: #ff4ea3;">"string"</span><span style="color: #a1db00; font-weight: bold;">}</span>,
+     <span style="color: #ff4ea3;">"description"</span>:<span style="color: #a1db00; font-weight: bold;">{</span><span style="color: #ff4ea3;">"type"</span>:<span style="color: #ff4ea3;">"string"</span><span style="color: #a1db00; font-weight: bold;">}</span>,
+     <span style="color: #ff4ea3;">"provider"</span>:<span style="color: #a1db00; font-weight: bold;">{</span><span style="color: #ff4ea3;">"type"</span>:<span style="color: #ff4ea3;">"string"</span><span style="color: #a1db00; font-weight: bold;">}</span>,
+     <span style="color: #ff4ea3;">"manufacturer"</span>:<span style="color: #a1db00; font-weight: bold;">{</span><span style="color: #ff4ea3;">"type"</span>:<span style="color: #ff4ea3;">"string"</span><span style="color: #a1db00; font-weight: bold;">}</span>,
+     <span style="color: #ff4ea3;">"sap_number"</span>:<span style="color: #a1db00; font-weight: bold;">{</span><span style="color: #ff4ea3;">"type"</span>:<span style="color: #ff4ea3;">"string"</span><span style="color: #a1db00; font-weight: bold;">}</span>,
+ <span style="color: #5fafd7; font-weight: bold;">]</span>
+ <span style="color: #ff4ea3;">"headers"</span>:<span style="color: #5fafd7; font-weight: bold;">[</span>
+     <span style="color: #ff4ea3;">"request"</span>: <span style="color: #a1db00; font-weight: bold;">[</span>
+         <span style="color: #ff4ea3;">"Accept"</span>: <span style="color: #ff4ea3;">"application/json, text/plain, */*"</span>,
+         <span style="color: #ff4ea3;">"Content-Type"</span>: <span style="color: #ff4ea3;">"application/json"</span>,
+         <span style="color: #ff4ea3;">"Authorization"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span><span style="color: #ff4ea3; font-weight: bold;">}</span>, 
+     <span style="color: #a1db00; font-weight: bold;">]</span>,
+     <span style="color: #ff4ea3;">"response"</span>: <span style="color: #a1db00; font-weight: bold;">[</span>
+         <span style="color: #ff4ea3;">"Content-Type"</span>: <span style="color: #ff4ea3;">"application/json"</span>,
+     <span style="color: #a1db00; font-weight: bold;">]</span>
+ <span style="color: #5fafd7; font-weight: bold;">]</span>,
+ <span style="color: #ff4ea3;">"contents"</span>: <span style="color: #5fafd7; font-weight: bold;">[</span>
+     <span style="color: #ff4ea3;">"request"</span>: <span style="color: #a1db00; font-weight: bold;">[</span> <span style="color: #a1db00; font-weight: bold;">]</span>,
+     <span style="color: #ff4ea3;">"response"</span>:<span style="color: #a1db00; font-weight: bold;">[</span>
+         <span style="color: #ff4ea3;">"count"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"integer"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+         <span style="color: #ff4ea3;">"next"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+         <span style="color: #ff4ea3;">"previous"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+         <span style="color: #ff4ea3;">"results"</span>:<span style="color: #ff4ea3; font-weight: bold;">[</span><span style="color: #ff4ea3;">"name"</span>:<span style="color: #00d7af; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #00d7af; font-weight: bold;">}</span>,
+                    <span style="color: #ff4ea3;">"description"</span>:<span style="color: #00d7af; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #00d7af; font-weight: bold;">}</span>,
+                    <span style="color: #ff4ea3;">"provider"</span>:<span style="color: #00d7af; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #00d7af; font-weight: bold;">}</span>,
+                    <span style="color: #ff4ea3;">"manufacturer"</span>:<span style="color: #00d7af; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #00d7af; font-weight: bold;">}</span>,
+                    <span style="color: #ff4ea3;">"sap_number"</span>:<span style="color: #00d7af; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #00d7af; font-weight: bold;">}</span>,
+                   <span style="color: #ff4ea3; font-weight: bold;">]</span>,
+     <span style="color: #a1db00; font-weight: bold;">]</span>,
+ <span style="color: #5fafd7; font-weight: bold;">]</span>,
+<span style="color: #0000cd; font-weight: bold;">}</span>
+</pre>
+</div></li>
+<li><p>
+is<sub>article</sub><sub>name</sub><sub>unique</sub>
+</p>
+<div class="org-src-container">
+<pre class="src src-js"><span style="color: #0000cd; font-weight: bold;">{</span><span style="color: #ff4ea3;">"method"</span>: <span style="color: #ff4ea3;">"GET"</span>,
+ <span style="color: #ff4ea3;">"url"</span>:<span style="color: #ff4ea3;">"/api/is_article_name_unique"</span>,
+ <span style="color: #ff4ea3;">"url_args"</span>:<span style="color: #5fafd7; font-weight: bold;">[</span><span style="color: #ff4ea3;">"name"</span>:<span style="color: #a1db00; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #a1db00; font-weight: bold;">}</span>,<span style="color: #5fafd7; font-weight: bold;">]</span>
+ <span style="color: #ff4ea3;">"headers"</span>:<span style="color: #5fafd7; font-weight: bold;">[</span>
+   <span style="color: #ff4ea3;">"request"</span>: <span style="color: #a1db00; font-weight: bold;">[</span>
+     <span style="color: #ff4ea3;">"Accept"</span>: <span style="color: #ff4ea3;">"application/json, text/plain, */*"</span>,
+     <span style="color: #ff4ea3;">"Authorization"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span><span style="color: #ff4ea3; font-weight: bold;">}</span>, 
+   <span style="color: #a1db00; font-weight: bold;">]</span>,
+   <span style="color: #ff4ea3;">"response"</span>: <span style="color: #a1db00; font-weight: bold;">[</span>
+    <span style="color: #ff4ea3;">"Content-Type"</span>: <span style="color: #ff4ea3;">"application/json"</span>,
+   <span style="color: #a1db00; font-weight: bold;">]</span>
+ <span style="color: #5fafd7; font-weight: bold;">]</span>,
+ <span style="color: #ff4ea3;">"contents"</span>: <span style="color: #5fafd7; font-weight: bold;">[</span>
+   <span style="color: #ff4ea3;">"request"</span>: <span style="color: #a1db00; font-weight: bold;">[]</span>,
+   <span style="color: #ff4ea3;">"response"</span>:<span style="color: #a1db00; font-weight: bold;">[</span>
+   <span style="color: #ff4ea3;">"unique"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"boolean"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+   <span style="color: #a1db00; font-weight: bold;">]</span>
+ <span style="color: #5fafd7; font-weight: bold;">]</span>
+<span style="color: #0000cd; font-weight: bold;">}</span>
+</pre>
+</div></li>
+<li><p>
+is<sub>carrier</sub><sub>uid</sub><sub>unique</sub>
+</p>
+<div class="org-src-container">
+<pre class="src src-js"><span style="color: #0000cd; font-weight: bold;">{</span><span style="color: #ff4ea3;">"method"</span>: <span style="color: #ff4ea3;">"GET"</span>,
+ <span style="color: #ff4ea3;">"url"</span>:<span style="color: #ff4ea3;">"/api/is_carrier_uid_unique"</span>,
+ <span style="color: #ff4ea3;">"url_args"</span>:<span style="color: #5fafd7; font-weight: bold;">[</span><span style="color: #ff4ea3;">"uid"</span>:<span style="color: #a1db00; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #a1db00; font-weight: bold;">}</span>,<span style="color: #5fafd7; font-weight: bold;">]</span>
+ <span style="color: #ff4ea3;">"headers"</span>:<span style="color: #5fafd7; font-weight: bold;">[</span>
+   <span style="color: #ff4ea3;">"request"</span>: <span style="color: #a1db00; font-weight: bold;">[</span>
+     <span style="color: #ff4ea3;">"Accept"</span>: <span style="color: #ff4ea3;">"application/json, text/plain, */*"</span>,
+     <span style="color: #ff4ea3;">"Authorization"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span><span style="color: #ff4ea3; font-weight: bold;">}</span>, 
+   <span style="color: #a1db00; font-weight: bold;">]</span>,
+   <span style="color: #ff4ea3;">"response"</span>: <span style="color: #a1db00; font-weight: bold;">[</span>
+    <span style="color: #ff4ea3;">"Content-Type"</span>: <span style="color: #ff4ea3;">"application/json"</span>,
+   <span style="color: #a1db00; font-weight: bold;">]</span>
+ <span style="color: #5fafd7; font-weight: bold;">]</span>,
+ <span style="color: #ff4ea3;">"contents"</span>: <span style="color: #5fafd7; font-weight: bold;">[</span>
+   <span style="color: #ff4ea3;">"request"</span>: <span style="color: #a1db00; font-weight: bold;">[]</span>,
+   <span style="color: #ff4ea3;">"response"</span>:<span style="color: #a1db00; font-weight: bold;">[</span>
+   <span style="color: #ff4ea3;">"unique"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"boolean"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+   <span style="color: #a1db00; font-weight: bold;">]</span>
+ <span style="color: #5fafd7; font-weight: bold;">]</span>
+<span style="color: #0000cd; font-weight: bold;">}</span>
+</pre>
+</div></li>
+<li><p>
+import<sub>article</sub>
+</p>
+<div class="org-src-container">
+<pre class="src src-js"><span style="color: #0000cd; font-weight: bold;">{</span><span style="color: #ff4ea3;">"method"</span>: <span style="color: #ff4ea3;">"POST"</span>,
+ <span style="color: #ff4ea3;">"url"</span>:<span style="color: #ff4ea3;">"/api/import_article"</span>,
+ <span style="color: #ff4ea3;">"headers"</span>:<span style="color: #5fafd7; font-weight: bold;">[</span>
+   <span style="color: #ff4ea3;">"request"</span>: <span style="color: #a1db00; font-weight: bold;">[</span>
+     <span style="color: #ff4ea3;">"Accept"</span>: <span style="color: #ff4ea3;">"application/json, text/plain, */*"</span>,
+     <span style="color: #ff4ea3;">"Authorization"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span><span style="color: #ff4ea3; font-weight: bold;">}</span>, 
+              <span style="color: #a1db00; font-weight: bold;">]</span>,
+   <span style="color: #ff4ea3;">"response"</span>: <span style="color: #a1db00; font-weight: bold;">[</span>
+    <span style="color: #ff4ea3;">"Content-Type"</span>: <span style="color: #ff4ea3;">"application/json"</span>,
+               <span style="color: #a1db00; font-weight: bold;">]</span>,
+ <span style="color: #5fafd7; font-weight: bold;">]</span>,
+ <span style="color: #ff4ea3;">"contents"</span>: <span style="color: #5fafd7; font-weight: bold;">[</span>
+   <span style="color: #ff4ea3;">"request"</span>: <span style="color: #a1db00; font-weight: bold;">[</span><span style="color: #ff4ea3;">"name"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+               <span style="color: #ff4ea3;">"description"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+               <span style="color: #ff4ea3;">"manufacturer"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+               <span style="color: #ff4ea3;">"provider"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+               <span style="color: #ff4ea3;">"sap_number"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+              <span style="color: #a1db00; font-weight: bold;">]</span>,
+   <span style="color: #ff4ea3;">"response"</span>:<span style="color: #a1db00; font-weight: bold;">[</span> <span style="color: #ff4ea3;">"success"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"boolean"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+                <span style="color: #ff4ea3;">"message"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+              <span style="color: #a1db00; font-weight: bold;">]</span>,
+ <span style="color: #5fafd7; font-weight: bold;">]</span>,
+<span style="color: #0000cd; font-weight: bold;">}</span>
+</pre>
+</div></li>
+<li><p>
+import<sub>carrier</sub>
+</p>
+<div class="org-src-container">
+<pre class="src src-js"><span style="color: #0000cd; font-weight: bold;">{</span><span style="color: #ff4ea3;">"method"</span>: <span style="color: #ff4ea3;">"POST"</span>,
+ <span style="color: #ff4ea3;">"url"</span>:<span style="color: #ff4ea3;">"/api/import_carrier"</span>,
+ <span style="color: #ff4ea3;">"headers"</span>:<span style="color: #5fafd7; font-weight: bold;">[</span>
+   <span style="color: #ff4ea3;">"request"</span>: <span style="color: #a1db00; font-weight: bold;">[</span>
+     <span style="color: #ff4ea3;">"Accept"</span>: <span style="color: #ff4ea3;">"application/json, text/plain, */*"</span>,
+     <span style="color: #ff4ea3;">"Authorization"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span><span style="color: #ff4ea3; font-weight: bold;">}</span>, 
+              <span style="color: #a1db00; font-weight: bold;">]</span>,
+   <span style="color: #ff4ea3;">"response"</span>: <span style="color: #a1db00; font-weight: bold;">[</span>
+    <span style="color: #ff4ea3;">"Content-Type"</span>: <span style="color: #ff4ea3;">"application/json"</span>,
+               <span style="color: #a1db00; font-weight: bold;">]</span>,
+ <span style="color: #5fafd7; font-weight: bold;">]</span>,
+ <span style="color: #ff4ea3;">"contents"</span>: <span style="color: #5fafd7; font-weight: bold;">[</span>
+   <span style="color: #ff4ea3;">"request"</span>: <span style="color: #a1db00; font-weight: bold;">[</span><span style="color: #ff4ea3;">"uid"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+               <span style="color: #ff4ea3;">"article_name"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+               <span style="color: #ff4ea3;">"container_type"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"integer"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+               <span style="color: #ff4ea3;">"quantity_original"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"integer"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+               <span style="color: #ff4ea3;">"quantity_current"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"integer"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+               <span style="color: #ff4ea3;">"diameter"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"integer"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+               <span style="color: #ff4ea3;">"width"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"integer"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+               <span style="color: #ff4ea3;">"lot_number"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"integer"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+               <span style="color: #ff4ea3;">"reserved"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"boolean"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+               <span style="color: #ff4ea3;">"archived"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"boolean"</span><span style="color: #ff4ea3; font-weight: bold;">}</span>,
+               <span style="color: #ff4ea3;">"delivered"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"boolean"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+               <span style="color: #ff4ea3;">"storage"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span><span style="color: #ff4ea3;">"type"</span>:<span style="color: #ff4ea3;">"string"</span><span style="color: #ff4ea3; font-weight: bold;">}</span>,
+               <span style="color: #ff4ea3;">"machine"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span><span style="color: #ff4ea3;">"type"</span>:<span style="color: #ff4ea3;">"string"</span><span style="color: #ff4ea3; font-weight: bold;">}</span>,
+              <span style="color: #a1db00; font-weight: bold;">]</span>,
+   <span style="color: #ff4ea3;">"response"</span>:<span style="color: #a1db00; font-weight: bold;">[</span> <span style="color: #ff4ea3;">"success"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"boolean"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+                <span style="color: #ff4ea3;">"message"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+              <span style="color: #a1db00; font-weight: bold;">]</span>,
+ <span style="color: #5fafd7; font-weight: bold;">]</span>,
+<span style="color: #0000cd; font-weight: bold;">}</span>
+</pre>
+</div></li>
+<li><p>
+import<sub>articles</sub><sub>file</sub>
+</p>
+<div class="org-src-container">
+<pre class="src src-js"><span style="color: #0000cd; font-weight: bold;">{</span><span style="color: #ff4ea3;">"method"</span>: <span style="color: #ff4ea3;">"POST"</span>,
+ <span style="color: #ff4ea3;">"url"</span>:<span style="color: #ff4ea3;">"/api/import_articles_file"</span>,
+ <span style="color: #ff4ea3;">"headers"</span>:<span style="color: #5fafd7; font-weight: bold;">[</span>
+     <span style="color: #ff4ea3;">"request"</span>: <span style="color: #a1db00; font-weight: bold;">[</span>
+         <span style="color: #ff4ea3;">"Accept"</span>: <span style="color: #ff4ea3;">"application/json, text/plain, */*"</span>,
+         <span style="color: #ff4ea3;">"Authorization"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span><span style="color: #ff4ea3; font-weight: bold;">}</span>,
+         <span style="color: #ff4ea3;">"Connection"</span>:<span style="color: #ff4ea3;">"keep-alive"</span>,
+         <span style="color: #ff4ea3;">"Content-Type"</span>:<span style="color: #ff4ea3;">"multipart/form-data"</span>
+     <span style="color: #a1db00; font-weight: bold;">]</span>,
+     <span style="color: #ff4ea3;">"response"</span>: <span style="color: #a1db00; font-weight: bold;">[</span>
+         <span style="color: #ff4ea3;">"Content-Type"</span>: <span style="color: #ff4ea3;">"application/json"</span>,
+     <span style="color: #a1db00; font-weight: bold;">]</span>,
+ <span style="color: #5fafd7; font-weight: bold;">]</span>,
+ <span style="color: #ff4ea3;">"contents"</span>: <span style="color: #5fafd7; font-weight: bold;">[</span>
+     <span style="color: #ff4ea3;">"request"</span>: file/payload,
+     <span style="color: #ff4ea3;">"response"</span>:<span style="color: #a1db00; font-weight: bold;">[</span> <span style="color: #ff4ea3;">"success"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"boolean"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+                  <span style="color: #ff4ea3;">"file_name"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span><span style="color: #ff4ea3;">"type"</span>:<span style="color: #ff4ea3;">"string"</span><span style="color: #ff4ea3; font-weight: bold;">}</span>,
+                  <span style="color: #ff4ea3;">"file_headers"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+                <span style="color: #a1db00; font-weight: bold;">]</span>,
+ <span style="color: #5fafd7; font-weight: bold;">]</span>,
+<span style="color: #0000cd; font-weight: bold;">}</span>
+</pre>
+</div></li>
+<li><p>
+import<sub>carriers</sub><sub>file</sub>
+</p>
+<div class="org-src-container">
+<pre class="src src-js"><span style="color: #0000cd; font-weight: bold;">{</span><span style="color: #ff4ea3;">"method"</span>: <span style="color: #ff4ea3;">"POST"</span>,
+ <span style="color: #ff4ea3;">"url"</span>:<span style="color: #ff4ea3;">"/api/import_carriers_file"</span>,
+ <span style="color: #ff4ea3;">"headers"</span>:<span style="color: #5fafd7; font-weight: bold;">[</span>
+     <span style="color: #ff4ea3;">"request"</span>: <span style="color: #a1db00; font-weight: bold;">[</span>
+         <span style="color: #ff4ea3;">"Accept"</span>: <span style="color: #ff4ea3;">"application/json, text/plain, */*"</span>,
+         <span style="color: #ff4ea3;">"Authorization"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span><span style="color: #ff4ea3; font-weight: bold;">}</span>,
+         <span style="color: #ff4ea3;">"Connection"</span>:<span style="color: #ff4ea3;">"keep-alive"</span>,
+         <span style="color: #ff4ea3;">"Content-Type"</span>:<span style="color: #ff4ea3;">"multipart/form-data"</span>
+     <span style="color: #a1db00; font-weight: bold;">]</span>,
+     <span style="color: #ff4ea3;">"response"</span>: <span style="color: #a1db00; font-weight: bold;">[</span>
+         <span style="color: #ff4ea3;">"Content-Type"</span>: <span style="color: #ff4ea3;">"application/json"</span>,
+     <span style="color: #a1db00; font-weight: bold;">]</span>,
+ <span style="color: #5fafd7; font-weight: bold;">]</span>,
+ <span style="color: #ff4ea3;">"contents"</span>: <span style="color: #5fafd7; font-weight: bold;">[</span>
+     <span style="color: #ff4ea3;">"request"</span>: file/payload,
+     <span style="color: #ff4ea3;">"response"</span>:<span style="color: #a1db00; font-weight: bold;">[</span> <span style="color: #ff4ea3;">"success"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"boolean"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+                  <span style="color: #ff4ea3;">"file_name"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span><span style="color: #ff4ea3;">"type"</span>:<span style="color: #ff4ea3;">"string"</span><span style="color: #ff4ea3; font-weight: bold;">}</span>,
+                  <span style="color: #ff4ea3;">"file_headers"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+                <span style="color: #a1db00; font-weight: bold;">]</span>,
+ <span style="color: #5fafd7; font-weight: bold;">]</span>,
+<span style="color: #0000cd; font-weight: bold;">}</span>
+</pre>
+</div></li>
+<li><p>
+import<sub>articles</sub><sub>confirm</sub>
+</p>
+<div class="org-src-container">
+<pre class="src src-js"><span style="color: #0000cd; font-weight: bold;">{</span><span style="color: #ff4ea3;">"method"</span>: <span style="color: #ff4ea3;">"POST"</span>,
+ <span style="color: #ff4ea3;">"url"</span>:<span style="color: #ff4ea3;">"/api/import_articles_confirm"</span>,
+ <span style="color: #ff4ea3;">"headers"</span>:<span style="color: #5fafd7; font-weight: bold;">[</span>
+     <span style="color: #ff4ea3;">"request"</span>: <span style="color: #a1db00; font-weight: bold;">[</span>
+         <span style="color: #ff4ea3;">"Accept"</span>: <span style="color: #ff4ea3;">"application/json, text/plain, */*"</span>,
+         <span style="color: #ff4ea3;">"Authorization"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span><span style="color: #ff4ea3; font-weight: bold;">}</span>, 
+     <span style="color: #a1db00; font-weight: bold;">]</span>,
+     <span style="color: #ff4ea3;">"response"</span>: <span style="color: #a1db00; font-weight: bold;">[</span>
+         <span style="color: #ff4ea3;">"Content-Type"</span>: <span style="color: #ff4ea3;">"application/json"</span>,
+     <span style="color: #a1db00; font-weight: bold;">]</span>,
+ <span style="color: #5fafd7; font-weight: bold;">]</span>,
+ <span style="color: #ff4ea3;">"contents"</span>: <span style="color: #5fafd7; font-weight: bold;">[</span>
+     <span style="color: #ff4ea3;">"request"</span>: <span style="color: #a1db00; font-weight: bold;">[</span><span style="color: #ff4ea3;">"file_name"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+                 <span style="color: #ff4ea3;">"mapping"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span><span style="color: #ff4ea3;">"field1"</span>:<span style="color: #ff4ea3;">"form1"</span>,
+                            <span style="color: #ff4ea3;">"field2"</span>:<span style="color: #ff4ea3;">"form2"</span>,
+                            ...
+                           <span style="color: #ff4ea3; font-weight: bold;">}</span>
+                <span style="color: #a1db00; font-weight: bold;">]</span>,
+     <span style="color: #ff4ea3;">"response"</span>:<span style="color: #a1db00; font-weight: bold;">[</span> <span style="color: #ff4ea3;">"success"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"boolean"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+                  <span style="color: #ff4ea3;">"message"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+                <span style="color: #a1db00; font-weight: bold;">]</span>,
+ <span style="color: #5fafd7; font-weight: bold;">]</span>,
+<span style="color: #0000cd; font-weight: bold;">}</span>
+</pre>
+</div></li>
+<li><p>
+import<sub>carriers</sub><sub>confirm</sub>
+</p>
+<div class="org-src-container">
+<pre class="src src-js"><span style="color: #0000cd; font-weight: bold;">{</span><span style="color: #ff4ea3;">"method"</span>: <span style="color: #ff4ea3;">"POST"</span>,
+   <span style="color: #ff4ea3;">"url"</span>:<span style="color: #ff4ea3;">"/api/import_articles_confirm"</span>,
+   <span style="color: #ff4ea3;">"headers"</span>:<span style="color: #5fafd7; font-weight: bold;">[</span>
+     <span style="color: #ff4ea3;">"request"</span>: <span style="color: #a1db00; font-weight: bold;">[</span>
+       <span style="color: #ff4ea3;">"Accept"</span>: <span style="color: #ff4ea3;">"application/json, text/plain, */*"</span>,
+       <span style="color: #ff4ea3;">"Authorization"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span><span style="color: #ff4ea3; font-weight: bold;">}</span>, 
+                <span style="color: #a1db00; font-weight: bold;">]</span>,
+     <span style="color: #ff4ea3;">"response"</span>: <span style="color: #a1db00; font-weight: bold;">[</span>
+      <span style="color: #ff4ea3;">"Content-Type"</span>: <span style="color: #ff4ea3;">"application/json"</span>,
+                 <span style="color: #a1db00; font-weight: bold;">]</span>,
+   <span style="color: #5fafd7; font-weight: bold;">]</span>,
+   <span style="color: #ff4ea3;">"contents"</span>: <span style="color: #5fafd7; font-weight: bold;">[</span>
+       <span style="color: #ff4ea3;">"request"</span>: <span style="color: #a1db00; font-weight: bold;">[</span>
+           <span style="color: #ff4ea3;">"file_name"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+           <span style="color: #ff4ea3;">"mapping"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span>
+               <span style="color: #ff4ea3;">"field1"</span>:<span style="color: #ff4ea3;">"form1"</span>,
+               <span style="color: #ff4ea3;">"field2"</span>:<span style="color: #ff4ea3;">"form2"</span>,
+               ...
+           <span style="color: #ff4ea3; font-weight: bold;">}</span>
+       <span style="color: #a1db00; font-weight: bold;">]</span>,
+       <span style="color: #ff4ea3;">"response"</span>:<span style="color: #a1db00; font-weight: bold;">[</span> <span style="color: #ff4ea3;">"success"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"boolean"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+                    <span style="color: #ff4ea3;">"message"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+                  <span style="color: #a1db00; font-weight: bold;">]</span>,
+   <span style="color: #5fafd7; font-weight: bold;">]</span>,
+<span style="color: #0000cd; font-weight: bold;">}</span>
+</pre>
+</div></li>
+<li><p>
+print<sub>carrier</sub><sub>selection</sub>
+</p>
+<div class="org-src-container">
+<pre class="src src-js"><span style="color: #0000cd; font-weight: bold;">{</span><span style="color: #ff4ea3;">"method"</span>: <span style="color: #ff4ea3;">"POST"</span>,
+ <span style="color: #ff4ea3;">"url"</span>:<span style="color: #ff4ea3;">"/api/print_carrier_selection"</span>,
+ <span style="color: #ff4ea3;">"headers"</span>:<span style="color: #5fafd7; font-weight: bold;">[</span>
+     <span style="color: #ff4ea3;">"request"</span>: <span style="color: #a1db00; font-weight: bold;">[</span>
+         <span style="color: #ff4ea3;">"Accept"</span>: <span style="color: #ff4ea3;">"application/json, text/plain, */*"</span>,
+         <span style="color: #ff4ea3;">"Content-Type"</span>: <span style="color: #ff4ea3;">"application/json"</span>,
+         <span style="color: #ff4ea3;">"Authorization"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span><span style="color: #ff4ea3; font-weight: bold;">}</span>, 
+     <span style="color: #a1db00; font-weight: bold;">]</span>,
+     <span style="color: #ff4ea3;">"response"</span>: <span style="color: #a1db00; font-weight: bold;">[</span>
+         <span style="color: #ff4ea3;">"Content-Type"</span>: <span style="color: #ff4ea3;">"application/json"</span>,
+     <span style="color: #a1db00; font-weight: bold;">]</span>,
+ <span style="color: #5fafd7; font-weight: bold;">]</span>,
+ <span style="color: #ff4ea3;">"contents"</span>: <span style="color: #5fafd7; font-weight: bold;">[</span>
+     <span style="color: #ff4ea3;">"request"</span>: <span style="color: #a1db00; font-weight: bold;">[</span>
+         <span style="color: #ff4ea3; font-weight: bold;">{</span><span style="color: #ff4ea3;">"carrier_uid"</span>:<span style="color: #00d7af; font-weight: bold;">{</span><span style="color: #ff4ea3;">"type"</span>:<span style="color: #ff4ea3;">"string"</span><span style="color: #00d7af; font-weight: bold;">}</span><span style="color: #ff4ea3; font-weight: bold;">}</span>,
+         ...
+     <span style="color: #a1db00; font-weight: bold;">]</span>:<span style="color: #a1db00; font-weight: bold;">{</span><span style="color: #ff4ea3;">"type"</span>:<span style="color: #ff4ea3;">"list"</span><span style="color: #a1db00; font-weight: bold;">}</span>,
+     <span style="color: #ff4ea3;">"response"</span>:<span style="color: #a1db00; font-weight: bold;">[</span>
+         <span style="color: #ff4ea3;">"success"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"boolean"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+         <span style="color: #ff4ea3;">"message"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+     <span style="color: #a1db00; font-weight: bold;">]</span>,
+ <span style="color: #5fafd7; font-weight: bold;">]</span>,
+<span style="color: #0000cd; font-weight: bold;">}</span>
+</pre>
+</div></li>
+<li><p>
+deliver<sub>carrier</sub><sub>selection</sub>
+</p>
+<div class="org-src-container">
+<pre class="src src-js"><span style="color: #0000cd; font-weight: bold;">{</span><span style="color: #ff4ea3;">"method"</span>: <span style="color: #ff4ea3;">"POST"</span>,
+ <span style="color: #ff4ea3;">"url"</span>:<span style="color: #ff4ea3;">"/api/deliver_carrier_selection"</span>,
+ <span style="color: #ff4ea3;">"headers"</span>:<span style="color: #5fafd7; font-weight: bold;">[</span>
+     <span style="color: #ff4ea3;">"request"</span>: <span style="color: #a1db00; font-weight: bold;">[</span>
+         <span style="color: #ff4ea3;">"Accept"</span>: <span style="color: #ff4ea3;">"application/json, text/plain, */*"</span>,
+         <span style="color: #ff4ea3;">"Content-Type"</span>: <span style="color: #ff4ea3;">"application/json"</span>,
+         <span style="color: #ff4ea3;">"Authorization"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span><span style="color: #ff4ea3; font-weight: bold;">}</span>, 
+     <span style="color: #a1db00; font-weight: bold;">]</span>,
+     <span style="color: #ff4ea3;">"response"</span>: <span style="color: #a1db00; font-weight: bold;">[</span>
+         <span style="color: #ff4ea3;">"Content-Type"</span>: <span style="color: #ff4ea3;">"application/json"</span>,
+     <span style="color: #a1db00; font-weight: bold;">]</span>,
+ <span style="color: #5fafd7; font-weight: bold;">]</span>,
+ <span style="color: #ff4ea3;">"contents"</span>: <span style="color: #5fafd7; font-weight: bold;">[</span>
+     <span style="color: #ff4ea3;">"request"</span>: <span style="color: #a1db00; font-weight: bold;">[</span>
+         <span style="color: #ff4ea3; font-weight: bold;">{</span><span style="color: #ff4ea3;">"carrier_uid"</span>:<span style="color: #00d7af; font-weight: bold;">{</span><span style="color: #ff4ea3;">"type"</span>:<span style="color: #ff4ea3;">"string"</span><span style="color: #00d7af; font-weight: bold;">}</span><span style="color: #ff4ea3; font-weight: bold;">}</span>,
+         ...
+     <span style="color: #a1db00; font-weight: bold;">]</span>:<span style="color: #a1db00; font-weight: bold;">{</span><span style="color: #ff4ea3;">"type"</span>:<span style="color: #ff4ea3;">"list"</span><span style="color: #a1db00; font-weight: bold;">}</span>,
+     <span style="color: #ff4ea3;">"response"</span>:<span style="color: #a1db00; font-weight: bold;">[</span>
+         <span style="color: #ff4ea3;">"success"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"boolean"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+         <span style="color: #ff4ea3;">"message"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+     <span style="color: #a1db00; font-weight: bold;">]</span>,
+ <span style="color: #5fafd7; font-weight: bold;">]</span>,
+<span style="color: #0000cd; font-weight: bold;">}</span>
+</pre>
+</div></li>
+<li><p>
+delete<sub>carrier</sub><sub>selection</sub>
+</p>
+<div class="org-src-container">
+<pre class="src src-js"><span style="color: #0000cd; font-weight: bold;">{</span><span style="color: #ff4ea3;">"method"</span>: <span style="color: #ff4ea3;">"DELETE"</span>,
+ <span style="color: #ff4ea3;">"url"</span>:<span style="color: #ff4ea3;">"/api/delete_carrier_selection"</span>,
+ <span style="color: #ff4ea3;">"headers"</span>:<span style="color: #5fafd7; font-weight: bold;">[</span>
+     <span style="color: #ff4ea3;">"request"</span>: <span style="color: #a1db00; font-weight: bold;">[</span>
+         <span style="color: #ff4ea3;">"Accept"</span>: <span style="color: #ff4ea3;">"application/json, text/plain, */*"</span>,
+         <span style="color: #ff4ea3;">"Content-Type"</span>: <span style="color: #ff4ea3;">"application/json"</span>,
+         <span style="color: #ff4ea3;">"Authorization"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span><span style="color: #ff4ea3; font-weight: bold;">}</span>, 
+     <span style="color: #a1db00; font-weight: bold;">]</span>,
+     <span style="color: #ff4ea3;">"response"</span>: <span style="color: #a1db00; font-weight: bold;">[</span>
+         <span style="color: #ff4ea3;">"Content-Type"</span>: <span style="color: #ff4ea3;">"application/json"</span>,
+     <span style="color: #a1db00; font-weight: bold;">]</span>,
+ <span style="color: #5fafd7; font-weight: bold;">]</span>,
+ <span style="color: #ff4ea3;">"contents"</span>: <span style="color: #5fafd7; font-weight: bold;">[</span>
+     <span style="color: #ff4ea3;">"request"</span>: <span style="color: #a1db00; font-weight: bold;">[</span>
+         <span style="color: #ff4ea3; font-weight: bold;">{</span><span style="color: #ff4ea3;">"carrier_uid"</span>:<span style="color: #00d7af; font-weight: bold;">{</span><span style="color: #ff4ea3;">"type"</span>:<span style="color: #ff4ea3;">"string"</span><span style="color: #00d7af; font-weight: bold;">}</span><span style="color: #ff4ea3; font-weight: bold;">}</span>,
+         ...
+     <span style="color: #a1db00; font-weight: bold;">]</span>:<span style="color: #a1db00; font-weight: bold;">{</span><span style="color: #ff4ea3;">"type"</span>:<span style="color: #ff4ea3;">"list"</span><span style="color: #a1db00; font-weight: bold;">}</span>,
+     <span style="color: #ff4ea3;">"response"</span>:<span style="color: #a1db00; font-weight: bold;">[</span>
+         <span style="color: #ff4ea3;">"success"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"boolean"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+         <span style="color: #ff4ea3;">"message"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+     <span style="color: #a1db00; font-weight: bold;">]</span>,
+ <span style="color: #5fafd7; font-weight: bold;">]</span>,
+<span style="color: #0000cd; font-weight: bold;">}</span>
+</pre>
+</div></li>
+</ul>
+</div>
+</div>
+<div id="outline-container-org582e6a4" class="outline-4">
+<h4 id="org582e6a4"><span class="section-number-4">1.2.4.</span> material storage</h4>
+<div class="outline-text-4" id="text-1-2-4">
+<ul class="org-ul">
+<li><p>
+get<sub>storages</sub>
+</p>
+<div class="org-src-container">
+<pre class="src src-js"><span style="color: #0000cd; font-weight: bold;">{</span><span style="color: #ff4ea3;">"method"</span>: <span style="color: #ff4ea3;">"GET"</span>,
+ <span style="color: #ff4ea3;">"url"</span>:<span style="color: #ff4ea3;">"/api/get_storages"</span>,
+ <span style="color: #ff4ea3;">"headers"</span>:<span style="color: #5fafd7; font-weight: bold;">[</span>
+     <span style="color: #ff4ea3;">"request"</span>: <span style="color: #a1db00; font-weight: bold;">[</span>
+         <span style="color: #ff4ea3;">"Accept"</span>: <span style="color: #ff4ea3;">"application/json, text/plain, */*"</span>,
+         <span style="color: #ff4ea3;">"Content-Type"</span>: <span style="color: #ff4ea3;">"application/json"</span>,
+         <span style="color: #ff4ea3;">"Authorization"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span><span style="color: #ff4ea3; font-weight: bold;">}</span>, 
+     <span style="color: #a1db00; font-weight: bold;">]</span>,
+     <span style="color: #ff4ea3;">"response"</span>: <span style="color: #a1db00; font-weight: bold;">[</span>
+         <span style="color: #ff4ea3;">"Content-Type"</span>: <span style="color: #ff4ea3;">"application/json"</span>,
+     <span style="color: #a1db00; font-weight: bold;">]</span>,
+ <span style="color: #5fafd7; font-weight: bold;">]</span>,
+ <span style="color: #ff4ea3;">"contents"</span>: <span style="color: #5fafd7; font-weight: bold;">[</span>
+     <span style="color: #ff4ea3;">"request"</span>: <span style="color: #a1db00; font-weight: bold;">[]</span>,
+     <span style="color: #ff4ea3;">"response"</span>:<span style="color: #a1db00; font-weight: bold;">[</span>
+         <span style="color: #ff4ea3;">"success"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"boolean"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+         <span style="color: #ff4ea3;">"storages"</span>:<span style="color: #ff4ea3; font-weight: bold;">[</span>
+             <span style="color: #00d7af; font-weight: bold;">{</span><span style="color: #ff4ea3;">"name"</span>:<span style="color: #ff8700; font-weight: bold;">{</span><span style="color: #ff4ea3;">"type"</span>:<span style="color: #ff4ea3;">"string"</span><span style="color: #ff8700; font-weight: bold;">}</span>,
+              <span style="color: #ff4ea3;">"description"</span>:<span style="color: #ff8700; font-weight: bold;">{</span><span style="color: #ff4ea3;">"type"</span>:<span style="color: #ff4ea3;">"string"</span><span style="color: #ff8700; font-weight: bold;">}</span>,
+              <span style="color: #ff4ea3;">"capacity"</span>:<span style="color: #ff8700; font-weight: bold;">{</span><span style="color: #ff4ea3;">"type"</span>:<span style="color: #ff4ea3;">"integer"</span><span style="color: #ff8700; font-weight: bold;">}</span>,
+              <span style="color: #ff4ea3;">"used_slots"</span>:<span style="color: #ff8700; font-weight: bold;">{</span><span style="color: #ff4ea3;">"type"</span>:<span style="color: #ff4ea3;">"integer"</span><span style="color: #ff8700; font-weight: bold;">}</span>,
+              <span style="color: #ff4ea3;">"storage type"</span>:<span style="color: #ff8700; font-weight: bold;">{</span><span style="color: #ff4ea3;">"type"</span>:<span style="color: #ff4ea3;">"integer"</span><span style="color: #ff8700; font-weight: bold;">}</span>
+             <span style="color: #00d7af; font-weight: bold;">}</span>,
+         <span style="color: #ff4ea3; font-weight: bold;">]</span>,
+     <span style="color: #a1db00; font-weight: bold;">]</span>,
+ <span style="color: #5fafd7; font-weight: bold;">]</span>,
+<span style="color: #0000cd; font-weight: bold;">}</span>
+</pre>
+</div></li>
+<li><p>
+edit<sub>carrier</sub>
+</p>
+<div class="org-src-container">
+<pre class="src src-js"><span style="color: #0000cd; font-weight: bold;">{</span><span style="color: #ff4ea3;">"method"</span>: <span style="color: #ff4ea3;">"EDIT"</span>,
+ <span style="color: #ff4ea3;">"url"</span>:<span style="color: #ff4ea3;">"/api/edit_carrier"</span>,
+ <span style="color: #ff4ea3;">"headers"</span>:<span style="color: #5fafd7; font-weight: bold;">[</span>
+     <span style="color: #ff4ea3;">"request"</span>: <span style="color: #a1db00; font-weight: bold;">[</span>
+         <span style="color: #ff4ea3;">"Accept"</span>: <span style="color: #ff4ea3;">"application/json, text/plain, */*"</span>,
+         <span style="color: #ff4ea3;">"Content-Type"</span>: <span style="color: #ff4ea3;">"application/json"</span>,
+         <span style="color: #ff4ea3;">"Authorization"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span><span style="color: #ff4ea3; font-weight: bold;">}</span>, 
+     <span style="color: #a1db00; font-weight: bold;">]</span>,
+     <span style="color: #ff4ea3;">"response"</span>: <span style="color: #a1db00; font-weight: bold;">[</span>
+         <span style="color: #ff4ea3;">"Content-Type"</span>: <span style="color: #ff4ea3;">"application/json"</span>,
+     <span style="color: #a1db00; font-weight: bold;">]</span>,
+ <span style="color: #5fafd7; font-weight: bold;">]</span>,
+ <span style="color: #ff4ea3;">"contents"</span>: <span style="color: #5fafd7; font-weight: bold;">[</span>
+     <span style="color: #ff4ea3;">"request"</span>: <span style="color: #a1db00; font-weight: bold;">{</span>
+         <span style="color: #ff4ea3;">"carrier_uid"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+         <span style="color: #ff4ea3;">"container_type"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+         <span style="color: #ff4ea3;">"quantity_original"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"integer"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+         <span style="color: #ff4ea3;">"quantity_current"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"integer"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+         <span style="color: #ff4ea3;">"diameter"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"integer"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+         <span style="color: #ff4ea3;">"width"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"integer"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+         <span style="color: #ff4ea3;">"lot_number"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+         <span style="color: #ff4ea3;">"delivered"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"boolean"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+         <span style="color: #ff4ea3;">"archived"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"boolean"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+         <span style="color: #ff4ea3;">"reserved"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"boolean"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+     <span style="color: #a1db00; font-weight: bold;">}</span>,
+     <span style="color: #ff4ea3;">"response"</span>:<span style="color: #a1db00; font-weight: bold;">[</span>
+         <span style="color: #ff4ea3;">"success"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"boolean"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+         <span style="color: #ff4ea3;">"message"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+     <span style="color: #a1db00; font-weight: bold;">]</span>,
+ <span style="color: #5fafd7; font-weight: bold;">]</span>,
+<span style="color: #0000cd; font-weight: bold;">}</span>
+</pre>
+</div></li>
+<li><p>
+store<sub>carrier</sub>
+</p>
+<div class="org-src-container">
+<pre class="src src-js"><span style="color: #0000cd; font-weight: bold;">{</span><span style="color: #ff4ea3;">"method"</span>: <span style="color: #ff4ea3;">"POST"</span>,
+ <span style="color: #ff4ea3;">"url"</span>:<span style="color: #ff4ea3;">"/api/store_carrier"</span>,
+ <span style="color: #ff4ea3;">"headers"</span>:<span style="color: #5fafd7; font-weight: bold;">[</span>
+     <span style="color: #ff4ea3;">"request"</span>: <span style="color: #a1db00; font-weight: bold;">[</span>
+         <span style="color: #ff4ea3;">"Accept"</span>: <span style="color: #ff4ea3;">"application/json, text/plain, */*"</span>,
+         <span style="color: #ff4ea3;">"Content-Type"</span>: <span style="color: #ff4ea3;">"application/json"</span>,
+         <span style="color: #ff4ea3;">"Authorization"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span><span style="color: #ff4ea3; font-weight: bold;">}</span>, 
+     <span style="color: #a1db00; font-weight: bold;">]</span>,
+     <span style="color: #ff4ea3;">"response"</span>: <span style="color: #a1db00; font-weight: bold;">[</span>
+         <span style="color: #ff4ea3;">"Content-Type"</span>: <span style="color: #ff4ea3;">"application/json"</span>,
+     <span style="color: #a1db00; font-weight: bold;">]</span>,
+ <span style="color: #5fafd7; font-weight: bold;">]</span>,
+ <span style="color: #ff4ea3;">"contents"</span>: <span style="color: #5fafd7; font-weight: bold;">[</span>
+     <span style="color: #ff4ea3;">"request"</span>: <span style="color: #a1db00; font-weight: bold;">{</span>
+         <span style="color: #ff4ea3;">"uid"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span><span style="color: #ff4ea3;">"type"</span>:<span style="color: #ff4ea3;">"string"</span><span style="color: #ff4ea3; font-weight: bold;">}</span>,
+         <span style="color: #ff4ea3;">"storage"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span><span style="color: #ff4ea3;">"type"</span>:<span style="color: #ff4ea3;">"string"</span><span style="color: #ff4ea3; font-weight: bold;">}</span>,
+                 <span style="color: #a1db00; font-weight: bold;">}</span>,
+     <span style="color: #ff4ea3;">"response"</span>:<span style="color: #a1db00; font-weight: bold;">[</span>
+         <span style="color: #ff4ea3;">"success"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"boolean"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+         <span style="color: #ff4ea3;">"storage_slot"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+     <span style="color: #a1db00; font-weight: bold;">]</span>,
+ <span style="color: #5fafd7; font-weight: bold;">]</span>,
+<span style="color: #0000cd; font-weight: bold;">}</span>
+</pre>
+</div></li>
+<li><p>
+store<sub>carrier</sub><sub>confirm</sub><sub>slot</sub>
+</p>
+<div class="org-src-container">
+<pre class="src src-js"><span style="color: #0000cd; font-weight: bold;">{</span><span style="color: #ff4ea3;">"method"</span>: <span style="color: #ff4ea3;">"POST"</span>,
+ <span style="color: #ff4ea3;">"url"</span>:<span style="color: #ff4ea3;">"/api/store_carrier_confirm_slot"</span>,
+ <span style="color: #ff4ea3;">"headers"</span>:<span style="color: #5fafd7; font-weight: bold;">[</span>
+     <span style="color: #ff4ea3;">"request"</span>: <span style="color: #a1db00; font-weight: bold;">[</span>
+         <span style="color: #ff4ea3;">"Accept"</span>: <span style="color: #ff4ea3;">"application/json, text/plain, */*"</span>,
+         <span style="color: #ff4ea3;">"Content-Type"</span>: <span style="color: #ff4ea3;">"application/json"</span>,
+         <span style="color: #ff4ea3;">"Authorization"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span><span style="color: #ff4ea3; font-weight: bold;">}</span>, 
+     <span style="color: #a1db00; font-weight: bold;">]</span>,
+     <span style="color: #ff4ea3;">"response"</span>: <span style="color: #a1db00; font-weight: bold;">[</span>
+         <span style="color: #ff4ea3;">"Content-Type"</span>: <span style="color: #ff4ea3;">"application/json"</span>,
+     <span style="color: #a1db00; font-weight: bold;">]</span>,
+ <span style="color: #5fafd7; font-weight: bold;">]</span>,
+ <span style="color: #ff4ea3;">"contents"</span>: <span style="color: #5fafd7; font-weight: bold;">[</span>
+     <span style="color: #ff4ea3;">"request"</span>: <span style="color: #a1db00; font-weight: bold;">{</span><span style="color: #ff4ea3;">"slot"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span><span style="color: #ff4ea3;">"type"</span>:<span style="color: #ff4ea3;">"string"</span><span style="color: #ff4ea3; font-weight: bold;">}</span><span style="color: #a1db00; font-weight: bold;">}</span>,
+     <span style="color: #ff4ea3;">"response"</span>:<span style="color: #a1db00; font-weight: bold;">[</span>
+         <span style="color: #ff4ea3;">"success"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"boolean"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+         <span style="color: #ff4ea3;">"message"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+     <span style="color: #a1db00; font-weight: bold;">]</span>,
+ <span style="color: #5fafd7; font-weight: bold;">]</span>,
+<span style="color: #0000cd; font-weight: bold;">}</span>
+</pre>
+</div></li>
+<li><p>
+add<sub>carrier</sub><sub>to</sub><sub>collect</sub><sub>queue</sub>
+</p>
+<div class="org-src-container">
+<pre class="src src-js"><span style="color: #0000cd; font-weight: bold;">{</span><span style="color: #ff4ea3;">"method"</span>: <span style="color: #ff4ea3;">"POST"</span>,
+ <span style="color: #ff4ea3;">"url"</span>:<span style="color: #ff4ea3;">"/api/add_carrier_to_collect_queue"</span>,
+ <span style="color: #ff4ea3;">"headers"</span>:<span style="color: #5fafd7; font-weight: bold;">[</span>
+     <span style="color: #ff4ea3;">"request"</span>: <span style="color: #a1db00; font-weight: bold;">[</span>
+         <span style="color: #ff4ea3;">"Accept"</span>: <span style="color: #ff4ea3;">"application/json, text/plain, */*"</span>,
+         <span style="color: #ff4ea3;">"Content-Type"</span>: <span style="color: #ff4ea3;">"application/json"</span>,
+         <span style="color: #ff4ea3;">"Authorization"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span><span style="color: #ff4ea3; font-weight: bold;">}</span>, 
+     <span style="color: #a1db00; font-weight: bold;">]</span>,
+     <span style="color: #ff4ea3;">"response"</span>: <span style="color: #a1db00; font-weight: bold;">[</span>
+         <span style="color: #ff4ea3;">"Content-Type"</span>: <span style="color: #ff4ea3;">"application/json"</span>,
+     <span style="color: #a1db00; font-weight: bold;">]</span>,
+ <span style="color: #5fafd7; font-weight: bold;">]</span>,
+ <span style="color: #ff4ea3;">"contents"</span>: <span style="color: #5fafd7; font-weight: bold;">[</span>
+     <span style="color: #ff4ea3;">"request"</span>: <span style="color: #a1db00; font-weight: bold;">{</span>
+         <span style="color: #ff4ea3;">"uid"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span><span style="color: #ff4ea3;">"type"</span>:<span style="color: #ff4ea3;">"string"</span><span style="color: #ff4ea3; font-weight: bold;">}</span>,
+     <span style="color: #a1db00; font-weight: bold;">}</span>,
+     <span style="color: #ff4ea3;">"response"</span>:<span style="color: #a1db00; font-weight: bold;">[</span>
+         <span style="color: #ff4ea3;">"success"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"boolean"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+         <span style="color: #ff4ea3;">"storage"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+         <span style="color: #ff4ea3;">"slot"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+         <span style="color: #ff4ea3;">"queue"</span>:<span style="color: #ff4ea3; font-weight: bold;">[</span>
+             <span style="color: #00d7af; font-weight: bold;">{</span><span style="color: #ff8700; font-weight: bold;">{</span><span style="color: #ff4ea3;">"carrier_uid"</span>:<span style="color: #af5fff; font-weight: bold;">{</span><span style="color: #ff4ea3;">"type"</span>:<span style="color: #ff4ea3;">"string"</span><span style="color: #af5fff; font-weight: bold;">}</span>,<span style="color: #ff4ea3;">"storage"</span>:<span style="color: #af5fff; font-weight: bold;">{</span><span style="color: #ff4ea3;">"type"</span>:<span style="color: #ff4ea3;">"string"</span><span style="color: #af5fff; font-weight: bold;">}</span>,<span style="color: #ff4ea3;">"storage_slot"</span>:<span style="color: #af5fff; font-weight: bold;">{</span><span style="color: #ff4ea3;">"type"</span>:<span style="color: #ff4ea3;">"string"</span><span style="color: #af5fff; font-weight: bold;">}</span><span style="color: #ff8700; font-weight: bold;">}</span><span style="color: #00d7af; font-weight: bold;">}</span>,
+             ...
+         <span style="color: #ff4ea3; font-weight: bold;">]</span>
+     <span style="color: #a1db00; font-weight: bold;">]</span>,
+ <span style="color: #5fafd7; font-weight: bold;">]</span>,
+<span style="color: #0000cd; font-weight: bold;">}</span>
+</pre>
+</div></li>
+<li><p>
+remove<sub>carrier</sub><sub>from</sub><sub>collect</sub><sub>queue</sub><sub>trough</sub><sub>storage</sub><sub>slot</sub>
+</p>
+<div class="org-src-container">
+<pre class="src src-js"><span style="color: #0000cd; font-weight: bold;">{</span><span style="color: #ff4ea3;">"method"</span>: <span style="color: #ff4ea3;">"POST"</span>,
+ <span style="color: #ff4ea3;">"url"</span>:<span style="color: #ff4ea3;">"/api/remove_carrier_from_collect_queue_trough_storage_slot"</span>,
+ <span style="color: #ff4ea3;">"headers"</span>:<span style="color: #5fafd7; font-weight: bold;">[</span>
+     <span style="color: #ff4ea3;">"request"</span>: <span style="color: #a1db00; font-weight: bold;">[</span>
+         <span style="color: #ff4ea3;">"Accept"</span>: <span style="color: #ff4ea3;">"application/json, text/plain, */*"</span>,
+         <span style="color: #ff4ea3;">"Content-Type"</span>: <span style="color: #ff4ea3;">"application/json"</span>,
+         <span style="color: #ff4ea3;">"Authorization"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span><span style="color: #ff4ea3; font-weight: bold;">}</span>, 
+     <span style="color: #a1db00; font-weight: bold;">]</span>,
+     <span style="color: #ff4ea3;">"response"</span>: <span style="color: #a1db00; font-weight: bold;">[</span>
+         <span style="color: #ff4ea3;">"Content-Type"</span>: <span style="color: #ff4ea3;">"application/json"</span>,
+     <span style="color: #a1db00; font-weight: bold;">]</span>,
+ <span style="color: #5fafd7; font-weight: bold;">]</span>,
+ <span style="color: #ff4ea3;">"contents"</span>: <span style="color: #5fafd7; font-weight: bold;">[</span>
+     <span style="color: #ff4ea3;">"request"</span>: <span style="color: #a1db00; font-weight: bold;">{</span>
+         <span style="color: #ff4ea3;">"slot"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span><span style="color: #ff4ea3;">"type"</span>:<span style="color: #ff4ea3;">"string"</span><span style="color: #ff4ea3; font-weight: bold;">}</span>,
+     <span style="color: #a1db00; font-weight: bold;">}</span>,
+     <span style="color: #ff4ea3;">"response"</span>:<span style="color: #a1db00; font-weight: bold;">[</span>
+         <span style="color: #ff4ea3;">"success"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"boolean"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+         <span style="color: #ff4ea3;">"queue"</span>:<span style="color: #ff4ea3; font-weight: bold;">[</span>
+             <span style="color: #00d7af; font-weight: bold;">{</span><span style="color: #ff8700; font-weight: bold;">{</span><span style="color: #ff4ea3;">"carrier_uid"</span>:<span style="color: #af5fff; font-weight: bold;">{</span><span style="color: #ff4ea3;">"type"</span>:<span style="color: #ff4ea3;">"string"</span><span style="color: #af5fff; font-weight: bold;">}</span>,<span style="color: #ff4ea3;">"storage"</span>:<span style="color: #af5fff; font-weight: bold;">{</span><span style="color: #ff4ea3;">"type"</span>:<span style="color: #ff4ea3;">"string"</span><span style="color: #af5fff; font-weight: bold;">}</span>,<span style="color: #ff4ea3;">"storage_slot"</span>:<span style="color: #af5fff; font-weight: bold;">{</span><span style="color: #ff4ea3;">"type"</span>:<span style="color: #ff4ea3;">"string"</span><span style="color: #af5fff; font-weight: bold;">}</span><span style="color: #ff8700; font-weight: bold;">}</span><span style="color: #00d7af; font-weight: bold;">}</span>,
+             ...
+         <span style="color: #ff4ea3; font-weight: bold;">]</span>
+
+     <span style="color: #a1db00; font-weight: bold;">]</span>,
+ <span style="color: #5fafd7; font-weight: bold;">]</span>,
+<span style="color: #0000cd; font-weight: bold;">}</span>
+</pre>
+</div></li>
+<li><p>
+get<sub>jobs</sub>
+</p>
+<div class="org-src-container">
+<pre class="src src-js"><span style="color: #0000cd; font-weight: bold;">{</span><span style="color: #ff4ea3;">"method"</span>: <span style="color: #ff4ea3;">"GET"</span>,
+ <span style="color: #ff4ea3;">"url"</span>:<span style="color: #ff4ea3;">"/api/get_jobs"</span>,
+ <span style="color: #ff4ea3;">"url_args"</span>: <span style="color: #5fafd7; font-weight: bold;">{</span><span style="color: #ff4ea3;">"page"</span> :<span style="color: #a1db00; font-weight: bold;">{</span><span style="color: #ff4ea3;">"type"</span>:<span style="color: #ff4ea3;">"integer"</span><span style="color: #a1db00; font-weight: bold;">}</span>,
+              <span style="color: #ff4ea3;">"page_size"</span>:<span style="color: #a1db00; font-weight: bold;">{</span><span style="color: #ff4ea3;">"type"</span>:<span style="color: #ff4ea3;">"integer"</span><span style="color: #a1db00; font-weight: bold;">}</span>,
+              <span style="color: #ff4ea3;">"ordering"</span>:<span style="color: #a1db00; font-weight: bold;">{</span><span style="color: #ff4ea3;">"type"</span>:<span style="color: #ff4ea3;">"string"</span><span style="color: #a1db00; font-weight: bold;">}</span>,
+              <span style="color: #ff4ea3;">"name"</span>:<span style="color: #a1db00; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #a1db00; font-weight: bold;">}</span>,
+              <span style="color: #ff4ea3;">"board"</span>:<span style="color: #a1db00; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #a1db00; font-weight: bold;">}</span>,
+              <span style="color: #ff4ea3;">"machine"</span>:<span style="color: #a1db00; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #a1db00; font-weight: bold;">}</span>,
+              <span style="color: #ff4ea3;">"project"</span>:<span style="color: #a1db00; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #a1db00; font-weight: bold;">}</span>,
+              <span style="color: #ff4ea3;">"description"</span>:<span style="color: #a1db00; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #a1db00; font-weight: bold;">}</span>,
+              <span style="color: #ff4ea3;">"customer"</span>:<span style="color: #a1db00; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #a1db00; font-weight: bold;">}</span>,
+              <span style="color: #ff4ea3;">"count"</span>:<span style="color: #a1db00; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"integer"</span> <span style="color: #a1db00; font-weight: bold;">}</span>,
+              <span style="color: #ff4ea3;">"start_at"</span>:<span style="color: #a1db00; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #a1db00; font-weight: bold;">}</span>,
+              <span style="color: #ff4ea3;">"finish_at"</span>:<span style="color: #a1db00; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #a1db00; font-weight: bold;">}</span>,
+              <span style="color: #ff4ea3;">"status"</span>:<span style="color: #a1db00; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #a1db00; font-weight: bold;">}</span>,
+             <span style="color: #5fafd7; font-weight: bold;">}</span>,
+ <span style="color: #ff4ea3;">"headers"</span>:<span style="color: #5fafd7; font-weight: bold;">[</span>
+     <span style="color: #ff4ea3;">"request"</span>: <span style="color: #a1db00; font-weight: bold;">[</span>
+         <span style="color: #ff4ea3;">"Accept"</span>: <span style="color: #ff4ea3;">"application/json, text/plain, */*"</span>,
+         <span style="color: #ff4ea3;">"Content-Type"</span>: <span style="color: #ff4ea3;">"application/json"</span>,
+         <span style="color: #ff4ea3;">"Authorization"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span><span style="color: #ff4ea3; font-weight: bold;">}</span>, 
+     <span style="color: #a1db00; font-weight: bold;">]</span>,
+     <span style="color: #ff4ea3;">"response"</span>: <span style="color: #a1db00; font-weight: bold;">[</span>
+         <span style="color: #ff4ea3;">"Content-Type"</span>: <span style="color: #ff4ea3;">"application/json"</span>,
+     <span style="color: #a1db00; font-weight: bold;">]</span>,
+ <span style="color: #5fafd7; font-weight: bold;">]</span>,
+ <span style="color: #ff4ea3;">"contents"</span>: <span style="color: #5fafd7; font-weight: bold;">[</span>
+     <span style="color: #ff4ea3;">"request"</span>: <span style="color: #a1db00; font-weight: bold;">{}</span>,
+     <span style="color: #ff4ea3;">"response"</span>:<span style="color: #a1db00; font-weight: bold;">[</span>
+         <span style="color: #ff4ea3;">"count"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"integer"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+         <span style="color: #ff4ea3;">"next"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+         <span style="color: #ff4ea3;">"previous"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+         <span style="color: #ff4ea3;">"results"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span>
+             <span style="color: #ff4ea3;">"name"</span>:<span style="color: #00d7af; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #00d7af; font-weight: bold;">}</span>,
+             <span style="color: #ff4ea3;">"board"</span>:<span style="color: #00d7af; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #00d7af; font-weight: bold;">}</span>,
+             <span style="color: #ff4ea3;">"project"</span>:<span style="color: #00d7af; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #00d7af; font-weight: bold;">}</span>,
+             <span style="color: #ff4ea3;">"description"</span>:<span style="color: #00d7af; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #00d7af; font-weight: bold;">}</span>,
+             <span style="color: #ff4ea3;">"customer"</span>:<span style="color: #00d7af; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #00d7af; font-weight: bold;">}</span>,
+             <span style="color: #ff4ea3;">"count"</span>:<span style="color: #00d7af; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"integer"</span> <span style="color: #00d7af; font-weight: bold;">}</span>,
+             <span style="color: #ff4ea3;">"start_at"</span>:<span style="color: #00d7af; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #00d7af; font-weight: bold;">}</span>,
+             <span style="color: #ff4ea3;">"finish_at"</span>:<span style="color: #00d7af; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #00d7af; font-weight: bold;">}</span>,
+             <span style="color: #ff4ea3;">"machine"</span>:<span style="color: #00d7af; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #00d7af; font-weight: bold;">}</span>,
+             <span style="color: #ff4ea3;">"status"</span>:<span style="color: #00d7af; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #00d7af; font-weight: bold;">}</span>,
+         <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+     <span style="color: #a1db00; font-weight: bold;">]</span>,
+ <span style="color: #5fafd7; font-weight: bold;">]</span>,
+<span style="color: #0000cd; font-weight: bold;">}</span>
+</pre>
+</div></li>
+<li>reset<sub>all</sub><sub>leds</sub></li>
+</ul>
+</div>
+</div>
+
+<div id="outline-container-org2975220" class="outline-4">
+<h4 id="org2975220"><span class="section-number-4">1.2.5.</span> setup center</h4>
+<div class="outline-text-4" id="text-1-2-5">
+<ul class="org-ul">
+<li><p>
+get<sub>machines</sub>
+</p>
+<div class="org-src-container">
+<pre class="src src-js"><span style="color: #0000cd; font-weight: bold;">{</span><span style="color: #ff4ea3;">"method"</span>: <span style="color: #ff4ea3;">"GET"</span>,
+ <span style="color: #ff4ea3;">"url"</span>:<span style="color: #ff4ea3;">"/api/get_machines"</span>,
+ <span style="color: #ff4ea3;">"headers"</span>:<span style="color: #5fafd7; font-weight: bold;">[</span>
+     <span style="color: #ff4ea3;">"request"</span>: <span style="color: #a1db00; font-weight: bold;">[</span>
+         <span style="color: #ff4ea3;">"Accept"</span>: <span style="color: #ff4ea3;">"application/json, text/plain, */*"</span>,
+         <span style="color: #ff4ea3;">"Content-Type"</span>: <span style="color: #ff4ea3;">"application/json"</span>,
+         <span style="color: #ff4ea3;">"Authorization"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span><span style="color: #ff4ea3; font-weight: bold;">}</span>, 
+     <span style="color: #a1db00; font-weight: bold;">]</span>,
+     <span style="color: #ff4ea3;">"response"</span>: <span style="color: #a1db00; font-weight: bold;">[</span>
+         <span style="color: #ff4ea3;">"Content-Type"</span>: <span style="color: #ff4ea3;">"application/json"</span>,
+     <span style="color: #a1db00; font-weight: bold;">]</span>,
+ <span style="color: #5fafd7; font-weight: bold;">]</span>,
+ <span style="color: #ff4ea3;">"contents"</span>: <span style="color: #5fafd7; font-weight: bold;">[</span>
+     <span style="color: #ff4ea3;">"request"</span>: <span style="color: #a1db00; font-weight: bold;">{}</span>,
+     <span style="color: #ff4ea3;">"response"</span>:<span style="color: #a1db00; font-weight: bold;">[</span>
+         <span style="color: #ff4ea3;">"machines"</span>:<span style="color: #ff4ea3; font-weight: bold;">[</span><span style="color: #00d7af; font-weight: bold;">{</span><span style="color: #ff4ea3;">"type"</span>:<span style="color: #ff4ea3;">"string"</span><span style="color: #00d7af; font-weight: bold;">}</span><span style="color: #ff4ea3; font-weight: bold;">]</span>,
+     <span style="color: #a1db00; font-weight: bold;">]</span>,
+ <span style="color: #5fafd7; font-weight: bold;">]</span>,
+<span style="color: #0000cd; font-weight: bold;">}</span>
+</pre>
+</div></li>
+
+<li><p>
+import<sub>job</sub><sub>file</sub>
+</p>
+<div class="org-src-container">
+<pre class="src src-js"><span style="color: #0000cd; font-weight: bold;">{</span><span style="color: #ff4ea3;">"method"</span>: <span style="color: #ff4ea3;">"EDIT"</span>,
+ <span style="color: #ff4ea3;">"url"</span>:<span style="color: #ff4ea3;">"/api/import_job_file"</span>,
+ <span style="color: #ff4ea3;">"headers"</span>:<span style="color: #5fafd7; font-weight: bold;">[</span>
+     <span style="color: #ff4ea3;">"request"</span>: <span style="color: #a1db00; font-weight: bold;">[</span>
+         <span style="color: #ff4ea3;">"Accept"</span>: <span style="color: #ff4ea3;">"application/json, text/plain, */*"</span>,
+         <span style="color: #ff4ea3;">"Authorization"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span><span style="color: #ff4ea3; font-weight: bold;">}</span>,
+         <span style="color: #ff4ea3;">"Connection"</span>:<span style="color: #ff4ea3;">"keep-alive"</span>,
+         <span style="color: #ff4ea3;">"Content-Type"</span>:<span style="color: #ff4ea3;">"multipart/form-data"</span>
+     <span style="color: #a1db00; font-weight: bold;">]</span>,
+     <span style="color: #ff4ea3;">"response"</span>: <span style="color: #a1db00; font-weight: bold;">[</span>
+         <span style="color: #ff4ea3;">"Content-Type"</span>: <span style="color: #ff4ea3;">"application/json"</span>,
+     <span style="color: #a1db00; font-weight: bold;">]</span>,
+ <span style="color: #5fafd7; font-weight: bold;">]</span>,
+ <span style="color: #ff4ea3;">"contents"</span>: <span style="color: #5fafd7; font-weight: bold;">[</span>
+     <span style="color: #ff4ea3;">"request"</span>: file/payload,
+     <span style="color: #ff4ea3;">"response"</span>:
+     <span style="color: #a1db00; font-weight: bold;">[</span> <span style="color: #ff4ea3;">"success"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"boolean"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+       <span style="color: #ff4ea3;">"file_headers"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+     <span style="color: #a1db00; font-weight: bold;">]</span>,
+ <span style="color: #5fafd7; font-weight: bold;">]</span>,
+<span style="color: #0000cd; font-weight: bold;">}</span>
+</pre>
+</div></li>
+
+<li><p>
+create<sub>job</sub>
+</p>
+<div class="org-src-container">
+<pre class="src src-js"><span style="color: #0000cd; font-weight: bold;">{</span><span style="color: #ff4ea3;">"method"</span>: <span style="color: #ff4ea3;">"POST"</span>,
+ <span style="color: #ff4ea3;">"url"</span>:<span style="color: #ff4ea3;">"/api/create_job"</span>,
+ <span style="color: #ff4ea3;">"headers"</span>:<span style="color: #5fafd7; font-weight: bold;">[</span>
+   <span style="color: #ff4ea3;">"request"</span>: <span style="color: #a1db00; font-weight: bold;">[</span>
+     <span style="color: #ff4ea3;">"Accept"</span>: <span style="color: #ff4ea3;">"application/json, text/plain, */*"</span>,
+     <span style="color: #ff4ea3;">"Authorization"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span><span style="color: #ff4ea3; font-weight: bold;">}</span>, 
+              <span style="color: #a1db00; font-weight: bold;">]</span>,
+   <span style="color: #ff4ea3;">"response"</span>: <span style="color: #a1db00; font-weight: bold;">[</span>
+    <span style="color: #ff4ea3;">"Content-Type"</span>: <span style="color: #ff4ea3;">"application/json"</span>,
+               <span style="color: #a1db00; font-weight: bold;">]</span>,
+ <span style="color: #5fafd7; font-weight: bold;">]</span>,
+ <span style="color: #ff4ea3;">"contents"</span>: <span style="color: #5fafd7; font-weight: bold;">[</span>
+   <span style="color: #ff4ea3;">"request"</span>: <span style="color: #a1db00; font-weight: bold;">[</span>
+       <span style="color: #ff4ea3;">"name"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+       <span style="color: #ff4ea3;">"board"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+       <span style="color: #ff4ea3;">"project"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+       <span style="color: #ff4ea3;">"description"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+       <span style="color: #ff4ea3;">"customer"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+       <span style="color: #ff4ea3;">"count"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"integer"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+       <span style="color: #ff4ea3;">"commission_date"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+       <span style="color: #ff4ea3;">"finish_date"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+
+              <span style="color: #a1db00; font-weight: bold;">]</span>,
+   <span style="color: #ff4ea3;">"response"</span>:<span style="color: #a1db00; font-weight: bold;">[</span> <span style="color: #ff4ea3;">"success"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"boolean"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+                <span style="color: #ff4ea3;">"message"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+              <span style="color: #a1db00; font-weight: bold;">]</span>,
+ <span style="color: #5fafd7; font-weight: bold;">]</span>,
+<span style="color: #0000cd; font-weight: bold;">}</span>
+</pre>
+</div></li>
+
+<li><p>
+pre<sub>setup</sub><sub>job</sub>
+</p>
+<div class="org-src-container">
+<pre class="src src-js"><span style="color: #0000cd; font-weight: bold;">{</span><span style="color: #ff4ea3;">"method"</span>: <span style="color: #ff4ea3;">"POST"</span>,
+ <span style="color: #ff4ea3;">"url"</span>:<span style="color: #ff4ea3;">"/api/pre_setup_job"</span>,
+ <span style="color: #ff4ea3;">"headers"</span>:<span style="color: #5fafd7; font-weight: bold;">[</span>
+     <span style="color: #ff4ea3;">"request"</span>: <span style="color: #a1db00; font-weight: bold;">[</span>
+         <span style="color: #ff4ea3;">"Accept"</span>: <span style="color: #ff4ea3;">"application/json, text/plain, */*"</span>,
+         <span style="color: #ff4ea3;">"Authorization"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span><span style="color: #ff4ea3; font-weight: bold;">}</span>, 
+     <span style="color: #a1db00; font-weight: bold;">]</span>,
+     <span style="color: #ff4ea3;">"response"</span>: <span style="color: #a1db00; font-weight: bold;">[</span>
+         <span style="color: #ff4ea3;">"Content-Type"</span>: <span style="color: #ff4ea3;">"application/json"</span>,
+     <span style="color: #a1db00; font-weight: bold;">]</span>,
+ <span style="color: #5fafd7; font-weight: bold;">]</span>,
+ <span style="color: #ff4ea3;">"contents"</span>: <span style="color: #5fafd7; font-weight: bold;">[</span>
+     <span style="color: #ff4ea3;">"request"</span>: <span style="color: #a1db00; font-weight: bold;">[</span>
+         <span style="color: #ff4ea3;">"job_name"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+         <span style="color: #ff4ea3;">"article_carrier_map"</span>:<span style="color: #ff4ea3; font-weight: bold;">[</span>
+             <span style="color: #ff4ea3;">"article_name"</span>:<span style="color: #ff4ea3;">"carrier_uid"</span>
+         <span style="color: #ff4ea3; font-weight: bold;">]</span>,
+                <span style="color: #a1db00; font-weight: bold;">]</span>,
+     <span style="color: #ff4ea3;">"response"</span>:<span style="color: #a1db00; font-weight: bold;">[</span> <span style="color: #ff4ea3;">"success"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"boolean"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+                  <span style="color: #ff4ea3;">"message"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+                <span style="color: #a1db00; font-weight: bold;">]</span>,
+ <span style="color: #5fafd7; font-weight: bold;">]</span>,
+<span style="color: #0000cd; font-weight: bold;">}</span>
+</pre>
+</div></li>
+
+<li><p>
+finish<sub>job</sub>
+</p>
+<div class="org-src-container">
+<pre class="src src-js"><span style="color: #0000cd; font-weight: bold;">{</span><span style="color: #ff4ea3;">"method"</span>: <span style="color: #ff4ea3;">"POST"</span>,
+ <span style="color: #ff4ea3;">"url"</span>:<span style="color: #ff4ea3;">"/api/finish_job"</span>,
+ <span style="color: #ff4ea3;">"headers"</span>:<span style="color: #5fafd7; font-weight: bold;">[</span>
+   <span style="color: #ff4ea3;">"request"</span>: <span style="color: #a1db00; font-weight: bold;">[</span>
+     <span style="color: #ff4ea3;">"Accept"</span>: <span style="color: #ff4ea3;">"application/json, text/plain, */*"</span>,
+     <span style="color: #ff4ea3;">"Authorization"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span><span style="color: #ff4ea3; font-weight: bold;">}</span>, 
+              <span style="color: #a1db00; font-weight: bold;">]</span>,
+   <span style="color: #ff4ea3;">"response"</span>: <span style="color: #a1db00; font-weight: bold;">[</span>
+    <span style="color: #ff4ea3;">"Content-Type"</span>: <span style="color: #ff4ea3;">"application/json"</span>,
+               <span style="color: #a1db00; font-weight: bold;">]</span>,
+ <span style="color: #5fafd7; font-weight: bold;">]</span>,
+ <span style="color: #ff4ea3;">"contents"</span>: <span style="color: #5fafd7; font-weight: bold;">[</span>
+   <span style="color: #ff4ea3;">"request"</span>:<span style="color: #a1db00; font-weight: bold;">{</span>
+       <span style="color: #ff4ea3;">"carrier_usage"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span><span style="color: #00d7af; font-weight: bold;">[</span>
+           <span style="color: #ff8700; font-weight: bold;">{</span><span style="color: #af5fff; font-weight: bold;">{</span><span style="color: #ff4ea3;">"carrier"</span>:<span style="color: #c6c6c6; font-weight: bold;">{</span><span style="color: #ff4ea3;">"type"</span>:<span style="color: #ff4ea3;">"string"</span><span style="color: #c6c6c6; font-weight: bold;">}</span><span style="color: #af5fff; font-weight: bold;">}</span>:<span style="color: #af5fff; font-weight: bold;">{</span><span style="color: #ff4ea3;">"usage"</span>:<span style="color: #c6c6c6; font-weight: bold;">{</span><span style="color: #ff4ea3;">"type"</span>:<span style="color: #ff4ea3;">"string"</span><span style="color: #c6c6c6; font-weight: bold;">}</span><span style="color: #af5fff; font-weight: bold;">}</span><span style="color: #ff8700; font-weight: bold;">}</span>,
+       <span style="color: #00d7af; font-weight: bold;">]</span><span style="color: #ff4ea3; font-weight: bold;">}</span>,
+       <span style="color: #ff4ea3;">"note"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span><span style="color: #ff4ea3;">"type"</span>:<span style="color: #ff4ea3;">"string"</span><span style="color: #ff4ea3; font-weight: bold;">}</span>
+   <span style="color: #a1db00; font-weight: bold;">}</span>,
+   <span style="color: #ff4ea3;">"response"</span>:<span style="color: #a1db00; font-weight: bold;">[</span> <span style="color: #ff4ea3;">"success"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"boolean"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+                <span style="color: #ff4ea3;">"message"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+              <span style="color: #a1db00; font-weight: bold;">]</span>,
+ <span style="color: #5fafd7; font-weight: bold;">]</span>,
+<span style="color: #0000cd; font-weight: bold;">}</span>
+</pre>
+</div></li>
+
+<li><p>
+delete<sub>job</sub>
+</p>
+<div class="org-src-container">
+<pre class="src src-js"><span style="color: #0000cd; font-weight: bold;">{</span><span style="color: #ff4ea3;">"method"</span>: <span style="color: #ff4ea3;">"DELETE"</span>,
+ <span style="color: #ff4ea3;">"url"</span>:<span style="color: #ff4ea3;">"/api/delete_job"</span>,
+ <span style="color: #ff4ea3;">"headers"</span>:<span style="color: #5fafd7; font-weight: bold;">[</span>
+   <span style="color: #ff4ea3;">"request"</span>: <span style="color: #a1db00; font-weight: bold;">[</span>
+     <span style="color: #ff4ea3;">"Accept"</span>: <span style="color: #ff4ea3;">"application/json, text/plain, */*"</span>,
+     <span style="color: #ff4ea3;">"Authorization"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span><span style="color: #ff4ea3; font-weight: bold;">}</span>, 
+              <span style="color: #a1db00; font-weight: bold;">]</span>,
+   <span style="color: #ff4ea3;">"response"</span>: <span style="color: #a1db00; font-weight: bold;">[</span>
+    <span style="color: #ff4ea3;">"Content-Type"</span>: <span style="color: #ff4ea3;">"application/json"</span>,
+               <span style="color: #a1db00; font-weight: bold;">]</span>,
+ <span style="color: #5fafd7; font-weight: bold;">]</span>,
+ <span style="color: #ff4ea3;">"contents"</span>: <span style="color: #5fafd7; font-weight: bold;">[</span>
+     <span style="color: #ff4ea3;">"request"</span>: <span style="color: #a1db00; font-weight: bold;">[</span><span style="color: #ff4ea3;">"job_name"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span><span style="color: #ff4ea3;">"type_string"</span><span style="color: #ff4ea3; font-weight: bold;">}</span>
+                <span style="color: #a1db00; font-weight: bold;">]</span>,
+     <span style="color: #ff4ea3;">"response"</span>:<span style="color: #a1db00; font-weight: bold;">[</span> <span style="color: #ff4ea3;">"success"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"boolean"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+                  <span style="color: #ff4ea3;">"message"</span>:<span style="color: #ff4ea3; font-weight: bold;">{</span> <span style="color: #ff4ea3;">"type"</span>: <span style="color: #ff4ea3;">"string"</span> <span style="color: #ff4ea3; font-weight: bold;">}</span>,
+                <span style="color: #a1db00; font-weight: bold;">]</span>,
+ <span style="color: #5fafd7; font-weight: bold;">]</span>,
+<span style="color: #0000cd; font-weight: bold;">}</span>
+</pre>
+</div></li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div id="postamble" class="status">
+<p class="date">Created: 2023-09-02 Sat 18:25</p>
+<p class="validation"><a href="https://validator.w3.org/check?uri=referer">Validate</a></p>
+</div>
+</body>
+</html>
