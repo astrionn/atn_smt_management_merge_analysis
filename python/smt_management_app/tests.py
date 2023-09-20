@@ -411,13 +411,58 @@ class CommonSetUpTestCase(TestCase):
 
 
   def test_view_creating_job(cls):
-    pass
-  #Article.objects.create
-  #Carrier.objects.create
-  #Storage.objects.create
-  #StorageSlot.objects.create
-  #Board.objects.create
-  #Job.objects.create
+    art_randname = cls.get_random_name("article")
+    a = Article.objects.create(name=art_randname)
+
+    art_randname2 = cls.get_random_name("article")
+    a2 = Article.objects.create(name=art_randname2)
+    
+    car_randname = cls.get_random_name("carrier")
+    c = Carrier.objects.create(name=car_randname,article=a,quantity_current=1000)
+
+    car_randname2 = cls.get_random_name("carrier")
+    c2 = Carrier.objects.create(name=car_randname2,article=a,quantity_current=1000)
+    
+    stor_randname = cls.get_random_name("storage")
+    s = Storage.objects.create(name=stor_randname,capacity=1000)
+
+    stor_slot_randname = cls.get_random_name("storage_slot")
+    ss = StorageSlot.objects.create(name=stor_slot_randname,storage=s)
+
+    stor_slot_randname2 = cls.get_random_name("storage_slot")
+    ss2 = StorageSlot.objects.create(name=stor_slot_randname2,storage=s)
+
+    c.storage_slot = ss
+    c.save()
+    c2.storage_slot = ss2
+    c2.save()
+
+    bor_randname = cls.get_random_name("board")
+    resp_board_create = cls.CLIENT.post('/api/board/',{
+      "name":bor_randname,
+    })
+
+    for ba in [art_randname,art_randname2]:
+      resp_boardarticles_create = cls.CLIENT.post('/api/boardarticle/',{'name':f"{bor_randname}_{ba}","article":ba,'count':10,'board':bor_randname})
+      #pp(resp_boardarticles_create.__dict__)
+    
+    bb = Board.objects.all()
+    b = bb.first()
+    #print(b)
+    #print(b.boardarticle_set.all())
+    #print(b.articles.all())
+    job = {
+      'name':cls.get_random_name('job'),
+      'board':b.name,
+      'count':100,
+      'start_at':'2023-01-01 8:00:00.000',#iso-8601
+      'finish_at':'2023-01-01 18:00:00.000'
+    }
+    resp_job_create = cls.CLIENT.post('/api/job/',job)
+    #pp(resp_job_create.__dict__)
+
+    resp_job_display = cls.CLIENT.get(f'/api/job/{job["name"]}/?format=json')
+    #pp(resp_job_display.__dict__)
 
   def test_view_creating_board_from_file(cls):
     pass
@@ -435,13 +480,6 @@ class CommonSetUpTestCase(TestCase):
   #Job.board.articles
   #assert equal
 
-  def test_view_displaying_boards(cls):
-    pass
-  #Article.objects.create
-  #Carrier.objects.create
-  #Storage.objects.create
-  #StorageSlot.objects.create
-  #Board.objects.create
 
   def test_view_printing_job(cls):
     pass
@@ -452,18 +490,3 @@ class CommonSetUpTestCase(TestCase):
   #Board.objects.create
   #Job.objects.create
   #print_job_bom()
-
-  def test_view_displaying_jobs(cls):
-    pass
-      #Article.objects.create
-  #Carrier.objects.create
-  #Storage.objects.create
-  #StorageSlot.objects.create
-  #Board.objects.create
-  #Job.objects.create
-  #get_jobs()
-
-  def test_view_displaying_articles(cls):
-    pass
-  #Article.objects.create
-  #get_articles()

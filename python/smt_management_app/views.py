@@ -20,6 +20,8 @@ from . models import AbstractBaseModel, Manufacturer, Provider, Article, Carrier
 # created by todo.org tangle
 # Create your views here.
 
+
+
 def store_carrier_confirm(request,carrier,slot):
    queryset = Carrier.objects.filter(name=carrier)
    if not queryset: return
@@ -260,6 +262,12 @@ class BoardViewSet(viewsets.ModelViewSet):
 class BoardArticleViewSet(viewsets.ModelViewSet):
     queryset = BoardArticle.objects.all()
     serializer_class = BoardArticleSerializer
+
+    def create(self, request, *args, **kwargs):
+       #print("Board Article ViewSet create:")
+       #pp(args)
+       #pp(kwargs)
+       return super().create(request, *args, **kwargs)
 
 class CarrierViewSet(viewsets.ModelViewSet):
     queryset = Carrier.objects.all()
