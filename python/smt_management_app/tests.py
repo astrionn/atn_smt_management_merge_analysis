@@ -1,12 +1,11 @@
-from http import client
 from pprint import pprint as pp
 import os 
 import json
 import datetime
-import random
 import pytz
 from logging import getLogger, DEBUG
 from random import randint
+import random
 
 
 from django.test import TestCase
@@ -83,7 +82,7 @@ class CommonSetUpTestCase(TestCase):
   @classmethod
   def login_client(cls):
     cls.logger.info('Logging in client...')
-    cls.CLIERNT.login(
+    cls.CLIENT.login(
       username=cls.USERNAME,
       password=cls.PASSWORD
     )
@@ -183,7 +182,89 @@ class CommonSetUpTestCase(TestCase):
 
 
   def test_view_creating_carriers_from_file(cls):
-    pass
+    """tests a 2-step workflow:
+        - uploading a csv file and getting the userspace headers and getting the file name returned
+        - sending a mapping from user space to internal space of headers along with the filename and getting success or failure message of creation 
+    """
+
+    #all fields and relations of Carrier model (Carrier._meta.fields)
+    headers = [
+      'name',
+      'created_at',
+      'updated_at',
+      'archived', 
+      'article',
+      'boardarticle',
+      'diameter', 
+      'width', 
+      'container_type', 
+      'quantity_original', 
+      'quantity_current', 
+      'lot_number', 
+      'reserved', 
+      'delivered', 
+      'collecting', 
+      'storage_slot', 
+      'machine_slot'
+      ]
+
+    #add some random to it to simulate the user having different names to our internal representation
+    headers_salted = [k+cls.get_random_name("_aaaa") for k in headers]
+
+    #build csv file
+    file_content = ",".join(headers_salted)
+    file_content += '\n'
+
+    for i in range(5):
+      values = []
+      for h in headers:
+        if h in ["archived","collecting","reserved"]:
+          values.append(str(False))
+        elif h in ["delivered"]:
+          values.append(str(True))
+        elif h in ["created_at","updated_at","storage_slot","machine_slot",'boardarticle']:
+          values.append('')
+        elif h in ['article']:
+          art_randname = cls.get_random_name('article')
+          a = Article.objects.create(name=art_randname)
+          values.append(a.name)
+        elif h in ["diameter"]:
+          values.append(7)
+        elif h in ["width"]:
+          values.append(8)
+        elif h in ["container_type"]:
+          values.append(0)
+        elif h in ["quantity_current","quantity_original"]:
+          values.append(1000)
+        elif h in ['name']:
+          values.append(cls.get_random_name("carrier"))
+        else:
+          values.append(cls.get_random_name(h))
+      values = [str(v) for v in values]
+      file_content += ",".join(values)
+      file_content += '\n'
+
+
+    f = SimpleUploadedFile("file.csv",bytes(file_content,encoding="utf8"), content_type='text/plain')
+
+    #upload csv file 
+    resp_create = cls.CLIENT.post("/api/save_file_and_get_headers/",{'file':f,'upload_type':'carrier'})
+    resp_create_json = resp_create.json()
+
+    headers_salted2 = resp_create_json["header_fields"]
+    headers2 = resp_create_json["object_fields"]
+    file_name = resp_create_json["file_name"]
+    
+    cls.assertEqual(sorted(headers_salted),sorted(headers_salted2))
+    cls.assertEqual(sorted(headers),sorted(headers2))
+
+    #provide user mapping
+    map_ = {k:v for k,v in zip(sorted(headers),sorted(headers_salted2))}
+    #post
+    resp_map = cls.CLIENT.post("/api/user_mapping_and_file_processing/",{'file_name':file_name,'map':json.dumps(map_)})
+    msg = resp_map.json()
+    #pp(msg)
+    
   #create a csv file with bunch of articles
   #get_csv_headers(file) -> file_name
   #create_articles_from_file(file_name,headers) -> created X didnt create Y
@@ -465,7 +546,7 @@ class CommonSetUpTestCase(TestCase):
     #pp(resp_job_display.__dict__)
 
   def test_view_creating_board_from_file(cls):
-    pass
+    pass    
   #Article.objects.create
   #Carrier.objects.create
   #Storage.objects.create
@@ -479,14 +560,3 @@ class CommonSetUpTestCase(TestCase):
   #Jobs.objects.get(name) -> Job
   #Job.board.articles
   #assert equal
-
-
-  def test_view_printing_job(cls):
-    pass
-  #Article.objects.create
-  #Carrier.objects.create
-  #Storage.objects.create
-  #StorageSlot.objects.create
-  #Board.objects.create
-  #Job.objects.create
-  #print_job_bom()

@@ -1,4 +1,3 @@
-from asyncio.proactor_events import _ProactorBaseWritePipeTransport
 import json
 import csv
 from pprint import pprint as pp
@@ -8,19 +7,15 @@ from functools import reduce
 
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import viewsets, filters, generics
-from rest_framework.renderers import JSONRenderer
-from django.http import HttpResponse, JsonResponse
+
+from django.http import JsonResponse
 from django.core.files import File
-
-
 
 from . serializers import *
 
 from . models import AbstractBaseModel, Manufacturer, Provider, Article, Carrier, Machine, MachineSlot, Storage, StorageSlot, Job, Board, BoardArticle, LocalFile
 # created by todo.org tangle
 # Create your views here.
-
-
 
 def store_carrier_confirm(request,carrier,slot):
    queryset = Carrier.objects.filter(name=carrier)
@@ -67,7 +62,7 @@ def store_carrier(request,carrier,storage):
       "carrier":c.name
       }
    return JsonResponse(msg)
-   
+
 
 def collect_carrier(request,carrier):
    c = Carrier.objects.filter(name=carrier).first()
@@ -98,10 +93,10 @@ def collect_carrier_confirm(request,carrier,slot):
    queryset = Carrier.objects.filter(collecting=True)
    #check membership
    queryset = queryset.filter(name=carrier)
-   
+
    if not queryset: return
    c = queryset.first()
-   
+
    #check slot correct
    if c.storage_slot.name != slot: return
    c.storage_slot.led_state = 1
@@ -156,6 +151,24 @@ def user_mapping_and_file_processing(request):
       map_ordered_l = sorted(map_l,key=lambda x:index_map[x[1]])
 
       for l in csv_reader:
+                #print(l)
+        if lf.upload_type == 'carrier':
+           carrier_dict = {k[0]:l[a_headers.index(k[1])] for k in map_ordered_l}
+           #pp(carrier_dict)
+           if carrier_dict.get('article',None):
+              a = Article.objects.get(name=carrier_dict['article'])
+              carrier_dict['article'] = a
+           if not carrier_dict.get('storage_slot',None):
+              carrier_dict['storage_slot'] = None
+           if not carrier_dict.get('machine_slot',None):
+              carrier_dict['machine_slot'] = None
+           if not carrier_dict.get('boardarticle',None):
+              carrier_dict['boardarticle'] = None
+
+
+           c = Carrier.objects.create(**carrier_dict)
+           msg['created'].append(c.name)
+
         if lf.upload_type == 'article':
           article_dict = {k[0]:l[a_headers.index(k[1])] for k in map_ordered_l}
 
@@ -208,52 +221,6 @@ def save_file_and_get_headers(request):
 class ArticleViewSet(viewsets.ModelViewSet):
     queryset = Article.objects.all()
     serializer_class = ArticleSerializer
-    filter_backends = (filters.SearchFilter, DjangoFilterBackend, filters.OrderingFilter)
-    ordering_fields = [
-        "name",
-        "provider__name",
-        "manufacturer__name",
-        "sap_number",
-        "created_at",
-        "updated_at",
-        "archived"
-    ]
-
-    search_fields = [
-       "name",
-       "description",
-       "provider__name",
-       "provider_description",
-       "manufacturer__name",
-       "manufacturer_description"
-       "sap_number",
-       "created_at",
-       "updated_at",
-       "archived"
-    ]
-
-    def get_queryset(self):
-        name = self.request.GET.get('name') 
-        description = self.request.GET.get('description')
-        
-        manufacturers_list = self.request.GET.getlist("manufacturers[]")
-        providers_list = self.request.GET.getlist("providers[]")
-
-        filter_args = {
-            "name__icontains":name,
-            "description__icontains":description,
-            "archived" : False,
-            }
-        # print(filter_args)       
-
-        filter_args = dict((k,v) for k,v in filter_args.items() if (v is not None and v != "" and v != []) )
-
-        articles = Article.objects.filter(**filter_args)
-        if len(manufacturers_list) > 0:
-            articles = articles.filter(reduce(operator.or_, (Q(manufacturer__name__icontains=x) for x in manufacturers_list)))
-        
-        return articles
-    
 
 class BoardViewSet(viewsets.ModelViewSet):
     queryset = Board.objects.all()
@@ -263,45 +230,9 @@ class BoardArticleViewSet(viewsets.ModelViewSet):
     queryset = BoardArticle.objects.all()
     serializer_class = BoardArticleSerializer
 
-    def create(self, request, *args, **kwargs):
-       #print("Board Article ViewSet create:")
-       #pp(args)
-       #pp(kwargs)
-       return super().create(request, *args, **kwargs)
-
 class CarrierViewSet(viewsets.ModelViewSet):
     queryset = Carrier.objects.all()
     serializer_class = CarrierSerializer
-    filter_backends = (filters.SearchFilter, DjangoFilterBackend, filters.OrderingFilter)
-    ordering_fields = [
-       "name",
-       "lot_number",
-       "quantity_current",
-       "article__name",
-       "delivered",
-       "reserved",
-    ]
-    search_fields = [
-       "name",
-       "lot_number",
-       "article__name",
-       "article__description",
-       "storage_slot__storage__name"
-    ]
-
-    def get_queryset(self):
-       name = self.request.GET.get('name')
-       lot_number = self.request.GET.get('lot_number')
-       filter_args = {
-          "name__icontains":name,
-          "lot_number__icontains":lot_number,
-       }
-       filter_args = dict((k,v) for k,v in filter_args.items() if (v is not None and v != "" and v != []) )
-       carriers = Carrier.objects.filter(**filter_args)
-       return carriers
-
-       
-       
 
 class JobViewSet(viewsets.ModelViewSet):
     queryset = Job.objects.all()

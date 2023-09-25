@@ -15,8 +15,8 @@ class AbstractBaseModel(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     archived = models.BooleanField(default=False)
 
-    def __str__(self):
-        return self.name
+    def __str__(self): 
+       return self.name
 
     def save(self, *args, **kwargs):
         if not self.name:
