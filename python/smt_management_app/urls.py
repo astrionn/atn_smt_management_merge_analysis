@@ -17,7 +17,6 @@ router.register(r'storage', views.StorageViewSet,'storage')
 router.register(r'storageslot', views.StorageSlotViewSet,'storageslot')
 
 name = "smt_management_app"
-
 urlpatterns = router.urls
 urlpatterns.append(path("save_file_and_get_headers/",views.save_file_and_get_headers, name='save_file_and_get_headers'))
 urlpatterns.append(path("user_mapping_and_file_processing/",views.user_mapping_and_file_processing, name='user_mapping_and_file_processing'))
