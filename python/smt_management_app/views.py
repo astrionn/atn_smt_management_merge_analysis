@@ -6,6 +6,10 @@ import operator
 from functools import reduce
 
 from django_filters.rest_framework import DjangoFilterBackend
+import operator
+from functools import reduce
+
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import viewsets, filters, generics
 
 from django.http import JsonResponse
@@ -152,6 +156,28 @@ def user_mapping_and_file_processing(request):
 
       for l in csv_reader:
                 #print(l)
+        if lf.upload_type == 'board':
+           if not request.POST['board'] or not Board.objects.filter(name=request.POST['board']):
+              msg['fail'].append(f"Board does not exist.")
+              break
+           board = Board.objects.get(name=request.POST['board'])
+
+           board_article_dict = {k[0]:l[a_headers.index(k[1])] for k in map_ordered_l}
+           board_article_dict['board'] = board
+           a = Article.objects.filter(name=board_article_dict['article'])
+           if a :
+              board_article_dict['article'] = a[0]
+           else:
+              msg['fail'].append(f"{board_article_dict['article']} does not exist.")
+              print(msg)
+              break
+           if not board_article_dict.get('count',None) or not board_article_dict['count'].isnumeric():
+              msg['fail'].append(f"{board_article_dict['article']} does have invalid count.")
+              break
+           board_article_dict['name'] = f"{board.name}_{board_article_dict['article'].name}"
+           b_article = BoardArticle.objects.create(**board_article_dict)
+           msg['created'].append(f"{board_article_dict['name']}")
+
         if lf.upload_type == 'carrier':
            carrier_dict = {k[0]:l[a_headers.index(k[1])] for k in map_ordered_l}
            #pp(carrier_dict)
@@ -211,7 +237,8 @@ def save_file_and_get_headers(request):
             model_fields = [f.name for f in Article._meta.get_fields()]
         elif lf.upload_type == 'carrier':
             model_fields = [f.name for f in Carrier._meta.get_fields()]
-
+        elif lf.upload_type == 'board':
+          model_fields = ['article','count']
         return JsonResponse({
             "object_fields":sorted(model_fields),
             "header_fields":sorted(lf.headers),
@@ -222,30 +249,11 @@ class ArticleViewSet(viewsets.ModelViewSet):
     queryset = Article.objects.all()
     serializer_class = ArticleSerializer
     filter_backends = (filters.SearchFilter, DjangoFilterBackend, filters.OrderingFilter)
-    ordering_fields = [
-      "name",
-      "provider__name",
-      "manufacturer__name",
-      "sap_number",
-      "created_at",
-      "updated_at",
-      "archived"
-  ]
+    filterset_fields = "__all__"
+    ordering_fields = "__all__"
+    search_fields = "__all__"
 
-    search_fields = [
-     "name",
-     "description",
-     "provider__name",
-     "provider_description",
-     "manufacturer__name",
-     "manufacturer_description"
-     "sap_number",
-     "created_at",
-     "updated_at",
-     "archived"
-  ]
-
-    def get_queryset(self):
+    """def get_queryset(self):
        name = self.request.GET.get('name') 
        description = self.request.GET.get('description')
 
@@ -265,7 +273,7 @@ class ArticleViewSet(viewsets.ModelViewSet):
        if len(manufacturers_list) > 0:
           articles = articles.filter(reduce(operator.or_, (Q(manufacturer__name__icontains=x) for x in manufacturers_list)))
 
-       return articles
+       return articles"""
 
 class BoardViewSet(viewsets.ModelViewSet):
     queryset = Board.objects.all()
