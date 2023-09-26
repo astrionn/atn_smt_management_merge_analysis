@@ -435,16 +435,62 @@ class CommonSetUpTestCase(TestCase):
     #pp(resp_confirm2.json())
 
   def test_view_collect_carriers_job(cls):
-    pass
-  #Article.objects.create
-  #Carrier.objects.create
-  #Storage.objects.create
-  #StorageSlot.objects.create
-  #Board.objects.create
-  #Job.objects.create
-  #collect_carriers_job(job) -> queue
-  #collect_carrier_confirm_slot(slot, carrier) -> storage, slot, carrier, queue
+    art_randname = cls.get_random_name("article")
+    a = Article.objects.create(name=art_randname)
 
+    art_randname2 = cls.get_random_name("article")
+    a2 = Article.objects.create(name=art_randname2)
+    
+    car_randname = cls.get_random_name("carrier")
+    c = Carrier.objects.create(name=car_randname,article=a,quantity_current=1000)
+
+    car_randname2 = cls.get_random_name("carrier")
+    c2 = Carrier.objects.create(name=car_randname2,article=a,quantity_current=1000)
+    
+    stor_randname = cls.get_random_name("storage")
+    s = Storage.objects.create(name=stor_randname,capacity=1000)
+
+    stor_slot_randname = cls.get_random_name("storage_slot")
+    ss = StorageSlot.objects.create(name=stor_slot_randname,storage=s)
+
+    stor_slot_randname2 = cls.get_random_name("storage_slot")
+    ss2 = StorageSlot.objects.create(name=stor_slot_randname2,storage=s)
+
+    c.storage_slot = ss
+    c.save()
+    c2.storage_slot = ss2
+    c2.save()
+
+    bor_randname = cls.get_random_name("board")
+    resp_board_create = cls.CLIENT.post('/api/board/',{
+      "name":bor_randname,
+    })
+
+    for ba in [art_randname,art_randname2]:
+      resp_boardarticles_create = cls.CLIENT.post('/api/boardarticle/',{'name':f"{bor_randname}_{ba}","article":ba,'count':10,'board':bor_randname})
+      #pp(resp_boardarticles_create.__dict__)
+    
+    bb = Board.objects.all()
+    b = bb.first()
+    #print(b)
+    #print(b.boardarticle_set.all())
+    #print(b.articles.all())
+    job = {
+      'name':cls.get_random_name('job'),
+      'board':b.name,
+      'count':100,
+      'start_at':'2023-01-01 8:00:00.000',#iso-8601
+      'finish_at':'2023-01-01 18:00:00.000'
+    }
+    resp_job_create = cls.CLIENT.post('/api/job/',job)
+    #pp(resp_job_create.json())
+
+    resp_job_display = cls.CLIENT.get(f'/api/job/{job["name"]}/?format=json')
+    #pp(resp_job_display.json())
+
+    resp_job_display_boardarticles = cls.CLIENT.get(f'/api/boardarticle/?format=json&board={job["board"]}')
+    #pp(resp_job_display_boardarticles.json())
+  
 
 
   def test_view_storing_carrier(cls):
@@ -546,13 +592,88 @@ class CommonSetUpTestCase(TestCase):
     #pp(resp_job_display.__dict__)
 
   def test_view_creating_board_from_file(cls):
-    pass    
-  #Article.objects.create
-  #Carrier.objects.create
-  #Storage.objects.create
-  #StorageSlot.objects.create
-  #Board.objects.create
-  #Job.objects.create
+    art_randname = cls.get_random_name("article")
+    a = Article.objects.create(name=art_randname)
+
+    art_randname2 = cls.get_random_name("article")
+    a2 = Article.objects.create(name=art_randname2)
+
+    art_randname3 = cls.get_random_name("article")
+    a3 = Article.objects.create(name=art_randname3)
+    
+    car_randname = cls.get_random_name("carrier")
+    c = Carrier.objects.create(name=car_randname,article=a,quantity_current=1000)
+
+    car_randname2 = cls.get_random_name("carrier")
+    c2 = Carrier.objects.create(name=car_randname2,article=a2,quantity_current=1000)
+
+    car_randname3 = cls.get_random_name("carrier")
+    c3 = Carrier.objects.create(name=car_randname3,article=a3,quantity_current=1000)
+    
+    stor_randname = cls.get_random_name("storage")
+    s = Storage.objects.create(name=stor_randname,capacity=1000)
+
+    stor_slot_randname = cls.get_random_name("storage_slot")
+    ss = StorageSlot.objects.create(name=stor_slot_randname,storage=s)
+
+    stor_slot_randname2 = cls.get_random_name("storage_slot")
+    ss2 = StorageSlot.objects.create(name=stor_slot_randname2,storage=s)
+
+    stor_slot_randname3 = cls.get_random_name("storage_slot")
+    ss3 = StorageSlot.objects.create(name=stor_slot_randname3,storage=s)
+
+
+    c.storage_slot = ss
+    c.save()
+    c2.storage_slot = ss2
+    c2.save()
+    c3.storage_slot = ss3
+    c3.save()
+
+    bor_randname = cls.get_random_name("board")
+    resp_board_create = cls.CLIENT.post('/api/board/',{
+      "name":bor_randname,
+    })
+
+    headers = ['article','count']
+    headers_salted = [k+cls.get_random_name("_aaaa") for k in headers]
+
+    file_content = ",".join(headers_salted)
+    file_content += '\n'
+    
+    for a in [a,a2,a3]:
+      values = []
+      for h in headers:
+          if h == 'article':
+            values.append(a.name)
+          else:
+            values.append(randint(1,100))
+      values = [str(v) for v in values]
+
+      file_content += ",".join(values)
+      file_content += '\n'
+
+
+    f = SimpleUploadedFile("file.csv",bytes(file_content,encoding="utf8"), content_type='text/plain')
+
+
+    resp_create = cls.CLIENT.post("/api/save_file_and_get_headers/",{'file':f,'upload_type':'board','board':bor_randname})
+    resp_create_json = resp_create.json()
+    #pp(resp_create_json)
+
+    headers_salted2 = resp_create_json["header_fields"]
+    headers2 = resp_create_json["object_fields"]
+    file_name = resp_create_json["file_name"]
+
+    cls.assertEqual(sorted(headers_salted),sorted(headers_salted2))
+    cls.assertEqual(sorted(headers),sorted(headers2))
+
+    #provide user mapping
+    map_ = {k:v for k,v in zip(sorted(headers),sorted(headers_salted2))}
+    #post
+    resp_map = cls.CLIENT.post("/api/user_mapping_and_file_processing/",{'file_name':file_name,'map':json.dumps(map_),'board':bor_randname})
+    msg = resp_map.json()
+    #pp(msg)
 
   #create a csv file with bunch of article names and counts
   #get_csv_headers(file) -> file_name
