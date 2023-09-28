@@ -58,6 +58,7 @@ How to install the backend
     .\venv\Scripts\python.exe -m pip install --upgrade pip
     .\venv\Scripts\python.exe -m pip install django
     .\venv\Scripts\python.exe -m pip install djangorestframework
+    .\venv\Scripts\python.exe -m pip install django-filter
   #+end_src
 - start django project and create app
   #+begin_src
@@ -92,7 +93,16 @@ How to install the backend
   #+CAPTION: =add rest_framework to settings.py=
   #+begin_src python
     INSTALLED_APPS.append("rest_framework")
+    INSTALLED_APPS.append("django_filters")
     INSTALLED_APPS.append("smt_management_app.apps.SmtManagementAppConfig")
+
+    REST_FRAMEWORK = {
+    'DEFAULT_FILTER_BACKENDS': (
+        'django_filters.rest_framework.DjangoFilterBackend',
+    ),
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
+    'PAGE_SIZE': 100
+}
 
 
     #only needed in developement in this project
@@ -129,7 +139,6 @@ How to install the backend
 
       from django_filters.rest_framework import DjangoFilterBackend
       from rest_framework import viewsets, filters, generics
-, filters, generics
 
       from django.http import JsonResponse
       from django.core.files import File
@@ -691,6 +700,28 @@ class StorageSlotSerializer(serializers.ModelSerializer):
 
         for l in csv_reader:
                   #print(l)
+          if lf.upload_type == 'board':
+             if not request.POST['board'] or not Board.objects.filter(name=request.POST['board']):
+                msg['fail'].append(f"Board does not exist.")
+                break
+             board = Board.objects.get(name=request.POST['board'])
+
+             board_article_dict = {k[0]:l[a_headers.index(k[1])] for k in map_ordered_l}
+             board_article_dict['board'] = board
+             a = Article.objects.filter(name=board_article_dict['article'])
+             if a :
+                board_article_dict['article'] = a[0]
+             else:
+                msg['fail'].append(f"{board_article_dict['article']} does not exist.")
+                print(msg)
+                break
+             if not board_article_dict.get('count',None) or not board_article_dict['count'].isnumeric():
+                msg['fail'].append(f"{board_article_dict['article']} does have invalid count.")
+                break
+             board_article_dict['name'] = f"{board.name}_{board_article_dict['article'].name}"
+             b_article = BoardArticle.objects.create(**board_article_dict)
+             msg['created'].append(f"{board_article_dict['name']}")
+
           if lf.upload_type == 'carrier':
              carrier_dict = {k[0]:l[a_headers.index(k[1])] for k in map_ordered_l}
              #pp(carrier_dict)
@@ -750,7 +781,8 @@ class StorageSlotSerializer(serializers.ModelSerializer):
               model_fields = [f.name for f in Article._meta.get_fields()]
           elif lf.upload_type == 'carrier':
               model_fields = [f.name for f in Carrier._meta.get_fields()]
-
+          elif lf.upload_type == 'board':
+            model_fields = ['article','count']
           return JsonResponse({
               "object_fields":sorted(model_fields),
               "header_fields":sorted(lf.headers),
@@ -875,6 +907,204 @@ class StorageSlotSerializer(serializers.ModelSerializer):
 
 
 
+#+end_src
+***** led shelf I/O
+#+begin_src python :tangle ./python/smt_management_app/neolight.py :tangle-mode (append)
+import requests
+
+
+
+def handle_errors(func):
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            #print(e)
+            return False
+    return wrapper
+
+
+class NeolightHandler():
+
+    def __init__(self, url : str, port : int) -> None:
+        self.url = 'http://' + url + ':' + str(port) + '/'
+        self.headers = {'content-type': 'application/json'}
+        self.on_leds = []
+        # self.redis_cli = redis.Redis(host='localhost', port=6379, db=0)
+
+    @handle_errors
+    def tower_on(self, tower : int, color : str) -> str:
+        """
+        Turn on tower light
+        :param tower: tower number (1,2)
+        :param color: color of the light (red, green, yellow)
+        :return: response
+        """
+        if tower == 1:
+            tower_name = 'channel1'
+        elif tower == 2:
+            tower_name = 'channel2'
+        else: 
+            return 'Invalid tower number'
+            
+        if color not in ['red', 'green',  'yellow']:
+            return 'Invalid color'
+
+        data = {'workchannel': tower_name, 'workcolor': color}
+
+        resp = requests.post(self.url + 'workinglight', json=data, headers=self.headers,timeout=0.2)
+        return resp.text
+
+    @handle_errors
+    def tower_off(self, tower : int, color : str) -> str:
+        """
+        Turn off tower light
+        :param tower: tower number (1,2)
+        :param color: color of the light (red, green, yellow)
+        :return: response
+        """
+        if tower == 1:
+            tower_name = 'channel1'
+        elif tower == 2:
+            tower_name = 'channel2'
+        else: 
+            return 'Invalid tower number'
+            
+        if color not in ['red', 'green',  'yellow']:
+            return 'Invalid color'
+
+        data = {'workchannel': tower_name, 'workcolor': color}
+        resp = requests.post(self.url + 'workingoff', json=data, headers=self.headers)
+        return resp.text
+
+    @handle_errors
+    def led_on(self, num : str , color : str) -> str:
+        """
+        Turn on led light
+        :param num: led number (1,2,3,4)
+        :param color: color of the light (red, green, yellow)
+        :return: response
+        """       
+        if color not in ['red', 'green', 'yellow', 'blue']:
+            return 'Invalid color'
+
+        data = {'light_led': num, 'light_led_color': color}
+        resp = requests.post(self.url + 'ledopen', json=data, headers=self.headers)
+        self.on_leds.append(num)
+        return resp.text
+
+    @handle_errors
+    def led_off(self, num : str) -> str:
+        """
+        Turn off led light
+        :param num: led number (1,2,3,4)
+        :return: response
+        """
+        data = {'off_led': num}
+        resp = requests.post(self.url + 'ledoff', json=data, headers=self.headers)
+        self.on_leds.remove(num)
+        return resp.text
+
+    @handle_errors
+    def side_on(self, side : int ,color : str) -> str:
+        """
+        Turn on all leds
+        :param color: color of the light (red, green, yellow)
+        :return: response
+        """
+        if side == 1:
+            side_name = 'channel1'
+        elif side == 2:
+            side_name = 'channel2'
+        else: 
+            return 'Invalid tower number'
+
+        if color not in ['red', 'green', 'yellow', 'blue']:
+            return 'Invalid color'
+
+        data = {'channel_num' : side_name  ,'channel_color': color}
+        resp = requests.post(self.url + 'lineledon', json=data, headers=self.headers)
+        return resp.text
+
+    @handle_errors
+    def side_off(self, side : int) -> str:
+        """
+        Turn off all leds
+        :return: response
+        """
+        if side == 1:
+            side_name = 'channel1'
+        elif side == 2:
+            side_name = 'channel2'
+        else: 
+            return 'Invalid tower number'
+
+        data = {'channel_num' : side_name, 'channel_color': 'blue'}
+        resp = requests.post(self.url + 'lineledoff', json=data, headers=self.headers)
+        return resp.text
+
+    @handle_errors
+    def reset_leds(self) -> str:
+        """
+        Turn off all leds
+        :return: response
+        """
+        for led in self.on_leds:
+            self.led_off(led)
+            
+#+end_src
+***** label printer I/O
+#+begin_src python :tangle ./python/smt_management_app/dymo.py :tangle-mode (append)
+from os import path
+from tkinter.constants import E
+from win32com.client import Dispatch
+
+class DymoHandler:
+    def __init__(self,label_name='Siemens.label') -> None:
+        import pythoncom
+
+        pythoncom.CoInitialize()
+
+        self.label = path.join('matmanagment', 'media',label_name)
+        if not path.isfile(self.label):
+            print('PyDymoLabel','Template file siemens.label does not exist')
+            return
+
+        else:
+            try:
+                self.labelCom = Dispatch('Dymo.DymoAddIn')
+                self.labelText = Dispatch('Dymo.DymoLabels')
+            except Exception as e:
+                print('PyDymoLabel','Dymo Add-in not installed', e)
+                return
+
+    def print_label(self,message_a='', message_b='',message_c='',message_d='',message_e='', feeder = False):
+        try:
+            selectPrinter = 'DYMO LabelWriter 450'
+            self.labelCom.SelectPrinter(selectPrinter)
+            is_open = self.labelCom.Open(self.label)
+            if not feeder:
+                self.labelText.SetField('BARCODE', message_a)
+                self.labelText.SetField('C_UID_VAL', message_a)
+                self.labelText.SetField('A_UID_VAL', message_b)
+                self.labelText.SetField('A_DESC_VAL', message_c)
+                self.labelText.SetField('WIDTH_VAL', message_d)
+                self.labelText.SetField('M_QTY_VAL', message_e)
+            else:
+                self.labelText.SetField('BARCODE', message_a)
+                self.labelText.SetField('BARCODE_1', message_a)
+                self.labelText.SetField('TEXT__1', message_a)
+                self.labelText.SetField('TEXT_2', message_a)
+                self.labelText.SetField('TEXT_1', "Feeder")
+                self.labelText.SetField('TEXT', "Feeder")
+
+            self.labelCom.StartPrintJob()
+            self.labelCom.Print(1, False)
+            self.labelCom.EndPrintJob()
+            return True
+        except Exception as e:
+            print('PyDymoLabel','Error printing label', e)
+            return False
 #+end_src
 ***** tests
 Testing will be done in two parts.
@@ -1307,7 +1537,61 @@ class CommonSetUpTestCase(TestCase):
     #pp(resp_confirm2.json())
 
   def test_view_collect_carriers_job(cls):
-    pass
+    art_randname = cls.get_random_name("article")
+    a = Article.objects.create(name=art_randname)
+
+    art_randname2 = cls.get_random_name("article")
+    a2 = Article.objects.create(name=art_randname2)
+    
+    car_randname = cls.get_random_name("carrier")
+    c = Carrier.objects.create(name=car_randname,article=a,quantity_current=1000)
+
+    car_randname2 = cls.get_random_name("carrier")
+    c2 = Carrier.objects.create(name=car_randname2,article=a,quantity_current=1000)
+    
+    stor_randname = cls.get_random_name("storage")
+    s = Storage.objects.create(name=stor_randname,capacity=1000)
+
+    stor_slot_randname = cls.get_random_name("storage_slot")
+    ss = StorageSlot.objects.create(name=stor_slot_randname,storage=s)
+
+    stor_slot_randname2 = cls.get_random_name("storage_slot")
+    ss2 = StorageSlot.objects.create(name=stor_slot_randname2,storage=s)
+
+    c.storage_slot = ss
+    c.save()
+    c2.storage_slot = ss2
+    c2.save()
+
+    bor_randname = cls.get_random_name("board")
+    resp_board_create = cls.CLIENT.post('/api/board/',{
+      "name":bor_randname,
+    })
+
+    for ba in [art_randname,art_randname2]:
+      resp_boardarticles_create = cls.CLIENT.post('/api/boardarticle/',{'name':f"{bor_randname}_{ba}","article":ba,'count':10,'board':bor_randname})
+      #pp(resp_boardarticles_create.__dict__)
+    
+    bb = Board.objects.all()
+    b = bb.first()
+    #print(b)
+    #print(b.boardarticle_set.all())
+    #print(b.articles.all())
+    job = {
+      'name':cls.get_random_name('job'),
+      'board':b.name,
+      'count':100,
+      'start_at':'2023-01-01 8:00:00.000',#iso-8601
+      'finish_at':'2023-01-01 18:00:00.000'
+    }
+    resp_job_create = cls.CLIENT.post('/api/job/',job)
+    #pp(resp_job_create.json())
+
+    resp_job_display = cls.CLIENT.get(f'/api/job/{job["name"]}/?format=json')
+    #pp(resp_job_display.json())
+
+    resp_job_display_boardarticles = cls.CLIENT.get(f'/api/boardarticle/?format=json&board={job["board"]}')
+    #pp(resp_job_display_boardarticles.json())
   #Article.objects.create
   #Carrier.objects.create
   #Storage.objects.create
@@ -1418,7 +1702,61 @@ class CommonSetUpTestCase(TestCase):
     #pp(resp_job_display.__dict__)
 
   def test_view_creating_board_from_file(cls):
-    pass    
+    art_randname = cls.get_random_name("article")
+    a = Article.objects.create(name=art_randname)
+
+    art_randname2 = cls.get_random_name("article")
+    a2 = Article.objects.create(name=art_randname2)
+    
+    car_randname = cls.get_random_name("carrier")
+    c = Carrier.objects.create(name=car_randname,article=a,quantity_current=1000)
+
+    car_randname2 = cls.get_random_name("carrier")
+    c2 = Carrier.objects.create(name=car_randname2,article=a,quantity_current=1000)
+    
+    stor_randname = cls.get_random_name("storage")
+    s = Storage.objects.create(name=stor_randname,capacity=1000)
+
+    stor_slot_randname = cls.get_random_name("storage_slot")
+    ss = StorageSlot.objects.create(name=stor_slot_randname,storage=s)
+
+    stor_slot_randname2 = cls.get_random_name("storage_slot")
+    ss2 = StorageSlot.objects.create(name=stor_slot_randname2,storage=s)
+
+    c.storage_slot = ss
+    c.save()
+    c2.storage_slot = ss2
+    c2.save()
+
+    bor_randname = cls.get_random_name("board")
+    resp_board_create = cls.CLIENT.post('/api/board/',{
+      "name":bor_randname,
+    })
+
+    for ba in [art_randname,art_randname2]:
+      resp_boardarticles_create = cls.CLIENT.post('/api/boardarticle/',{'name':f"{bor_randname}_{ba}","article":ba,'count':10,'board':bor_randname})
+      #pp(resp_boardarticles_create.__dict__)
+    
+    bb = Board.objects.all()
+    b = bb.first()
+    #print(b)
+    #print(b.boardarticle_set.all())
+    #print(b.articles.all())
+    job = {
+      'name':cls.get_random_name('job'),
+      'board':b.name,
+      'count':100,
+      'start_at':'2023-01-01 8:00:00.000',#iso-8601
+      'finish_at':'2023-01-01 18:00:00.000'
+    }
+    resp_job_create = cls.CLIENT.post('/api/job/',job)
+    #pp(resp_job_create.json())
+
+    resp_job_display = cls.CLIENT.get(f'/api/job/{job["name"]}/?format=json')
+    #pp(resp_job_display.json())
+
+    resp_job_display_boardarticles = cls.CLIENT.get(f'/api/boardarticle/?format=json&board={job["board"]}')
+    #pp(resp_job_display_boardarticles.json())
   #Article.objects.create
   #Carrier.objects.create
   #Storage.objects.create
