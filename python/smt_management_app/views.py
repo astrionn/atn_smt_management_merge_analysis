@@ -10,6 +10,7 @@ import operator
 from functools import reduce
 
 from django_filters.rest_framework import DjangoFilterBackend
+from requests import Response
 from rest_framework import viewsets, filters, generics
 
 from django.http import JsonResponse
@@ -245,6 +246,16 @@ def save_file_and_get_headers(request):
             "file_name":lf.name
         })
 
+class ArticleNameViewSet(generics.ListAPIView):
+   model = Article
+
+   def get(self,request):
+      queryset = Article.objects.all()
+      serializer = ArticleNameSerializer(queryset,many=True)
+      data = [{k:v for k,v in a.items()} for a in serializer.data]
+      return JsonResponse(data,safe=False)
+
+
 class ArticleViewSet(viewsets.ModelViewSet):
     queryset = Article.objects.all()
     serializer_class = ArticleSerializer
@@ -282,6 +293,15 @@ class BoardViewSet(viewsets.ModelViewSet):
 class BoardArticleViewSet(viewsets.ModelViewSet):
     queryset = BoardArticle.objects.all()
     serializer_class = BoardArticleSerializer
+
+class CarrierNameViewSet(generics.ListAPIView):
+   model = Carrier
+
+   def get(self,request):
+      queryset = Carrier.objects.all()
+      serializer = CarrierNameSerializer(queryset,many=True)
+      data = [{k:v for k,v in c.items()} for c in serializer.data]
+      return JsonResponse(data,safe=False)
 
 class CarrierViewSet(viewsets.ModelViewSet):
     queryset = Carrier.objects.all()
