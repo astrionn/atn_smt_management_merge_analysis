@@ -5,7 +5,7 @@ from pprint import pprint as pp
 import operator
 from functools import reduce
 
-from django_filters.rest_framework import DjangoFilterBackend
+from django_filters import rest_framework as rest_filter 
 import operator
 from functools import reduce
 
@@ -255,36 +255,20 @@ class ArticleNameViewSet(generics.ListAPIView):
       data = [{k:v for k,v in a.items()} for a in serializer.data]
       return JsonResponse(data,safe=False)
 
+class ArticleFilter(rest_filter.FilterSet):
+   class Meta:
+      model = Article
+      fields = {
+         "name":["exact","contains"]
+      }
 
 class ArticleViewSet(viewsets.ModelViewSet):
     queryset = Article.objects.all()
     serializer_class = ArticleSerializer
-    filter_backends = (filters.SearchFilter, DjangoFilterBackend, filters.OrderingFilter)
-    filterset_fields = "__all__"
+    filter_backends = (rest_filter.DjangoFilterBackend,filters.SearchFilter, filters.OrderingFilter)
+    filterset_class = ArticleFilter
     ordering_fields = "__all__"
     search_fields = "__all__"
-
-    """def get_queryset(self):
-       name = self.request.GET.get('name') 
-       description = self.request.GET.get('description')
-
-       manufacturers_list = self.request.GET.getlist("manufacturers[]")
-       providers_list = self.request.GET.getlist("providers[]")
-
-       filter_args = {
-          "name__icontains":name,
-          "description__icontains":description,
-          "archived" : False,
-          }
-       # print(filter_args)       
-
-       filter_args = dict((k,v) for k,v in filter_args.items() if (v is not None and v != "" and v != []) )
-
-       articles = Article.objects.filter(**filter_args)
-       if len(manufacturers_list) > 0:
-          articles = articles.filter(reduce(operator.or_, (Q(manufacturer__name__icontains=x) for x in manufacturers_list)))
-
-       return articles"""
 
 class BoardViewSet(viewsets.ModelViewSet):
     queryset = Board.objects.all()
