@@ -5,12 +5,12 @@ from pprint import pprint as pp
 import operator
 from functools import reduce
 
-from django_filters import rest_framework as rest_filter 
+from django_filters.rest_framework import DjangoFilterBackend
 import operator
 from functools import reduce
 
-from django_filters.rest_framework import DjangoFilterBackend
-from requests import Response
+from django_filters import rest_framework as rest_filter
+import django_filters
 from rest_framework import viewsets, filters, generics
 
 from django.http import JsonResponse
@@ -23,244 +23,266 @@ from . models import AbstractBaseModel, Manufacturer, Provider, Article, Carrier
 # Create your views here.
 
 def store_carrier_confirm(request,carrier,slot):
-   queryset = Carrier.objects.filter(name=carrier)
-   if not queryset: return
-   queryset2 = StorageSlot.objects.filter(name=slot)
-   if not queryset2: return
-   c = queryset.first()
-   ss = queryset2.first()
-   if ss.led_state == 0: return 
-   c.storage_slot = ss
-   c.save()
-   ss.led_state = 1
-   #thread to ledstate 0 in 15s
+     queryset = Carrier.objects.filter(name=carrier)
+     if not queryset:
+         return
+     queryset2 = StorageSlot.objects.filter(name=slot)
+     if not queryset2:
+         return
+     c = queryset.first()
+     ss = queryset2.first()
+     if ss.led_state == 0:
+          return 
+     c.storage_slot = ss
+     c.save()
+     ss.led_state = 1
+     #thread to ledstate 0 in 15s
 
 def store_carrier(request,carrier,storage):
-   #is carrier storable ?
-   #print(carrier,storage)
-   carriers = Carrier.objects.filter(name=carrier)
-   #print(carriers)
-   if not carriers: return
-   c = carriers.first()
-   #print(c.__dict__)
-   if c.collecting: return
-   if c.archived: return
-   if not c.delivered: return
-   if c.storage_slot: return
-   if c.machine_slot: return
+     #is carrier storable ?
+     #print(carrier,storage)
+     carriers = Carrier.objects.filter(name=carrier)
+     #print(carriers)
+     if not carriers:
+         return
+     c = carriers.first()
+     #print(c.__dict__)
+     if c.collecting:
+         return
+     if c.archived:
+         return
+     if not c.delivered:
+         return
+     if c.storage_slot:
+         return
+     if c.machine_slot:
+          return
 
 
-   #free storage slot for storage ?
-   storages = Storage.objects.filter(name=storage)
-   #print(storages)
-   if not storages: return
-   storage = storages.first()
-   #print(storage)
-   free_slots = StorageSlot.objects.filter(carrier__isnull=True,storage=storage)
-   #print(free_slots)
-   fs = free_slots.first()
-   fs.led_state = 2
-   fs.save()
-   msg = {
-      'storage':storage.name,
-      'slot':fs.name,
-      "carrier":c.name
-      }
-   return JsonResponse(msg)
+     #free storage slot for storage ?
+     storages = Storage.objects.filter(name=storage)
+     #print(storages)
+     if not storages:
+          return
+     storage = storages.first()
+     #print(storage)
+     free_slots = StorageSlot.objects.filter(carrier__isnull=True,storage=storage)
+     #print(free_slots)
+     fs = free_slots.first()
+     fs.led_state = 2
+     fs.save()
+     msg = {
+         'storage':storage.name,
+         'slot':fs.name,
+         "carrier":c.name
+     }
+     return JsonResponse(msg)
 
 
 def collect_carrier(request,carrier):
-   c = Carrier.objects.filter(name=carrier).first()
+     c = Carrier.objects.filter(name=carrier).first()
 
-   #get queue and add
-   queryset = Carrier.objects.filter(collecting=True)
-   if c in queryset: return
-   c.collecting = True
-   c.save()
-   queryset = Carrier.objects.filter(collecting=True)
-   queue = [{
-      'carrier':cc.name,
-      'storage':cc.storage_slot.storage.name,
-      'slot':cc.storage_slot.name
-   } for cc in queryset]
+     #get queue and add
+     queryset = Carrier.objects.filter(collecting=True)
+     if c in queryset:
+          return
+     c.collecting = True
+     c.save()
+     queryset = Carrier.objects.filter(collecting=True)
+     queue = [{
+         'carrier':cc.name,
+         'storage':cc.storage_slot.storage.name,
+         'slot':cc.storage_slot.name
+     } for cc in queryset]
 
-   msg = {
-      'storage':c.storage_slot.storage.name,
-      'slot':c.storage_slot.name,
-      'carrier':c.name,
-      'queue':queue
-          }
-   c.storage_slot.led_state = 2
-   return JsonResponse(msg)
+     msg = {
+         'storage':c.storage_slot.storage.name,
+         'slot':c.storage_slot.name,
+         'carrier':c.name,
+         'queue':queue
+     }
+     c.storage_slot.led_state = 2
+     return JsonResponse(msg)
 
 def collect_carrier_confirm(request,carrier,slot):
-   #get queue
-   queryset = Carrier.objects.filter(collecting=True)
-   #check membership
-   queryset = queryset.filter(name=carrier)
+     #get queue
+     queryset = Carrier.objects.filter(collecting=True)
+     #check membership
+     queryset = queryset.filter(name=carrier)
 
-   if not queryset: return
-   c = queryset.first()
+     if not queryset:
+          return
+     c = queryset.first()
 
-   #check slot correct
-   if c.storage_slot.name != slot: return
-   c.storage_slot.led_state = 1
-   c.save()
-   #thread led state off in 15s
+     #check slot correct
+     if c.storage_slot.name != slot:
+          return
+     c.storage_slot.led_state = 1
+     c.save()
+     #thread led state off in 15s
 
-   #set slot to null
-   c.storage_slot = None
-   #remove vom queue
-   c.collecting = False
-   c.save()
-   #return storage, slot, carrier queue
-   queryset = Carrier.objects.filter(collecting=True)
-   queue = [{
-      'carrier':cc.name,
-      'storage':cc.storage_slot.storage.name,
-      'slot':cc.storage_slot.name
-   } for cc in queryset]
+     #set slot to null
+     c.storage_slot = None
+     #remove vom queue
+     c.collecting = False
+     c.save()
+     #return storage, slot, carrier queue
+     queryset = Carrier.objects.filter(collecting=True)
+     queue = [{
+         'carrier':cc.name,
+         'storage':cc.storage_slot.storage.name,
+         'slot':cc.storage_slot.name
+     } for cc in queryset]
 
-   msg = {
-      'storage':None,
-      'slot':None,
-      'carrier':c.name,
-      'queue':queue
-          }
-   return JsonResponse(msg)
+     msg = {
+         'storage':None,
+         'slot':None,
+         'carrier':c.name,
+         'queue':queue
+     }
+     return JsonResponse(msg)
 
 class ListStoragesAPI(generics.ListAPIView):
-    model = Carrier
-    serializer_class = CarrierSerializer
-    def get_queryset(self):
-        storage = self.kwargs['storage']
-        s = Storage.objects.get(name=storage)
-        slots_qs = StorageSlot.objects.filter(storage=s)
-        queryset = Carrier.objects.filter(storage_slot__in=slots_qs)
-        return queryset
+     model = Carrier
+     serializer_class = CarrierSerializer
+     def get_queryset(self):
+         storage = self.kwargs['storage']
+         s = Storage.objects.get(name=storage)
+         slots_qs = StorageSlot.objects.filter(storage=s)
+         queryset = Carrier.objects.filter(storage_slot__in=slots_qs)
+         return queryset
 
 def user_mapping_and_file_processing(request):
-  if request.POST:
-    file_name = request.POST['file_name']
-    map_ = request.POST['map']
-    map_ = json.loads(map_)
-    map_l = [(k,v) for k,v in map_.items()]
+     if request.POST:
+         file_name = request.POST['file_name']
+         map_ = request.POST['map']
+         map_ = json.loads(map_)
+         map_l = [(k,v) for k,v in map_.items()]
 
 
-    lf = LocalFile.objects.get(name=file_name)
-    msg = {'created':[],'fail':[]}
-    with open(lf.file_object.name) as f:
-      csv_reader = csv.reader(f,delimiter=',')
-      a_headers = csv_reader.__next__()
-      index_map = {value: index for index, value in enumerate(a_headers)}
-      map_ordered_l = sorted(map_l,key=lambda x:index_map[x[1]])
+         lf = LocalFile.objects.get(name=file_name)
+         msg = {'created':[],'fail':[]}
+         with open(lf.file_object.name) as f:
+             csv_reader = csv.reader(f,delimiter=',')
+             a_headers = csv_reader.__next__()
+             index_map = {value: index for index, value in enumerate(a_headers)}
+             map_ordered_l = sorted(map_l,key=lambda x:index_map[x[1]])
 
-      for l in csv_reader:
-                #print(l)
-        if lf.upload_type == 'board':
-           if not request.POST['board'] or not Board.objects.filter(name=request.POST['board']):
-              msg['fail'].append(f"Board does not exist.")
-              break
-           board = Board.objects.get(name=request.POST['board'])
+             for l in csv_reader:
+                 #print(l)
+                 if lf.upload_type == 'board':
+                     if not request.POST['board'] or not Board.objects.filter(name=request.POST['board']):
+                         msg['fail'].append(f"Board does not exist.")
+                         break
+                     board = Board.objects.get(name=request.POST['board'])
 
-           board_article_dict = {k[0]:l[a_headers.index(k[1])] for k in map_ordered_l}
-           board_article_dict['board'] = board
-           a = Article.objects.filter(name=board_article_dict['article'])
-           if a :
-              board_article_dict['article'] = a[0]
-           else:
-              msg['fail'].append(f"{board_article_dict['article']} does not exist.")
-              print(msg)
-              break
-           if not board_article_dict.get('count',None) or not board_article_dict['count'].isnumeric():
-              msg['fail'].append(f"{board_article_dict['article']} does have invalid count.")
-              break
-           board_article_dict['name'] = f"{board.name}_{board_article_dict['article'].name}"
-           b_article = BoardArticle.objects.create(**board_article_dict)
-           msg['created'].append(f"{board_article_dict['name']}")
+                     board_article_dict = {k[0]:l[a_headers.index(k[1])] for k in map_ordered_l}
+                     board_article_dict['board'] = board
+                     a = Article.objects.filter(name=board_article_dict['article'])
+                     if a:
+                         board_article_dict['article'] = a[0]
+                     else:
+                         msg['fail'].append(f"{board_article_dict['article']} does not exist.")
+                         print(msg)
+                         break
+                     if not board_article_dict.get('count',None) or not board_article_dict['count'].isnumeric():
+                         msg['fail'].append(f"{board_article_dict['article']} does have invalid count.")
+                         break
+                     board_article_dict['name'] = f"{board.name}_{board_article_dict['article'].name}"
+                     b_article = BoardArticle.objects.create(**board_article_dict)
+                     msg['created'].append(f"{board_article_dict['name']}")
 
-        if lf.upload_type == 'carrier':
-           carrier_dict = {k[0]:l[a_headers.index(k[1])] for k in map_ordered_l}
-           #pp(carrier_dict)
-           if carrier_dict.get('article',None):
-              a = Article.objects.get(name=carrier_dict['article'])
-              carrier_dict['article'] = a
-           if not carrier_dict.get('storage_slot',None):
-              carrier_dict['storage_slot'] = None
-           if not carrier_dict.get('machine_slot',None):
-              carrier_dict['machine_slot'] = None
-           if not carrier_dict.get('boardarticle',None):
-              carrier_dict['boardarticle'] = None
+                 if lf.upload_type == 'carrier':
+                     carrier_dict = {k[0]:l[a_headers.index(k[1])] for k in map_ordered_l}
+                     #pp(carrier_dict)
+                     if carrier_dict.get('article',None):
+                         a = Article.objects.get(name=carrier_dict['article'])
+                         carrier_dict['article'] = a
+                     if not carrier_dict.get('storage_slot',None):
+                         carrier_dict['storage_slot'] = None
+                     if not carrier_dict.get('machine_slot',None):
+                         carrier_dict['machine_slot'] = None
+                     if not carrier_dict.get('boardarticle',None):
+                         carrier_dict['boardarticle'] = None
 
 
-           c = Carrier.objects.create(**carrier_dict)
-           msg['created'].append(c.name)
+                     c = Carrier.objects.create(**carrier_dict)
+                     msg['created'].append(c.name)
 
-        if lf.upload_type == 'article':
-          article_dict = {k[0]:l[a_headers.index(k[1])] for k in map_ordered_l}
+                 if lf.upload_type == 'article':
+                     article_dict = {k[0]:l[a_headers.index(k[1])] for k in map_ordered_l}
 
-          if article_dict['manufacturer']:
-            o_m,c_m = Manufacturer.objects.get_or_create(name=article_dict['manufacturer'])
-            if c_m: 
-              article_dict['manufacturer'] = o_m
-              msg['created'].append(o_m.name)
+                     if article_dict['manufacturer']:
+                         o_m,c_m = Manufacturer.objects.get_or_create(name=article_dict['manufacturer'])
+                         if c_m: 
+                             article_dict['manufacturer'] = o_m
+                             msg['created'].append(o_m.name)
 
-            if article_dict['provider']:
-              pps = article_dict['provider'].split(',')
-              del article_dict['provider']
-              providers = []
-              for p in pps:
-                o_p,c_p = Provider.objects.get_or_create(name=p)
-                if c_p:
-                  providers.append(o_p)
-                  msg['created'].append(o_p.name)
-            if article_dict['boardarticle']:
-              del article_dict['boardarticle']
+                     if article_dict['provider']:
+                         pps = article_dict['provider'].split(',')
+                         del article_dict['provider']
+                         providers = []
+                         for p in pps:
+                             o_p,c_p = Provider.objects.get_or_create(name=p)
+                             if c_p:
+                                 providers.append(o_p)
+                                 msg['created'].append(o_p.name)
+                     if article_dict['boardarticle']:
+                         del article_dict['boardarticle']
 
-            c = Article.objects.create(**article_dict)
-            if c : msg['created'].append(c.name)
-            for p in providers:
-              c.provider.add(p)
-            c.save()
+                     c = Article.objects.create(**article_dict)
+                     if c : msg['created'].append(c.name)
+                     for p in providers:
+                         c.provider.add(p)
+                         c.save()
 
-      msg_j = json.dumps(msg)
-      return JsonResponse(msg_j,safe=False)
+                 msg_j = json.dumps(msg)
+                 return JsonResponse(msg_j,safe=False)
 
 def save_file_and_get_headers(request):
-    if request.FILES and request.POST:
-        lf = LocalFile.objects.create(file_object=File(request.FILES["file"]), upload_type=request.POST["upload_type"])
-        #open file
-        with open(lf.file_object.path,newline='') as f:
-            csv_reader = csv.reader(f,delimiter=',')
-            lf.headers = list(csv_reader.__next__())
-            lf.save()
-        if lf.upload_type == 'article':
-            model_fields = [f.name for f in Article._meta.get_fields()]
-        elif lf.upload_type == 'carrier':
-            model_fields = [f.name for f in Carrier._meta.get_fields()]
-        elif lf.upload_type == 'board':
-          model_fields = ['article','count']
-        return JsonResponse({
-            "object_fields":sorted(model_fields),
-            "header_fields":sorted(lf.headers),
-            "file_name":lf.name
-        })
+     if request.FILES and request.POST:
+         lf = LocalFile.objects.create(file_object=File(request.FILES["file"]), upload_type=request.POST["upload_type"])
+         #open file
+         with open(lf.file_object.path,newline='') as f:
+             csv_reader = csv.reader(f,delimiter=',')
+             lf.headers = list(csv_reader.__next__())
+             lf.save()
+             if lf.upload_type == 'article':
+                 model_fields = [f.name for f in Article._meta.get_fields()]
+             elif lf.upload_type == 'carrier':
+                 model_fields = [f.name for f in Carrier._meta.get_fields()]
+             elif lf.upload_type == 'board':
+                 model_fields = ['article','count']
+             return JsonResponse({
+                     "object_fields":sorted(model_fields),
+                     "header_fields":sorted(lf.headers),
+                     "file_name":lf.name
+                 })
 
 class ArticleNameViewSet(generics.ListAPIView):
-   model = Article
+     model = Article
 
-   def get(self,request):
-      queryset = Article.objects.all()
-      serializer = ArticleNameSerializer(queryset,many=True)
-      data = [{k:v for k,v in a.items()} for a in serializer.data]
-      return JsonResponse(data,safe=False)
+     def get(self,request):
+         queryset = Article.objects.all()
+         serializer = ArticleNameSerializer(queryset,many=True)
+         data = [{k:v for k,v in a.items()} for a in serializer.data]
+         return JsonResponse(data,safe=False)
 
 class ArticleFilter(rest_filter.FilterSet):
-   class Meta:
-      model = Article
-      fields = {
-         "name":["exact","contains"]
-      }
+    class Meta:
+        model = Article
+        fields = {
+            "name": ["exact", "contains"],
+            "description": ["exact", "contains"],
+            "provider__name": ["exact", "contains"],
+            "provider_description": ["exact", "contains"],
+            "manufacturer__name": ["exact", "contains"],
+            "manufacturer_description": ["exact", "contains"],
+            "sap_number": ["exact", "contains"],
+            "created_at": ["exact", "contains", "gte", "lte"],
+            "updated_at": ["exact", "contains", "gte", "lte"],
+            "archived": ["exact"],
+             }
 
 class ArticleViewSet(viewsets.ModelViewSet):
     queryset = Article.objects.all()
@@ -268,7 +290,6 @@ class ArticleViewSet(viewsets.ModelViewSet):
     filter_backends = (rest_filter.DjangoFilterBackend,filters.SearchFilter, filters.OrderingFilter)
     filterset_class = ArticleFilter
     ordering_fields = "__all__"
-    search_fields = "__all__"
 
 class BoardViewSet(viewsets.ModelViewSet):
     queryset = Board.objects.all()
@@ -279,48 +300,100 @@ class BoardArticleViewSet(viewsets.ModelViewSet):
     serializer_class = BoardArticleSerializer
 
 class CarrierNameViewSet(generics.ListAPIView):
-   model = Carrier
+    model = Carrier
 
-   def get(self,request):
-      queryset = Carrier.objects.all()
-      serializer = CarrierNameSerializer(queryset,many=True)
-      data = [{k:v for k,v in c.items()} for c in serializer.data]
-      return JsonResponse(data,safe=False)
+    def get(self,request):
+        queryset = Carrier.objects.all()
+        serializer = CarrierNameSerializer(queryset,many=True)
+        data = [{k:v for k,v in c.items()} for c in serializer.data]
+        return JsonResponse(data,safe=False)
+
+class CarrierFilter(django_filters.FilterSet):
+    # There is no default filtering system for selection fields,
+    # I implemented a custom option for gt and lt, if you don’t need them, you can simply delete them
+    quantity_current__gt = django_filters.NumberFilter(field_name='quantity_current', lookup_expr='gt')
+    quantity_current__lt = django_filters.NumberFilter(field_name='quantity_current', lookup_expr='lt')
+    diameter__gt = django_filters.NumberFilter(field_name='diameter', lookup_expr='gt')
+    diameter__lt = django_filters.NumberFilter(field_name='diameter', lookup_expr='lt')
+    width__gt = django_filters.NumberFilter(field_name='width', lookup_expr='gt')
+    width__lt = django_filters.NumberFilter(field_name='width', lookup_expr='lt')
+    container_type__gt = django_filters.NumberFilter(field_name='container_type', lookup_expr='gt')
+    container_type__lt = django_filters.NumberFilter(field_name='container_type', lookup_expr='lt')
+
+    class Meta:
+        model = Carrier
+        fields = {
+            "name": ["exact", "contains"],
+            'diameter': ['exact', 'gt', 'lt'],
+            'width': ['exact', 'gt', 'lt'],
+            'container_type': ['exact', 'gt', 'lt'],
+            'quantity_original': ['exact', 'gte', 'lte'],
+            'lot_number': ['exact', 'contains'],
+            'reserved': ['exact'],
+            'delivered': ['exact'],
+            'collecting': ['exact'],
+            'article__name': ['exact', 'contains'],
+            'storage_slot__name': ['exact', 'contains'],
+            'machine_slot__name': ['exact', 'contains'],
+            "archived": ["exact"],
+            "created_at": ["exact", "contains", "gte", "lte"],
+            "updated_at": ["exact", "contains", "gte", "lte"],
+           }    
 
 class CarrierViewSet(viewsets.ModelViewSet):
     queryset = Carrier.objects.all()
     serializer_class = CarrierSerializer
     filter_backends = (filters.SearchFilter, DjangoFilterBackend, filters.OrderingFilter)
+    filterset_class = CarrierFilter
     ordering_fields = [
-     "name",
-     "lot_number",
-     "quantity_current",
-     "article__name",
-     "delivered",
-     "reserved",
-  ]
+        "name",
+        "lot_number",
+        "quantity_current",
+        "article__name",
+        "delivered",
+        "reserved",
+         ]
     search_fields = [
-     "name",
-     "lot_number",
-     "article__name",
-     "article__description",
-     "storage_slot__storage__name"
-  ]
+        "name",
+        "lot_number",
+        "article__name",
+        "article__description",
+        "storage_slot__storage__name"
+         ]
 
     def get_queryset(self):
-       name = self.request.GET.get('name')
-       lot_number = self.request.GET.get('lot_number')
-       filter_args = {
-        "name__icontains":name,
-        "lot_number__icontains":lot_number,
-     }
-       filter_args = dict((k,v) for k,v in filter_args.items() if (v is not None and v != "" and v != []) )
-       carriers = Carrier.objects.filter(**filter_args)
-       return carriers
+        name = self.request.GET.get('name')
+        lot_number = self.request.GET.get('lot_number')
+        filter_args = {
+            "name__icontains":name,
+            "lot_number__icontains":lot_number,
+        }
+        filter_args = dict((k,v) for k,v in filter_args.items() if (v is not None and v != "" and v != []) )
+        carriers = Carrier.objects.filter(**filter_args)
+        return carriers
+
+class JobFilter(django_filters.FilterSet):
+    class Meta:
+        model = Job
+        fields = {
+            "name": ["exact", "contains"],
+            'board__name': ['exact', 'icontains'],
+            'machine__name': ['exact', 'icontains'],
+            'project': ['exact', 'icontains'],
+            'customer': ['exact', 'icontains'],
+            'count': ['exact', 'gt', 'lt'],
+            'start_at': ['exact', 'gte', 'lte'],
+            'finish_at': ['exact', 'gte', 'lte'],
+            'status': ['exact'],
+            "archived": ["exact"],
+            "created_at": ["exact", "contains", "gte", "lte"],
+            "updated_at": ["exact", "contains", "gte", "lte"],
+        }
 
 class JobViewSet(viewsets.ModelViewSet):
     queryset = Job.objects.all()
     serializer_class = JobSerializer
+    filterset_class = JobFilter
 
 class MachineViewSet(viewsets.ModelViewSet):
     queryset = Machine.objects.all()

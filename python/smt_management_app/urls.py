@@ -5,7 +5,6 @@ from rest_framework.routers import DefaultRouter
 router = DefaultRouter()
 
 router.register(r'article', views.ArticleViewSet,'article')
-#router.register(r'articlelist',views.ArticleNameViewSet,'articlelist')
 router.register(r'board', views.BoardViewSet,'board')
 router.register(r'boardarticle', views.BoardArticleViewSet,'boardarticle')
 router.register(r'carrier', views.CarrierViewSet,'carrier')
@@ -19,10 +18,6 @@ router.register(r'storageslot', views.StorageSlotViewSet,'storageslot')
 
 name = "smt_management_app"
 urlpatterns = router.urls
-
-urlpatterns.append(path("articlelist/",views.ArticleNameViewSet.as_view(),name="articlelist"))
-urlpatterns.append(path("carrierlist/",views.CarrierNameViewSet.as_view(),name="carrierlist"))
-
 urlpatterns.append(path("save_file_and_get_headers/",views.save_file_and_get_headers, name='save_file_and_get_headers'))
 urlpatterns.append(path("user_mapping_and_file_processing/",views.user_mapping_and_file_processing, name='user_mapping_and_file_processing'))
 urlpatterns.append(path("get_storage_content/<storage>/",views.ListStoragesAPI.as_view(),name='get_storage_content'))
@@ -30,3 +25,5 @@ urlpatterns.append(path("collect_carrier/<carrier>/",views.collect_carrier,name=
 urlpatterns.append(path("collect_carrier_confirm/<carrier>/<slot>/",views.collect_carrier_confirm,name='collect_carrier_confirm'))
 urlpatterns.append(path("store_carrier/<carrier>/<storage>/",views.store_carrier,name='store_carrier'))
 urlpatterns.append(path("store_carrier_confirm/<carrier>/<storage>/",views.store_carrier_confirm,name='store_carrier_confirm'))
+urlpatterns.append(path("articlelist/",views.ArticleNameViewSet.as_view(),name="articlelist"))
+urlpatterns.append(path("carrierlist/",views.CarrierNameViewSet.as_view(),name="carrierlist"))

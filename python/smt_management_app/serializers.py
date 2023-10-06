@@ -10,7 +10,7 @@ from . models import *
 from rest_framework import serializers
 # created by todo.org tangle
 # Create your serializers here.
- 
+
 class ManufacturerSerializer(serializers.ModelSerializer):
     class Meta:
         model = Manufacturer
@@ -20,18 +20,18 @@ class ProviderSerializer(serializers.ModelSerializer):
         model = Provider
         fields = "__all__"
 
+class ArticleNameSerializer(serializers.ModelSerializer):
+    name = serializers.CharField(max_length=255)
+    class Meta:
+        fields = ["name"]
+        model = Article
+
 class ArticleSerializer(serializers.ModelSerializer):
     manufacturer = ManufacturerSerializer(read_only=True)
     provider = ProviderSerializer(read_only=True)
     class Meta:
         model = Article
         fields = "__all__"
-
-class ArticleNameSerializer(serializers.ModelSerializer):
-    name = serializers.CharField(max_length=255)
-    class Meta:
-        fields = ["name"]
-        model = Article
 
 class BoardArticleSerializer(serializers.ModelSerializer):
     class Meta:
@@ -51,7 +51,7 @@ class BoardArticleSerializer(serializers.ModelSerializer):
             )
         return ba
 class BoardSerializer(serializers.ModelSerializer):
-    
+
     class Meta:
         model = Board
         fields = "__all__"
@@ -70,10 +70,13 @@ class BoardSerializer(serializers.ModelSerializer):
             )
         return ba
 class BoardSerializer(serializers.ModelSerializer):
-    
+
     class Meta:
         model = Board
         fields = "__all__"
+
+
+
 
 class CarrierNameSerializer(serializers.ModelSerializer):
     name = serializers.CharField(max_length=255)
@@ -83,7 +86,7 @@ class CarrierNameSerializer(serializers.ModelSerializer):
 
 class CarrierSerializer(serializers.ModelSerializer):
     article = serializers.PrimaryKeyRelatedField(many=False,queryset=Article.objects.all())
-    
+
     class Meta:
         model = Carrier
         fields = "__all__"
