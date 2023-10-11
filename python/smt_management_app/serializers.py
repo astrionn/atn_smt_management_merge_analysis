@@ -1,37 +1,111 @@
 from pprint import pprint as pp
-from . models import *
+from typing import Required
+
+from pkg_resources import require
+from .models import *
 from rest_framework import serializers
+
 # created by todo.org tangle
 # Create your serializers here.
 
 from os import read
 from pprint import pprint as pp
-from . models import *
+from .models import *
 from rest_framework import serializers
+
+
 # created by todo.org tangle
 # Create your serializers here.
+class StorageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Storage
+        fields = "__all__"
+
+
+class StorageSlotSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = StorageSlot
+        fields = "__all__"
+
+
+class ManufacturerNameSerializer(serializers.ModelSerializer):
+    name = serializers.CharField(max_length=255)
+
+    class Meta:
+        fields = ["name"]
+        model = Manufacturer
+
 
 class ManufacturerSerializer(serializers.ModelSerializer):
+    name = serializers.CharField(max_length=255)
+
     class Meta:
         model = Manufacturer
-        fields = "__all__"
+        fields = ["name"]
+
+
+class ProviderNameSerializer(serializers.ModelSerializer):
+    name = serializers.CharField(max_length=255)
+
+    class Meta:
+        fields = ["name"]
+        model = Provider
+
+
 class ProviderSerializer(serializers.ModelSerializer):
     class Meta:
+        fields = ["name"]
         model = Provider
-        fields = "__all__"
+
 
 class ArticleNameSerializer(serializers.ModelSerializer):
     name = serializers.CharField(max_length=255)
+
     class Meta:
         fields = ["name"]
         model = Article
 
+
+class ArticleProviderSerializer(serializers.ModelSerializer):
+    provider_id = serializers.PrimaryKeyRelatedField(queryset=Provider.objects.all())
+    description = serializers.CharField(max_length=255, required=False)
+
+    class Meta:
+        model = ArticleProvider
+        fields = ["provider_id", "description"]
+
+
 class ArticleSerializer(serializers.ModelSerializer):
-    manufacturer = ManufacturerSerializer(read_only=True)
-    provider = ProviderSerializer(read_only=True)
+    manufacturer = ManufacturerSerializer(required=False, allow_null=True)
+    providers = ArticleProviderSerializer(
+        source="articleprovider_set", many=True, required=False
+    )
+
     class Meta:
         model = Article
-        fields = "__all__"
+        fields = [
+            "name",
+            "manufacturer",
+            "manufacturer_description",
+            "sap_number",
+            "description",
+            "providers",
+        ]
+
+    def create(self, validated_data):
+        if "manufacturer" in validated_data.keys():
+            manufactuerdata = validated_data.pop("manufacturer")
+            manufacturer, created = Manufacturer.objects.get_or_create(
+                **manufactuerdata
+            )
+            validated_data["manufacturer"] = manufacturer
+
+        article = Article.objects.create(**validated_data)
+        return article
+
+    def validate(self, *args, **kwargs):
+        return super().validate(*args, **kwargs)
+
 
 class BoardArticleSerializer(serializers.ModelSerializer):
     class Meta:
@@ -39,74 +113,89 @@ class BoardArticleSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
     def create(self, validated_data):
-        #print("BoardArticel Serializer create:")
-        #pp(validated_data)
+        # print("BoardArticel Serializer create:")
+        # pp(validated_data)
 
         ba, created = BoardArticle.objects.update_or_create(
-            article=validated_data.get('article',None),
-            name=validated_data.get('name',None),
-            count=validated_data.get('count',None),
-            board=validated_data.get('board',None),
-            carrier=validated_data.get('carrier',None),
-            )
+            article=validated_data.get("article", None),
+            name=validated_data.get("name", None),
+            count=validated_data.get("count", None),
+            board=validated_data.get("board", None),
+            carrier=validated_data.get("carrier", None),
+        )
         return ba
-class BoardSerializer(serializers.ModelSerializer):
 
+
+class BoardSerializer(serializers.ModelSerializer):
     class Meta:
         model = Board
         fields = "__all__"
-
 
     def create(self, validated_data):
-        #print("BoardArticel Serializer create:")
-        #pp(validated_data)
+        # print("BoardArticel Serializer create:")
+        # pp(validated_data)
 
         ba, created = BoardArticle.objects.update_or_create(
-            article=validated_data.get('article',None),
-            name=validated_data.get('name',None),
-            count=validated_data.get('count',None),
-            board=validated_data.get('board',None),
-            carrier=validated_data.get('carrier',None),
-            )
+            article=validated_data.get("article", None),
+            name=validated_data.get("name", None),
+            count=validated_data.get("count", None),
+            board=validated_data.get("board", None),
+            carrier=validated_data.get("carrier", None),
+        )
         return ba
-class BoardSerializer(serializers.ModelSerializer):
 
+
+class BoardSerializer(serializers.ModelSerializer):
     class Meta:
         model = Board
         fields = "__all__"
-
-
 
 
 class CarrierNameSerializer(serializers.ModelSerializer):
     name = serializers.CharField(max_length=255)
+
     class Meta:
         fields = ["name"]
         model = Carrier
 
+
 class CarrierSerializer(serializers.ModelSerializer):
-    article = serializers.PrimaryKeyRelatedField(many=False,queryset=Article.objects.all())
+    article = serializers.PrimaryKeyRelatedField(
+        many=False, queryset=Article.objects.all()
+    )
+    article_description = serializers.CharField(
+        source="article.description", required=False
+    )
+
+    article_manufacturer = serializers.CharField(
+        source="article.manufacturer.name", required=False
+    )
+    article_manufacturer_description = serializers.CharField(
+        source="article.manufacturer_description", required=False
+    )
+
+    article_sap_number = serializers.CharField(
+        source="article.sap_number", required=False
+    )
 
     class Meta:
         model = Carrier
         fields = "__all__"
+
+
 class JobSerializer(serializers.ModelSerializer):
     class Meta:
         model = Job
         fields = "__all__"
+
+
 class MachineSerializer(serializers.ModelSerializer):
     class Meta:
         model = Machine
         fields = "__all__"
+
+
 class MachineSlotSerializer(serializers.ModelSerializer):
     class Meta:
         model = MachineSlot
-        fields = "__all__"
-class StorageSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Storage
-        fields = "__all__"
-class StorageSlotSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = StorageSlot
         fields = "__all__"
