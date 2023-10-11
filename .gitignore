@@ -1,5 +1,6 @@
 *.zip
 **/venv
+**/js/**
 *.sqlite3
 .vscode
 **/__pycache__

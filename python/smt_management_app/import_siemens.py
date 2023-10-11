@@ -7,12 +7,13 @@ import time
 
 client = requests.session()
 
-path = "C:\\Users\\LB\\Downloads\\SMD_Artikel.csv"
+path = "C:\\Users\\LB\\Downloads\\store.csv"
 url = "http://localhost:8000/api/article/"
 url2 = "http://localhost:8000/api/carrier/"
 url3 = "http://localhost:8000/api/storageslot/"
 url4 = "http://localhost:8000/api/storage/?format=json"
 url5 = "http://localhost:8000/api/manufacturer/"
+
 
 resp_storage = client.get(url4)
 storage = resp_storage.json()
@@ -31,30 +32,36 @@ headers = data[0]
 
 print(list(enumerate(headers)))
 for i, l in enumerate(data[1:]):
+    print("\n", l)
     data = {
-        "name": (None, l[0]),
+        "name": (None, l[1]),
         "description": (None, l[2]),
-        "manufacturer": (None, l[6]),
-        "manufacturer_description": (None, l[7]),
+        "manufacturer": (None, l[7]),
+        "manufacturer_description": (None, l[8]),
     }
 
-    manu = client.get(f"{url5}?name={l[6]}")
+    manu = client.get(f"{url5}?name={l[7]}")
     manu = manu.json()
     # pp(manu)
     if manu["count"] == 0:
-        manu_create = client.post(url5, {"name": l[6]})
+        manu_create = client.post(url5, {"name": l[7]})
         # pp(manu_create.__dict__)
+
     resp = client.post(url, files=data)
+    pp(data)
+    pp(resp.__dict__)
+    pp(resp.request.__dict__)
     if len(sys.argv) < 2:
         continue
 
     data2 = {
-        "name": f"C{str(i+1).zfill(3)}",
-        "quantity_current": 1000,
-        "article": l[0],
-        "lot_number": i,
+        "name": l[0],
+        "quantity_current": l[3],
+        "article": l[1],
+        "lot_number": l[9],
         "delivered": True,
     }
+    # pp(data)
     # pp(data2)
     # time.sleep(0.1)
     resp2 = client.post(url2, json=data2)
