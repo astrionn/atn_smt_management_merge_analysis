@@ -118,7 +118,7 @@ class Carrier(AbstractBaseModel):
         default=0, choices=TYPE_CHOICES, null=True, blank=True
     )
     quantity_original = models.IntegerField(blank=True, null=True)
-    quantity_current = models.IntegerField()
+    quantity_current = models.IntegerField(blank=True, null=True)
     lot_number = models.CharField(max_length=20, blank=True, null=True)
 
     reserved = models.BooleanField(default=False)
