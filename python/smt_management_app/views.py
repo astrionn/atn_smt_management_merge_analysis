@@ -87,6 +87,39 @@ def get_csrf_token(request):
     return response
 
 
+def lamp_id_to_side_row_lamp(lamp_id):
+    """Converts a lamp ID to a side-row-lamp string.
+
+    Args:
+      lamp_id: The lamp ID, an integer between 1 and 1400, inclusive.
+
+    Returns:
+      A string of the form "001-01-001", where "001" is the side, "01" is the row,
+      and "001" is the lamp within the row.
+    """
+
+    side = (lamp_id - 1) // 100 + 1
+    row = (lamp_id - 1) // 10 % 10 + 1
+    lamp = lamp_id % 10 + 1
+    return f"{side:03}-{row:02}-{lamp:03}"
+
+
+def side_row_lamp_to_lamp_id(side_row_lamp):
+    """Converts a side-row-lamp string to a lamp ID.
+
+    Args:
+      side_row_lamp: A string of the form "001-01-001", where "001" is the side,
+        "01" is the row, and "001" is the lamp within the row.
+
+    Returns:
+      The lamp ID, an integer between 1 and 1400, inclusive.
+    """
+
+    side, row, lamp = side_row_lamp.split("-")
+    lamp_id = 100 * (int(side) - 1) + 10 * (int(row) - 1) + int(lamp) - 1
+    return lamp_id
+
+
 @csrf_exempt
 def store_carrier_confirm(request, carrier, slot):
     # pp(request.__dict__)
@@ -95,9 +128,7 @@ def store_carrier_confirm(request, carrier, slot):
     queryset = Carrier.objects.filter(name=carrier)
     if not queryset:
         return JsonResponse({"success": False})
-    slot = slot[-3:]
-    slot = int(slot)
-    slot += 300
+
     # print(slot)
     queryset2 = StorageSlot.objects.filter(name=slot)
     if not queryset2:
