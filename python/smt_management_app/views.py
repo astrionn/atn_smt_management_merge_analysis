@@ -87,72 +87,6 @@ def get_csrf_token(request):
     return response
 
 
-def lamp_id_to_side_row_lamp(lamp_id):
-    """Converts a lamp ID to a side-row-lamp string.
-
-    Args:
-      lamp_id: The lamp ID, an integer between 1 and 1400, inclusive.
-
-    Returns:
-      A string of the form "001-01-001", where "001" is the side, "01" is the row,
-      and "001" is the lamp within the row.
-    """
-
-    side = (lamp_id - 1) // 100 + 1
-    row = (lamp_id - 1) // 10 % 10 + 1
-    lamp = lamp_id % 10 + 1
-    return f"{side:03}-{row:02}-{lamp:03}"
-
-
-def side_row_lamp_to_lamp_id(side_row_lamp):
-    """Converts a side-row-lamp string to a lamp ID.
-
-    Args:
-      side_row_lamp: A string of the form "001-01-001", where "001" is the side,
-        "01" is the row, and "001" is the lamp within the row.
-
-    Returns:
-      The lamp ID, an integer between 1 and 1400, inclusive.
-    """
-
-    side, row, lamp = side_row_lamp.split("-")
-    lamp_id = 100 * (int(side) - 1) + 10 * (int(row) - 1) + int(lamp) - 1
-    return lamp_id
-
-
-@csrf_exempt
-def store_carrier_confirm(request, carrier, slot):
-    # pp(request.__dict__)
-    # print(carrier)
-    # print(slot)
-    queryset = Carrier.objects.filter(name=carrier)
-    if not queryset:
-        return JsonResponse({"success": False})
-
-    # print(slot)
-    queryset2 = StorageSlot.objects.filter(name=slot)
-    if not queryset2:
-        return JsonResponse({"success": False, "message": "no slot found"})
-    c = queryset.first()
-    ss = queryset2.first()
-    if ss.led_state == 0:
-        return JsonResponse({"success": False, "message": "led is off but shouldn't"})
-    c.storage_slot = ss
-    c.save()
-    ss.led_state = 0
-    # thread to ledstate 0 in 15s
-    Thread(
-        target=neo.led_on,
-        args=(
-            slot,
-            "yellow",
-        ),
-    ).start()
-    Timer(interval=5, function=neo.led_off, args=([slot])).start()
-    ss.save()
-    return JsonResponse({"success": True})
-
-
 @csrf_exempt
 def store_carrier(request, carrier, storage):
     # is carrier storable ?
@@ -196,6 +130,39 @@ def store_carrier(request, carrier, storage):
     #    Timer(interval=15, function=neo.led_off, args=(fs.name,)).start()
     msg = {"storage": storage.name, "slot": fs.name, "carrier": c.name, "success": True}
     return JsonResponse(msg)
+
+
+@csrf_exempt
+def store_carrier_confirm(request, carrier, slot):
+    # pp(request.__dict__)
+    # print(carrier)
+    # print(slot)
+    queryset = Carrier.objects.filter(name=carrier)
+    if not queryset:
+        return JsonResponse({"success": False})
+
+    # print(slot)
+    queryset2 = StorageSlot.objects.filter(name=slot)
+    if not queryset2:
+        return JsonResponse({"success": False, "message": "no slot found"})
+    c = queryset.first()
+    ss = queryset2.first()
+    if ss.led_state == 0:
+        return JsonResponse({"success": False, "message": "led is off but shouldn't"})
+    c.storage_slot = ss
+    c.save()
+    ss.led_state = 0
+    # thread to ledstate 0 in 15s
+    Thread(
+        target=neo.led_on,
+        args=(
+            slot,
+            "yellow",
+        ),
+    ).start()
+    Timer(interval=5, function=neo.led_off, args=([slot])).start()
+    ss.save()
+    return JsonResponse({"success": True})
 
 
 def collect_carrier(request, carrier):
@@ -483,17 +450,17 @@ class ArticleViewSet(viewsets.ModelViewSet):
 
     def create(self, request, *args, **kwargs):
         data = request.data
-        providers_data = data.pop("providers", None)
+        providers_data = data.get("providers", None)
         article_serializer = self.get_serializer(data=data)
         article_serializer.is_valid(raise_exception=True)
         article_instance = article_serializer.save()
 
         if providers_data:
             for provider_data in providers_data:
-                name = provider_data.pop("name")
+                name = provider_data.get("name")
                 if not name:
                     continue
-                description = provider_data.pop("description", None)
+                description = provider_data.get("description", None)
                 provider, _ = Provider.objects.get_or_create(name=name)
                 ArticleProvider.objects.create(
                     article=article_instance, provider=provider, description=description

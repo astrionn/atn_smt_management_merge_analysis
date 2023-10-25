@@ -67,18 +67,18 @@ class ArticleNameSerializer(serializers.ModelSerializer):
 
 
 class ArticleProviderSerializer(serializers.ModelSerializer):
-    provider_id = serializers.PrimaryKeyRelatedField(queryset=Provider.objects.all())
+    name = serializers.PrimaryKeyRelatedField(queryset=Provider.objects.all())
     description = serializers.CharField(max_length=255, required=False)
 
     class Meta:
         model = ArticleProvider
-        fields = ["provider_id", "description"]
+        fields = ["name", "description"]
 
 
 class ArticleSerializer(serializers.ModelSerializer):
     manufacturer = ManufacturerSerializer(required=False, allow_null=True)
     providers = ArticleProviderSerializer(
-        source="articleprovider_set", many=True, required=False
+        source="article.provider_set", many=True, required=False
     )
 
     class Meta:
@@ -93,6 +93,7 @@ class ArticleSerializer(serializers.ModelSerializer):
         ]
 
     def create(self, validated_data):
+        print(1, validated_data)
         if "manufacturer" in validated_data.keys():
             manufactuerdata = validated_data.pop("manufacturer")
             manufacturer, created = Manufacturer.objects.get_or_create(
@@ -100,6 +101,15 @@ class ArticleSerializer(serializers.ModelSerializer):
             )
             validated_data["manufacturer"] = manufacturer
 
+        if "providers" in validated_data.keys():
+            print("Article Serializer found providers key")
+            providersdata = validated_data.pop("providers")
+            print(providersdata)
+            for p in providersdata:
+                print(p)
+                provider, created = Provider.objects.get_or_create(**p)
+                validated_data["providers"].append(provider)
+        print(2, validated_data)
         article = Article.objects.create(**validated_data)
         return article
 
@@ -168,7 +178,7 @@ class CarrierSerializer(serializers.ModelSerializer):
     )
 
     article_manufacturer = serializers.CharField(
-        source="article.manufacturer.name", required=False
+        source="article.manufacturer", required=False
     )
     article_manufacturer_description = serializers.CharField(
         source="article.manufacturer_description", required=False
@@ -176,6 +186,10 @@ class CarrierSerializer(serializers.ModelSerializer):
 
     article_sap_number = serializers.CharField(
         source="article.sap_number", required=False
+    )
+
+    article_providers = serializers.CharField(
+        source="article.providers", required=False
     )
 
     class Meta:
