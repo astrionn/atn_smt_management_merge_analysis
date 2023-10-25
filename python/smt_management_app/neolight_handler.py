@@ -21,18 +21,37 @@ class NeoLightAPI:
         self.tower_colors = tower_colors
         self.all_leds = list(range(1, max_led_address + 1))
 
-    def calc_slot_id(self, n):
-        group = str((n - 1) // 100 + 1).zfill(3)
-        subgroup = str((n - 1) // 4 % 25 + 1).zfill(2)
+    def led_address_to_side_row_lamp(self, led_address):
+        if led_address < 1 or led_address > 1400:
+            raise ValueError("LED address should be between 1 and 1400.")
 
-        if n <= 700:
-            item = str(n % 4 + 1).zfill(3)
-            s = f"001-{group}-{subgroup}{item}"
+        side = "001" if led_address < 701 else "002"
+        if led_address > 700:
+            led_address -= 700
+        row = (led_address - 1) // 100 + 1
+        lamp = (led_address - 1) % 100 + 1
+
+        return f"{str(side).zfill(3)}-{str(row).zfill(2)}-{str(lamp).zfill(3)}"
+
+    def side_row_lamp_to_led_address(self, input_string):
+        print(input_string)
+        side, row, lamp = input_string.split("-")
+        if len(side) != 3 or len(row) != 2 or len(lamp) != 3:
+            raise ValueError("Invalid input format.")
+
+        side = int(side)
+        row = int(row)
+        lamp = int(lamp)
+
+        if side not in [1, 2] or row < 1 or row > 14 or lamp < 1 or lamp > 100:
+            raise ValueError("Invalid input values.")
+
+        if side == 1:
+            led_address = (row - 1) * 100 + lamp
         else:
-            item = str(n % 4 + 1).zfill(2)
-            item = "1" + item
-            s = f"001-{group}-{subgroup}{item}"
-        return s
+            led_address = 700 + (row - 1) * 100 + lamp
+
+        return led_address
 
     def _LED_On_Control(self, lights_dict):
         """
@@ -112,8 +131,7 @@ class NeoLightAPI:
 
     def led_on(self, lamp, color):
         # print(f"in led_on lamp={lamp},color={color}")
-        if not str(lamp).isdigit() or str(lamp) == "0":
-            raise ValueError("Invalid value for lamp address")
+        lamp = self.side_row_lamp_to_led_address(lamp)
         if color not in self.led_colors:
             raise ValueError(
                 f"Invalid color {color} for LED. Possible values are {self.led_colors}"
@@ -124,8 +142,7 @@ class NeoLightAPI:
         return self._LED_On_Control(lights_dict)
 
     def led_off(self, lamp):
-        if not str(lamp).isdigit() or str(lamp) == "0":
-            raise ValueError("Invalid value for lamp address")
+        lamp = self.side_row_lamp_to_led_address(lamp)
         return self._LED_Off_Control([str(lamp)])
 
     def reset_leds(self, working_light=False):
