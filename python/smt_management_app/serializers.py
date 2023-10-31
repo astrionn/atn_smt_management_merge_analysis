@@ -66,20 +66,13 @@ class ArticleNameSerializer(serializers.ModelSerializer):
         model = Article
 
 
-class ArticleProviderSerializer(serializers.ModelSerializer):
-    name = serializers.PrimaryKeyRelatedField(queryset=Provider.objects.all())
-    description = serializers.CharField(max_length=255, required=False)
-
-    class Meta:
-        model = ArticleProvider
-        fields = ["name", "description"]
-
-
 class ArticleSerializer(serializers.ModelSerializer):
     manufacturer = ManufacturerSerializer(required=False, allow_null=True)
-    providers = ArticleProviderSerializer(
-        source="article.provider_set", many=True, required=False
-    )
+    provider1 = ProviderSerializer(required=False, allow_null=True)
+    provider2 = ProviderSerializer(required=False, allow_null=True)
+    provider3 = ProviderSerializer(required=False, allow_null=True)
+    provider4 = ProviderSerializer(required=False, allow_null=True)
+    provider5 = ProviderSerializer(required=False, allow_null=True)
 
     class Meta:
         model = Article
@@ -87,13 +80,21 @@ class ArticleSerializer(serializers.ModelSerializer):
             "name",
             "manufacturer",
             "manufacturer_description",
+            "provider1",
+            "provider1_description",
+            "provider2",
+            "provider2_description",
+            "provider3",
+            "provider3_description",
+            "provider4",
+            "provider4_description",
+            "provider5",
+            "provider5_description",
             "sap_number",
             "description",
-            "providers",
         ]
 
     def create(self, validated_data):
-        print(1, validated_data)
         if "manufacturer" in validated_data.keys():
             manufactuerdata = validated_data.pop("manufacturer")
             manufacturer, created = Manufacturer.objects.get_or_create(
@@ -101,15 +102,27 @@ class ArticleSerializer(serializers.ModelSerializer):
             )
             validated_data["manufacturer"] = manufacturer
 
-        if "providers" in validated_data.keys():
-            print("Article Serializer found providers key")
-            providersdata = validated_data.pop("providers")
-            print(providersdata)
-            for p in providersdata:
-                print(p)
-                provider, created = Provider.objects.get_or_create(**p)
-                validated_data["providers"].append(provider)
-        print(2, validated_data)
+        if "provider1" in validated_data.keys():
+            provider1data = validated_data.pop("provider1")
+            provider1, created = Provider.objects.get_or_create(provider1data)
+            validated_data["provider1"] = provider1
+        if "provider2" in validated_data.keys():
+            provider2data = validated_data.pop("provider2")
+            provider2, created = Provider.objects.get_or_create(provider2data)
+            validated_data["provider2"] = provider2
+        if "provider3" in validated_data.keys():
+            provider3data = validated_data.pop("provider3")
+            provider3, created = Provider.objects.get_or_create(provider3data)
+            validated_data["provider3"] = provider3
+        if "provider4" in validated_data.keys():
+            provider4data = validated_data.pop("provider4")
+            provider4, created = Provider.objects.get_or_create(provider4data)
+            validated_data["provider4"] = provider4
+        if "provider5" in validated_data.keys():
+            provider5data = validated_data.pop("provider5")
+            provider5, created = Provider.objects.get_or_create(provider5data)
+            validated_data["provider5"] = provider5
+
         article = Article.objects.create(**validated_data)
         return article
 
@@ -188,8 +201,38 @@ class CarrierSerializer(serializers.ModelSerializer):
         source="article.sap_number", required=False
     )
 
-    article_providers = serializers.CharField(
-        source="article.providers", required=False
+    article_provider1 = serializers.CharField(
+        source="article.provider1", required=False
+    )
+
+    article_provider1_description = serializers.CharField(
+        source="article.provider1_description", required=False
+    )
+
+    article_provider2 = serializers.CharField(
+        source="article.provider2", required=False
+    )
+    article_provider2_description = serializers.CharField(
+        source="article.provider2_description", required=False
+    )
+
+    article_provider3 = serializers.CharField(
+        source="article.provider3", required=False
+    )
+    article_provider3_description = serializers.CharField(
+        source="article.provider3_description", required=False
+    )
+    article_provider4 = serializers.CharField(
+        source="article.provider4", required=False
+    )
+    article_provider4_description = serializers.CharField(
+        source="article.provider4_description", required=False
+    )
+    article_provider5 = serializers.CharField(
+        source="article.provider5", required=False
+    )
+    article_provider5_description = serializers.CharField(
+        source="article.provider5_description", required=False
     )
 
     class Meta:
