@@ -108,7 +108,7 @@ urlpatterns.append(
 
 urlpatterns.append(
     path(
-        "dashboard_data",
+        "dashboard_data/",
         views.dashboard_data,
         name="dashboard_data",
     )
