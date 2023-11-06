@@ -105,3 +105,11 @@ urlpatterns.append(
         name="reset_leds",
     )
 )
+
+urlpatterns.append(
+    path(
+        "dashboard_data",
+        views.dashboard_data,
+        name="dashboard_data",
+    )
+)
