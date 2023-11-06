@@ -5,60 +5,23 @@ import random
 from pprint import pprint as pp
 import time
 
-
-def led_address_to_side_row_lamp(led_address):
-    if led_address < 1 or led_address > 1400:
-        raise ValueError("LED address should be between 1 and 1400.")
-
-    side = "001" if led_address < 701 else "002"
-    if led_address > 700:
-        led_address -= 700
-    row = (led_address - 1) // 100 + 1
-    lamp = (led_address - 1) % 100 + 1
-
-    return f"{str(side).zfill(3)}-{str(row).zfill(2)}-{str(lamp).zfill(3)}"
-
-
-def side_row_lamp_to_led_address(input_string):
-    side, row, lamp = input_string.split("-")
-    if len(side) != 3 or len(row) != 2 or len(lamp) != 3:
-        raise ValueError("Invalid input format.")
-
-    side = int(side)
-    row = int(row)
-    lamp = int(lamp)
-
-    if side not in [1, 2] or row < 1 or row > 14 or lamp < 1 or lamp > 100:
-        raise ValueError("Invalid input values.")
-
-    if side == 1:
-        led_address = (row - 1) * 100 + lamp
-    else:
-        led_address = 700 + (row - 1) * 100 + lamp
-
-    return led_address
-
-
 client = requests.session()
 
-path = "C:\\Users\\LB\\Downloads\\SMD_Artikel.csv"
+path = "C:\\Users\\LB\\Downloads\\store.csv"
 url = "http://localhost:8000/api/article/"
 url2 = "http://localhost:8000/api/carrier/"
 url3 = "http://localhost:8000/api/storageslot/"
 url4 = "http://localhost:8000/api/storage/?format=json"
 url5 = "http://localhost:8000/api/manufacturer/"
 
+
 resp_storage = client.get(url4)
 storage = resp_storage.json()
 if not storage["results"]:
     resp_create_storage = client.post(url4, {"name": "storage1", "capacity": 1000})
     pp(resp_create_storage.json())
-    for i in range(1, 1400):
-        data3 = {
-            "name": led_address_to_side_row_lamp(i),
-            "storage": "storage1",
-        }
-        print(i, data3)
+    for i in [303, 305, 307, 308, 309]:
+        data3 = {"name": f"{str(i).zfill(3)}", "storage": "storage1"}
         resp3 = client.post(url3, json=data3)
 
 
@@ -69,30 +32,36 @@ headers = data[0]
 
 print(list(enumerate(headers)))
 for i, l in enumerate(data[1:]):
+    print("\n", l)
     data = {
-        "name": (None, l[0]),
+        "name": (None, l[1]),
         "description": (None, l[2]),
-        "manufacturer": (None, l[6]),
-        "manufacturer_description": (None, l[7]),
+        "manufacturer": (None, l[7]),
+        "manufacturer_description": (None, l[8]),
     }
 
-    manu = client.get(f"{url5}?name={l[6]}")
+    manu = client.get(f"{url5}?name={l[7]}")
     manu = manu.json()
     # pp(manu)
     if manu["count"] == 0:
-        manu_create = client.post(url5, {"name": l[6]})
+        manu_create = client.post(url5, {"name": l[7]})
         # pp(manu_create.__dict__)
+
     resp = client.post(url, files=data)
+    pp(data)
+    pp(resp.__dict__)
+    pp(resp.request.__dict__)
     if len(sys.argv) < 2:
         continue
 
     data2 = {
-        "name": f"C{str(i+1).zfill(3)}",
+        "name": l[0],
         "quantity_current": l[3],
-        "article": l[0],
-        "lot_number": (i + 1) % 10,
+        "article": l[1],
+        "lot_number": l[9],
         "delivered": True,
     }
+    # pp(data)
     # pp(data2)
     # time.sleep(0.1)
     resp2 = client.post(url2, json=data2)
