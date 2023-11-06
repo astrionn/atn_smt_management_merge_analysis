@@ -52,15 +52,18 @@ neo = NeoLightAPI("192.168.178.11")
 
 def dashboard_data(request):
     total = Carrier.objects.filter(archived=False).count()
-    delivered = Carrier.objects.filter(archived=False,delivered=True).count()
+    undelivered = Carrier.objects.filter(archived=False,delivered=False).count()
     stored = Carrier.objects.filter(archived=False,storage_slot__is_null=False).count()
     free_slots = StorageSlot.objects.filter(carrier__isnull=True).count()
+    storages = Storage.objects.filter(archived=False).count()
+
     
 
     return JsonResponse({
         "total_carriers":total
-        "not_delivered":delivered,
+        "not_delivered":undelivered,
         "in_storage":stored,
+        "storages":storages,
         "free_slots":free_slots
     })
 
