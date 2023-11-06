@@ -61,6 +61,7 @@ def dashboard_data(request):
     
 
     return JsonResponse({
+
         "total_carriers":total,
         "not_delivered":undelivered,
         "in_storage":stored,
