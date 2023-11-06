@@ -57,6 +57,7 @@ def dashboard_data(request):
     free_slots = StorageSlot.objects.filter(carrier__isnull=True).count()
     storages = Storage.objects.filter(archived=False).count()
 
+
     
 
     return JsonResponse({
