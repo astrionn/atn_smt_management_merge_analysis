@@ -49,6 +49,10 @@ neo = NeoLightAPI("192.168.178.11")
 # created by todo.org tangle
 # Create your views here.
 
+@csrf_exempt
+def reset_leds(request,storage):
+    neo.reset_leds(working_light=True)
+    return JsonResponse({"reset_led":storage})
 
 def check_unique(request, field, value):
     if field == "sapnumber":

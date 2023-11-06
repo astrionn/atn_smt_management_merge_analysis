@@ -97,3 +97,11 @@ urlpatterns.append(
         name="check_unique",
     )
 )
+
+urlpatterns.append(
+    path(
+        "reset_leds/<storage>/",
+        views.reset_leds,
+        name="reset_leds",
+    )
+)

@@ -41,12 +41,14 @@ def side_row_lamp_to_led_address(input_string):
 
 client = requests.session()
 
+base_url = 'localhost'
+
 path = "C:\\Users\\LB\\Downloads\\SMD_Artikel.csv"
-url = "http://localhost:8000/api/article/"
-url2 = "http://localhost:8000/api/carrier/"
-url3 = "http://localhost:8000/api/storageslot/"
-url4 = "http://localhost:8000/api/storage/?format=json"
-url5 = "http://localhost:8000/api/manufacturer/"
+url = f"http://{base_url}:8000/api/article/"
+url2 = f"http://{base_url}:8000/api/carrier/"
+url3 = f"http://{base_url}:8000/api/storageslot/"
+url4 = f"http://{base_url}:8000/api/storage/?format=json"
+url5 = f"http://{base_url}:8000/api/manufacturer/"
 
 resp_storage = client.get(url4)
 storage = resp_storage.json()
