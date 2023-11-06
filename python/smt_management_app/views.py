@@ -71,7 +71,10 @@ def dashboard_data(request):
 
 @csrf_exempt
 def reset_leds(request,storage):
-    neo.reset_leds(working_light=True)
+    Thread(
+        target=neo.reset_leds,
+        kwargs={'working_light':True}
+    ).start()
     return JsonResponse({"reset_led":storage})
 
 def check_unique(request, field, value):
