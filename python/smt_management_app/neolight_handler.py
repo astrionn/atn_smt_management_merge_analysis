@@ -34,6 +34,7 @@ class NeoLightAPI:
         return f"{str(side).zfill(3)}-{str(row).zfill(2)}-{str(lamp).zfill(3)}"
 
     def side_row_lamp_to_led_address(self, input_string):
+
         # print(input_string)
         side, row, lamp = input_string.split("-")
         if len(side) != 3 or len(row) != 2 or len(lamp) != 3:
