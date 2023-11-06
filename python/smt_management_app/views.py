@@ -49,6 +49,19 @@ neo = NeoLightAPI("192.168.178.11")
 # created by todo.org tangle
 # Create your views here.
 
+
+def dashboard_data(request):
+    total = len(Carrier.objects.filter(archived=False))
+    delivered = len(Carrier.objects.filter(archived=False,delivered=True))
+    stored = len(Carrier.objects.filter(archived=False,storage_slot__is_null=False))
+    
+
+    return JsonResponse({
+        "total_carriers":total
+        "not_delivered":delivered,
+        "in_storage":stored
+    })
+
 @csrf_exempt
 def reset_leds(request,storage):
     neo.reset_leds(working_light=True)
