@@ -87,72 +87,6 @@ def get_csrf_token(request):
     return response
 
 
-def lamp_id_to_side_row_lamp(lamp_id):
-    """Converts a lamp ID to a side-row-lamp string.
-
-    Args:
-      lamp_id: The lamp ID, an integer between 1 and 1400, inclusive.
-
-    Returns:
-      A string of the form "001-01-001", where "001" is the side, "01" is the row,
-      and "001" is the lamp within the row.
-    """
-
-    side = (lamp_id - 1) // 100 + 1
-    row = (lamp_id - 1) // 10 % 10 + 1
-    lamp = lamp_id % 10 + 1
-    return f"{side:03}-{row:02}-{lamp:03}"
-
-
-def side_row_lamp_to_lamp_id(side_row_lamp):
-    """Converts a side-row-lamp string to a lamp ID.
-
-    Args:
-      side_row_lamp: A string of the form "001-01-001", where "001" is the side,
-        "01" is the row, and "001" is the lamp within the row.
-
-    Returns:
-      The lamp ID, an integer between 1 and 1400, inclusive.
-    """
-
-    side, row, lamp = side_row_lamp.split("-")
-    lamp_id = 100 * (int(side) - 1) + 10 * (int(row) - 1) + int(lamp) - 1
-    return lamp_id
-
-
-@csrf_exempt
-def store_carrier_confirm(request, carrier, slot):
-    # pp(request.__dict__)
-    # print(carrier)
-    # print(slot)
-    queryset = Carrier.objects.filter(name=carrier)
-    if not queryset:
-        return JsonResponse({"success": False})
-
-    # print(slot)
-    queryset2 = StorageSlot.objects.filter(name=slot)
-    if not queryset2:
-        return JsonResponse({"success": False, "message": "no slot found"})
-    c = queryset.first()
-    ss = queryset2.first()
-    if ss.led_state == 0:
-        return JsonResponse({"success": False, "message": "led is off but shouldn't"})
-    c.storage_slot = ss
-    c.save()
-    ss.led_state = 0
-    # thread to ledstate 0 in 15s
-    Thread(
-        target=neo.led_on,
-        args=(
-            slot,
-            "yellow",
-        ),
-    ).start()
-    Timer(interval=5, function=neo.led_off, args=([slot])).start()
-    ss.save()
-    return JsonResponse({"success": True})
-
-
 @csrf_exempt
 def store_carrier(request, carrier, storage):
     # is carrier storable ?
@@ -196,6 +130,39 @@ def store_carrier(request, carrier, storage):
     #    Timer(interval=15, function=neo.led_off, args=(fs.name,)).start()
     msg = {"storage": storage.name, "slot": fs.name, "carrier": c.name, "success": True}
     return JsonResponse(msg)
+
+
+@csrf_exempt
+def store_carrier_confirm(request, carrier, slot):
+    # pp(request.__dict__)
+    # print(carrier)
+    # print(slot)
+    queryset = Carrier.objects.filter(name=carrier)
+    if not queryset:
+        return JsonResponse({"success": False})
+
+    # print(slot)
+    queryset2 = StorageSlot.objects.filter(name=slot)
+    if not queryset2:
+        return JsonResponse({"success": False, "message": "no slot found"})
+    c = queryset.first()
+    ss = queryset2.first()
+    if ss.led_state == 0:
+        return JsonResponse({"success": False, "message": "led is off but shouldn't"})
+    c.storage_slot = ss
+    c.save()
+    ss.led_state = 0
+    # thread to ledstate 0 in 15s
+    Thread(
+        target=neo.led_on,
+        args=(
+            slot,
+            "yellow",
+        ),
+    ).start()
+    Timer(interval=5, function=neo.led_off, args=([slot])).start()
+    ss.save()
+    return JsonResponse({"success": True})
 
 
 def collect_carrier(request, carrier):
@@ -362,6 +329,7 @@ def user_mapping_and_file_processing(request):
                     article_dict = {
                         k[0]: l[a_headers.index(k[1])] for k in map_ordered_l
                     }
+                    print(0, article_dict)
 
                     if (
                         "manufacturer" in article_dict.keys()
@@ -374,12 +342,58 @@ def user_mapping_and_file_processing(request):
                         if c_m:
                             msg["created"].append(o_m.name)
 
-                    if "provider" in article_dict.keys() and article_dict["provider"]:
-                        o_p, c_p = Provider.objects.get_or_create(
-                            name=article_dict["provider"]
+                    if "provider1" in article_dict.keys() and article_dict["provider1"]:
+                        print(f'creating provider1 :{article_dict["provider1"]}')
+                        (
+                            provider1_object,
+                            provider1_created,
+                        ) = Provider.objects.get_or_create(
+                            name=article_dict["provider1"]
                         )
-                        if c_p:
-                            msg["created"].append(o_p.name)
+                        article_dict["provider1"] = provider1_object
+                        print(provider1_object)
+                        if provider1_created:
+                            msg["created"].append(provider1_object.name)
+                    if "provider2" in article_dict.keys() and article_dict["provider2"]:
+                        (
+                            provider2_object,
+                            provider2_created,
+                        ) = Provider.objects.get_or_create(
+                            name=article_dict["provider2"]
+                        )
+                        article_dict["provider2"] = provider2_object
+                        if provider2_created:
+                            msg["created"].append(provider2_object.name)
+                    if "provider3" in article_dict.keys() and article_dict["provider3"]:
+                        (
+                            provider3_object,
+                            provider3_created,
+                        ) = Provider.objects.get_or_create(
+                            name=article_dict["provider3"]
+                        )
+                        article_dict["provider3"] = provider3_object
+                        if provider3_created:
+                            msg["created"].append(provider3_object.name)
+                    if "provider4" in article_dict.keys() and article_dict["provider4"]:
+                        (
+                            provider4_object,
+                            provider4_created,
+                        ) = Provider.objects.get_or_create(
+                            name=article_dict["provider4"]
+                        )
+                        article_dict["provider4"] = provider4_object
+                        if provider4_created:
+                            msg["created"].append(provider4_object.name)
+                    if "provider5" in article_dict.keys() and article_dict["provider5"]:
+                        (
+                            provider5_object,
+                            provider5_created,
+                        ) = Provider.objects.get_or_create(
+                            name=article_dict["provider5"]
+                        )
+                        article_dict["provider5"] = provider5_object
+                        if provider5_created:
+                            msg["created"].append(provider5_object.name)
 
                     if (
                         "boardarticle" in article_dict.keys()
@@ -387,12 +401,9 @@ def user_mapping_and_file_processing(request):
                     ):
                         del article_dict["boardarticle"]
                     if not Article.objects.filter(name=article_dict["name"]).exists():
+                        pp(article_dict)
                         o_a = Article.objects.create(
-                            **{
-                                k: v
-                                for k, v in article_dict.items()
-                                if v and k != "provider"
-                            }
+                            **{k: v for k, v in article_dict.items() if k and v}
                         )
                         c_a = True
                     else:
@@ -400,12 +411,6 @@ def user_mapping_and_file_processing(request):
 
                     if c_a:
                         msg["created"].append(o_a.name)
-                        if (
-                            "provider" in article_dict.keys()
-                            and article_dict["provider"]
-                            and o_p
-                        ):
-                            ArticleProvider.objects.create(article=o_a, provider=o_p)
                     else:
                         msg["fail"].append(article_dict["name"])
 
@@ -456,6 +461,12 @@ class ArticleNameViewSet(generics.ListAPIView):
 
 
 class ArticleFilter(rest_filter.FilterSet):
+    provider1__name = rest_filter.CharFilter(method="provider_filter")
+    provider2__name = rest_filter.CharFilter(method="provider_filter")
+    provider3__name = rest_filter.CharFilter(method="provider_filter")
+    provider4__name = rest_filter.CharFilter(method="provider_filter")
+    provider5__name = rest_filter.CharFilter(method="provider_filter")
+
     class Meta:
         model = Article
         fields = {
@@ -463,11 +474,30 @@ class ArticleFilter(rest_filter.FilterSet):
             "description": ["exact", "contains"],
             "manufacturer__name": ["exact", "contains"],
             "manufacturer_description": ["exact", "contains"],
+            "provider1__name": ["exact", "contains"],
+            "provider1_description": ["exact", "contains"],
+            "provider2__name": ["exact", "contains"],
+            "provider2_description": ["exact", "contains"],
+            "provider3__name": ["exact", "contains"],
+            "provider3_description": ["exact", "contains"],
+            "provider4__name": ["exact", "contains"],
+            "provider4_description": ["exact", "contains"],
+            "provider5__name": ["exact", "contains"],
+            "provider5_description": ["exact", "contains"],
             "sap_number": ["exact", "contains"],
             "created_at": ["exact", "contains", "gte", "lte"],
             "updated_at": ["exact", "contains", "gte", "lte"],
             "archived": ["exact"],
         }
+
+    def provider_filter(self, queryset, name, value):
+        return queryset.filter(
+            models.Q(provider1=value)
+            | models.Q(provider2=value)
+            | models.Q(provider3=value)
+            | models.Q(provider4=value)
+            | models.Q(provider5=value)
+        )
 
 
 class ArticleViewSet(viewsets.ModelViewSet):
@@ -480,27 +510,6 @@ class ArticleViewSet(viewsets.ModelViewSet):
     )
     filterset_class = ArticleFilter
     ordering_fields = "__all__"
-
-    def create(self, request, *args, **kwargs):
-        data = request.data
-        providers_data = data.pop("providers", None)
-        article_serializer = self.get_serializer(data=data)
-        article_serializer.is_valid(raise_exception=True)
-        article_instance = article_serializer.save()
-
-        if providers_data:
-            for provider_data in providers_data:
-                name = provider_data.pop("name")
-                if not name:
-                    continue
-                description = provider_data.pop("description", None)
-                provider, _ = Provider.objects.get_or_create(name=name)
-                ArticleProvider.objects.create(
-                    article=article_instance, provider=provider, description=description
-                )
-
-        headers = self.get_success_headers(article_serializer.data)
-        return JsonResponse(article_serializer.data, status=201, headers=headers)
 
 
 class BoardViewSet(viewsets.ModelViewSet):

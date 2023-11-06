@@ -69,17 +69,53 @@ class Article(AbstractBaseModel):
         Manufacturer, on_delete=models.CASCADE, null=True, blank=True
     )
     manufacturer_description = models.CharField(max_length=50, null=True, blank=True)
+
+    provider1 = models.ForeignKey(
+        Provider,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="provider1",
+    )
+    provider1_description = models.CharField(max_length=50, null=True, blank=True)
+    provider2 = models.ForeignKey(
+        Provider,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="provider2",
+    )
+    provider2_description = models.CharField(max_length=50, null=True, blank=True)
+    provider3 = models.ForeignKey(
+        Provider,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="provider3",
+    )
+    provider3_description = models.CharField(max_length=50, null=True, blank=True)
+    provider4 = models.ForeignKey(
+        Provider,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="provider4",
+    )
+    provider4_description = models.CharField(max_length=50, null=True, blank=True)
+    provider5 = models.ForeignKey(
+        Provider,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="provider5",
+    )
+    provider5_description = models.CharField(max_length=50, null=True, blank=True)
+
     description = models.CharField(max_length=255, null=True, blank=True)
     sap_number = models.CharField(max_length=50, null=True, blank=True)
 
     def get_absolute_url(self):
         return reverse("smt_management_app:article-detail", kwargs={"name": self.name})
-
-
-class ArticleProvider(models.Model):
-    article = models.ForeignKey(Article, on_delete=models.CASCADE)
-    provider = models.ForeignKey(Provider, on_delete=models.CASCADE)
-    description = models.CharField(max_length=255, null=True, blank=True)
 
 
 class Carrier(AbstractBaseModel):
