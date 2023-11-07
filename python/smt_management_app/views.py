@@ -52,30 +52,27 @@ neo = NeoLightAPI("192.168.178.11")
 
 def dashboard_data(request):
     total = Carrier.objects.filter(archived=False).count()
-    undelivered = Carrier.objects.filter(archived=False,delivered=False).count()
-    stored = Carrier.objects.filter(archived=False,storage_slot__isnull=False).count()
+    undelivered = Carrier.objects.filter(archived=False, delivered=False).count()
+    stored = Carrier.objects.filter(archived=False, storage_slot__isnull=False).count()
     free_slots = StorageSlot.objects.filter(carrier__isnull=True).count()
     storages = Storage.objects.filter(archived=False).count()
 
+    return JsonResponse(
+        {
+            "total_carriers": total,
+            "not_delivered": undelivered,
+            "in_storage": stored,
+            "storages": storages,
+            "free_slots": free_slots,
+        }
+    )
 
-    
-
-    return JsonResponse({
-
-        "total_carriers":total,
-        "not_delivered":undelivered,
-        "in_storage":stored,
-        "storages":storages,
-        "free_slots":free_slots
-    })
 
 @csrf_exempt
-def reset_leds(request,storage):
-    Thread(
-        target=neo.reset_leds,
-        kwargs={'working_light':True}
-    ).start()
-    return JsonResponse({"reset_led":storage})
+def reset_leds(request, storage):
+    Thread(target=neo.reset_leds, kwargs={"working_light": True}).start()
+    return JsonResponse({"reset_led": storage})
+
 
 def check_unique(request, field, value):
     if field == "sapnumber":
@@ -562,22 +559,11 @@ class CarrierNameViewSet(generics.ListAPIView):
 class CarrierFilter(django_filters.FilterSet):
     # There is no default filtering system for selection fields,
     # I implemented a custom option for gt and lt, if you don’t need them, you can simply delete them
-    quantity_current__gt = django_filters.NumberFilter(
-        field_name="quantity_current", lookup_expr="gt"
-    )
-    quantity_current__lt = django_filters.NumberFilter(
-        field_name="quantity_current", lookup_expr="lt"
-    )
+
     diameter__gt = django_filters.NumberFilter(field_name="diameter", lookup_expr="gt")
     diameter__lt = django_filters.NumberFilter(field_name="diameter", lookup_expr="lt")
     width__gt = django_filters.NumberFilter(field_name="width", lookup_expr="gt")
     width__lt = django_filters.NumberFilter(field_name="width", lookup_expr="lt")
-    container_type__gt = django_filters.NumberFilter(
-        field_name="container_type", lookup_expr="gt"
-    )
-    container_type__lt = django_filters.NumberFilter(
-        field_name="container_type", lookup_expr="lt"
-    )
 
     class Meta:
         model = Carrier
@@ -586,12 +572,17 @@ class CarrierFilter(django_filters.FilterSet):
             "diameter": ["exact", "gt", "lt"],
             "width": ["exact", "gt", "lt"],
             "container_type": ["exact", "gt", "lt"],
-            "quantity_original": ["exact", "gte", "lte"],
+            "quantity_original": ["exact", "gt", "lt"],
+            "quantity_current": ["exact", "gt", "lt"],
             "lot_number": ["exact", "contains"],
             "reserved": ["exact"],
             "delivered": ["exact"],
             "collecting": ["exact"],
             "article__name": ["exact", "contains"],
+            "article__description": ["exact", "contains"],
+            "article__manufacturer__name": ["exact", "contains"],
+            "article__manufacturer_description": ["exact", "contains"],
+            "article__sap_number": ["exact", "contains"],
             "storage_slot__name": ["exact", "contains"],
             "storage__name": ["exact", "contains"],
             "machine_slot__name": ["exact", "contains"],
