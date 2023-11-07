@@ -119,21 +119,6 @@ class Article(AbstractBaseModel):
 
 
 class Carrier(AbstractBaseModel):
-    DIAMETER_CHOICES = [
-        (7, '7"'),
-        (13, '13"'),
-    ]
-
-    WIDTH_CHOICES = [
-        (8, "8 mm"),
-        (12, "12 mm"),
-        (16, "16 mm"),
-        (24, "24 mm"),
-        (32, "32 mm"),
-        (44, "44 mm"),
-        (56, "56 mm"),
-    ]
-
     TYPE_CHOICES = [
         (0, "Reel"),
         (1, "Tray"),
@@ -144,12 +129,8 @@ class Carrier(AbstractBaseModel):
     article = models.ForeignKey(
         Article, on_delete=models.CASCADE, null=False, blank=False
     )
-    diameter = models.IntegerField(
-        default=7, choices=DIAMETER_CHOICES, null=True, blank=True
-    )
-    width = models.IntegerField(
-        default=12, choices=WIDTH_CHOICES, null=True, blank=True
-    )
+    diameter = models.IntegerField(default=7, null=True, blank=True)
+    width = models.IntegerField(default=12, null=True, blank=True)
     container_type = models.IntegerField(
         default=0, choices=TYPE_CHOICES, null=True, blank=True
     )
