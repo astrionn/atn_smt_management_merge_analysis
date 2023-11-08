@@ -115,6 +115,7 @@ def get_csrf_token(request):
 def store_carrier(request, carrier, storage):
     # is carrier storable ?
     # print(carrier,storage)
+    carrier = carrier.strip()
     carriers = Carrier.objects.filter(name=carrier)
     # print(carriers)
     if not carriers:
@@ -161,6 +162,8 @@ def store_carrier_confirm(request, carrier, slot):
     # pp(request.__dict__)
     # print(carrier)
     # print(slot)
+    carrier = carrier.strip()
+    slot = slot.strip()
     queryset = Carrier.objects.filter(name=carrier)
     if not queryset:
         return JsonResponse({"success": False})
@@ -190,6 +193,7 @@ def store_carrier_confirm(request, carrier, slot):
 
 
 def collect_carrier(request, carrier):
+    carrier = carrier.strip()
     c = Carrier.objects.filter(name=carrier).first()
 
     # get queue and add
@@ -222,6 +226,8 @@ def collect_carrier(request, carrier):
 
 
 def collect_carrier_confirm(request, carrier, slot):
+    carrier = carrier.strip()
+    slot = slot.strip()
     # get queue
     queryset = Carrier.objects.filter(collecting=True)
     # check membership
