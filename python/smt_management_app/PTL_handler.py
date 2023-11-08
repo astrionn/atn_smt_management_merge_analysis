@@ -36,7 +36,7 @@ class PTL_API:
     
 ptl = PTL_API('COM6')
 ptl._LED_Control(command=23,LED=0)
-for i in range(1,300):
+for i in [i for i in range(1,150) if i not in range(2,150,4)]:
 
     cmd = 11
     if i > 150:
