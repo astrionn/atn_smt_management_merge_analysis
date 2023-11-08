@@ -41,7 +41,7 @@ def side_row_lamp_to_led_address(input_string):
 
 client = requests.session()
 
-base_url = 'localhost'
+base_url = "localhost"
 
 path = "C:\\Users\\LB\\Downloads\\SMD_Artikel.csv"
 url = f"http://{base_url}:8000/api/article/"
@@ -55,7 +55,7 @@ storage = resp_storage.json()
 if not storage["results"]:
     resp_create_storage = client.post(url4, {"name": "storage1", "capacity": 1000})
     pp(resp_create_storage.json())
-    for i in range(1, 1400):
+    for i in range(1, 1401):
         data3 = {
             "name": led_address_to_side_row_lamp(i),
             "storage": "storage1",
@@ -69,7 +69,7 @@ with open(path, encoding="latin_1") as f:
 
 headers = data[0]
 
-print(list(enumerate(headers)))
+pp(list(enumerate(headers)))
 for i, l in enumerate(data[1:]):
     data = {
         "name": (None, l[0]),
