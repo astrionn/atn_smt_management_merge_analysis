@@ -34,14 +34,36 @@ class PTL_API:
         query = self.serial.write(byte_cmd)
         res = self.serial.read(8)
     
-ptl = PTL_API('COM6')
+ptl = PTL_API('COM16')
 ptl._LED_Control(command=23,LED=0)
-for i in [i for i in range(1,150) if i not in range(2,150,4)]:
+ptl._LED_Control(LED=1)
 
+
+"""
+skip:
+3
+4
+6
+7
+9
+10
+12
+13
+"""
+for i in range(1,150):
+    if i in [3,4,6,7,9,10,12,13,15,16,18,19,21,22]:#until about 50 then shift pattern once -1 
+        continue
+    
     cmd = 11
     if i > 150:
         cmd = 21
         i -=150
-    ptl._LED_Control(LED=i,R=random.randint(0,255),G=random.randint(0,255),B=random.randint(0,255),command=cmd)
+    #ptl._LED_Control(LED=i,R=random.randint(0,255),G=random.randint(0,255),B=random.randint(0,255),command=cmd)
+    r = 255 if i%3 == 0 else 0
+    g = 255 if i%3 == 1 else 0
+    b = 255 if i%3 == 2 else 0
+    ptl._LED_Control(LED=i,R=r,G=g,B=b,command=cmd)
+    print(str(i).zfill(3),str(r).zfill(3),str(g).zfill(3),str(b).zfill(3))
 else:
     ptl._LED_Control(command=23,LED=0)
+    pass
