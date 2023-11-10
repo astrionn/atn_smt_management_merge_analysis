@@ -9,7 +9,7 @@ class PTL_API:
         self.port = port
         self.baudrate = 9600
         self.serial = serial.Serial(port=self.port,baudrate=self.baudrate,timeout=0.25)
-        self.slot_to_strip_map = {k:v for k,v in enumerate([1, 2, 5, 8, 11, 14, 17, 20, 23, 26, 29, 32, 35, 38, 41, 42, 45, 48, 51, 54, 57, 60, 63, 66, 69, 71, 73, 76, 79, 82, 85, 88, 91, 94, 97, 99, 102, 105, 108, 111, 114, 117, 120, 123, 126, 129, 132, 135, 138, 140])}
+        self.slot_to_strip_map = {k:v+1 for k,v in enumerate([1, 2, 5, 8, 11, 14, 17, 20, 23, 26, 29, 32, 35, 38, 41, 42, 45, 48, 51, 54, 57, 60, 63, 66, 69, 71, 73, 76, 79, 82, 85, 88, 91, 94, 97, 99, 102, 105, 108, 111, 114, 117, 120, 123, 126, 129, 132, 135, 138, 140])}
 
 
     def _LED_strip_control(self,gateway=1,controller=1,command=11,channel=1,led_C=0,led_D=1,R=0,G=0,B=0):
