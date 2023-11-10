@@ -605,6 +605,7 @@ class CarrierViewSet(viewsets.ModelViewSet):
         "article__manufacturer__name",
         "article__manufacturer_description",
         "article__description",
+        "article__sap_number",
     ]
     search_fields = "__all__"
 
