@@ -291,7 +291,8 @@ def user_mapping_and_file_processing(request):
         map_ = request.POST["map"]
         map_ = json.loads(map_)
         map_l = [(k, v) for k, v in map_.items() if v]
-
+        print(1, map_)
+        print(2, map_l)
         lf = LocalFile.objects.get(name=file_name)
         msg = {"created": [], "fail": []}
         with open(lf.file_object.name) as f:
@@ -299,6 +300,11 @@ def user_mapping_and_file_processing(request):
             a_headers = csv_reader.__next__()
             index_map = {value: index for index, value in enumerate(a_headers)}
             map_ordered_l = sorted(map_l, key=lambda x: index_map[x[1]])
+            print(3, a_headers)
+            print(4)
+            pp(index_map)
+            print(5)
+            pp(map_ordered_l)
             for l in csv_reader:
                 if lf.upload_type == "board":
                     if not request.POST["board"] or not Board.objects.filter(
@@ -339,7 +345,7 @@ def user_mapping_and_file_processing(request):
                     carrier_dict = {
                         k[0]: l[a_headers.index(k[1])] for k in map_ordered_l
                     }
-                    # pp(carrier_dict)
+
                     if carrier_dict.get("article", None):
                         a = Article.objects.get(name=carrier_dict["article"])
                         carrier_dict["article"] = a
@@ -350,7 +356,11 @@ def user_mapping_and_file_processing(request):
                     if not carrier_dict.get("boardarticle", None):
                         carrier_dict["boardarticle"] = None
                     if not Carrier.objects.filter(name=carrier_dict["name"]).exists():
+                        print(6)
+                        pp(carrier_dict)
                         c = Carrier.objects.create(**carrier_dict)
+                        print(7)
+                        pp(c.__dict__)
                         msg["created"].append(c.name)
                     else:
                         msg["fail"].append(carrier_dict["name"])
@@ -602,7 +612,9 @@ class CarrierViewSet(viewsets.ModelViewSet):
         filters.OrderingFilter,
     )
     filterset_class = CarrierFilter
-    ordering_fields = "__all__"
+    ordering_fields = [field.name for field in Carrier._meta.get_fields()] + [
+        "article__manufacturer__name"
+    ]
     search_fields = "__all__"
 
     def get_queryset(self):
