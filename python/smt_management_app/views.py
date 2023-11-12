@@ -520,13 +520,14 @@ class ArticleFilter(rest_filter.FilterSet):
         }
 
     def provider_filter(self, queryset, name, value):
-        return queryset.filter(
-            models.Q(provider1=value)
-            | models.Q(provider2=value)
-            | models.Q(provider3=value)
-            | models.Q(provider4=value)
-            | models.Q(provider5=value)
+        qs = queryset.filter(
+            models.Q(provider1__name__contains=value)
+            | models.Q(provider2__name__contains=value)
+            | models.Q(provider3__name__contains=value)
+            | models.Q(provider4__name__contains=value)
+            | models.Q(provider5__name__contains=value)
         )
+        return qs
 
 
 class ArticleViewSet(viewsets.ModelViewSet):
@@ -564,6 +565,11 @@ class CarrierNameViewSet(generics.ListAPIView):
 class CarrierFilter(django_filters.FilterSet):
     # There is no default filtering system for selection fields,
     # I implemented a custom option for gt and lt, if you don’t need them, you can simply delete them
+    article__provider1__name = rest_filter.CharFilter(method="article_provider_filter")
+    article__provider2__name = rest_filter.CharFilter(method="article_provider_filter")
+    article__provider3__name = rest_filter.CharFilter(method="article_provider_filter")
+    article__provider4__name = rest_filter.CharFilter(method="article_provider_filter")
+    article__provider5__name = rest_filter.CharFilter(method="article_provider_filter")
 
     class Meta:
         model = Carrier
@@ -582,6 +588,11 @@ class CarrierFilter(django_filters.FilterSet):
             "article__description": ["exact", "contains"],
             "article__manufacturer__name": ["exact", "contains"],
             "article__manufacturer_description": ["exact", "contains"],
+            "article__provider1__name": ["exact", "contains"],
+            "article__provider2__name": ["exact", "contains"],
+            "article__provider3__name": ["exact", "contains"],
+            "article__provider4__name": ["exact", "contains"],
+            "article__provider5__name": ["exact", "contains"],
             "article__sap_number": ["exact", "contains"],
             "storage_slot__name": ["exact", "contains"],
             "storage__name": ["exact", "contains"],
@@ -590,6 +601,16 @@ class CarrierFilter(django_filters.FilterSet):
             "created_at": ["exact", "contains", "gte", "lte"],
             "updated_at": ["exact", "contains", "gte", "lte"],
         }
+
+    def article_provider_filter(self, queryset, name, value):
+        qs = queryset.filter(
+            models.Q(article__provider1__name__contains=value)
+            | models.Q(article__provider2__name__contains=value)
+            | models.Q(article__provider3__name__contains=value)
+            | models.Q(article__provider4__name__contains=value)
+            | models.Q(article__provider5__name__contains=value)
+        )
+        return qs
 
 
 class CarrierViewSet(viewsets.ModelViewSet):
