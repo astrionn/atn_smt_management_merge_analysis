@@ -147,6 +147,7 @@ class PTL_API:
         )
 
     def led_on(self, shelf=1, lamp=1001, color="blue"):
+        print(f"LED ON {shelf=} {lamp=} {color=}")
         R = G = B = 0
         if color == "red":
             R = 255
