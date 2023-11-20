@@ -113,3 +113,11 @@ urlpatterns.append(
         name="dashboard_data",
     )
 )
+
+urlpatterns.append(
+    path(
+        "test_leds/",
+        views.test_leds,
+        name="test_leds",
+    )
+)

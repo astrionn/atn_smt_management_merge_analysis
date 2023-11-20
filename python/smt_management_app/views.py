@@ -43,11 +43,25 @@ from .models import (
 )
 
 from .neolight_handler import NeoLightAPI
+from .PTL_handler import PTL_API
 from threading import Thread, Timer
 
-neo = NeoLightAPI("192.168.178.11")
+try:
+    # neo = NeoLightAPI("192.168.178.11")
+    neo = PTL_API("COM16")
+except Exception as e:
+    print(666, e)
+
 # created by todo.org tangle
 # Create your views here.
+
+
+@csrf_exempt
+def test_leds(request):
+    Thread(
+        target=neo.test_higher_layer(),
+    ).start()
+    return JsonResponse({"test_led": True})
 
 
 def dashboard_data(request):
@@ -119,17 +133,21 @@ def store_carrier(request, carrier, storage):
     carriers = Carrier.objects.filter(name=carrier)
     # print(carriers)
     if not carriers:
-        return JsonResponse({"success": False})
+        print("carrier not found")
+        return JsonResponse({"success": False, "message": "Carrier not found."})
     c = carriers.first()
     # print(c.__dict__)
     if c.collecting:
-        return JsonResponse({"success": False})
+        print("carrier is collecting")
+        return JsonResponse({"success": False, "message": "Carrier is collecting."})
     if c.archived:
-        return JsonResponse({"success": False})
+        return JsonResponse({"success": False, "message": "Carrier has been archived."})
     if not c.delivered:
-        return JsonResponse({"success": False})
+        return JsonResponse(
+            {"success": False, "message": "Carrier has not been delivered."}
+        )
     if c.storage_slot:
-        return JsonResponse({"success": False})
+        return JsonResponse({"success": False, "message": "Carrier is stored already."})
     if c.machine_slot:
         return JsonResponse({"success": False})
 
@@ -137,9 +155,9 @@ def store_carrier(request, carrier, storage):
     storages = Storage.objects.filter(name=storage)
     # print(storages)
     if not storages:
-        return JsonResponse({"success": False})
+        return JsonResponse({"success": False, "message": "No free storage slot."})
     storage = storages.first()
-    # print(storage)
+
     free_slots = StorageSlot.objects.filter(carrier__isnull=True, storage=storage)
     # print(free_slots)
     fs = free_slots.first()
@@ -147,12 +165,9 @@ def store_carrier(request, carrier, storage):
     fs.save()
     Thread(
         target=neo.led_on,
-        args=(
-            fs.name,
-            "blue",
-        ),
+        kwargs={"lamp": fs.name, "color": "blue"},
     ).start()
-    #    Timer(interval=15, function=neo.led_off, args=(fs.name,)).start()
+
     msg = {"storage": storage.name, "slot": fs.name, "carrier": c.name, "success": True}
     return JsonResponse(msg)
 
@@ -166,7 +181,7 @@ def store_carrier_confirm(request, carrier, slot):
     slot = slot.strip()
     queryset = Carrier.objects.filter(name=carrier)
     if not queryset:
-        return JsonResponse({"success": False})
+        return JsonResponse({"success": False, "message": "Carrier not found."})
 
     # print(slot)
     queryset2 = StorageSlot.objects.filter(name=slot)
@@ -182,12 +197,12 @@ def store_carrier_confirm(request, carrier, slot):
     # thread to ledstate 0 in 15s
     Thread(
         target=neo.led_on,
-        args=(
-            slot,
-            "yellow",
-        ),
+        kwargs={
+            "lamp": slot,
+            "color": "yellow",
+        },
     ).start()
-    Timer(interval=5, function=neo.led_off, args=([slot])).start()
+    Timer(interval=5, function=neo.led_off, kwargs={"lamp": slot}).start()
     ss.save()
     return JsonResponse({"success": True})
 
@@ -200,7 +215,7 @@ def collect_carrier(request, carrier):
     queryset = Carrier.objects.filter(collecting=True)
     # print(queryset)
     if c in queryset:
-        return JsonResponse({"success": False})
+        return JsonResponse({"success": False, "message": "Already in queue."})
     c.collecting = True
     c.save()
     queryset = Carrier.objects.filter(collecting=True)
@@ -221,7 +236,9 @@ def collect_carrier(request, carrier):
         "queue": queue,
     }
     c.storage_slot.led_state = 2
-    Thread(target=neo.led_on, args=(c.storage_slot.name, "green")).start()
+    Thread(
+        target=neo.led_on, kwargs={"lamp": c.storage_slot.name, "color": "green"}
+    ).start()
     return JsonResponse(msg)
 
 
@@ -244,12 +261,18 @@ def collect_carrier_confirm(request, carrier, slot):
     c.save()
     Thread(
         target=neo.led_on,
-        args=(
-            c.storage_slot.name,
-            "yellow",
-        ),
+        kwargs={
+            "lamp": c.storage_slot.name,
+            "color": "yellow",
+        },
     ).start()
-    Timer(interval=5, function=neo.led_off, args=(c.storage_slot.name,)).start()
+    Timer(
+        interval=5,
+        function=neo.led_off,
+        kwargs={
+            "lamp": c.storage_slot.name,
+        },
+    ).start()
     # thread led state off in 15s
 
     # set slot to null
