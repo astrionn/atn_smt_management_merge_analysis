@@ -47,8 +47,8 @@ from .PTL_handler import PTL_API
 from threading import Thread, Timer
 
 try:
-    # neo = NeoLightAPI("192.168.178.11")
-    neo = PTL_API("COM16")
+    neo = NeoLightAPI("192.168.178.11")
+    # neo = PTL_API("COM16")
 except Exception as e:
     print(666, e)
 
