@@ -49,7 +49,7 @@ url2 = f"http://{base_url}:8000/api/carrier/"
 url3 = f"http://{base_url}:8000/api/storageslot/"
 url4 = f"http://{base_url}:8000/api/storage/?format=json"
 url5 = f"http://{base_url}:8000/api/manufacturer/"
-
+"""
 resp_storage = client.get(url4)
 storage = resp_storage.json()
 if not storage["results"]:
@@ -62,7 +62,7 @@ if not storage["results"]:
         }
         print(i, data3)
         resp3 = client.post(url3, json=data3)
-
+"""
 
 with open(path, encoding="latin_1") as f:
     data = list(csv.reader(f, delimiter=","))

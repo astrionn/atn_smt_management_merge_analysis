@@ -6,7 +6,7 @@ import serial.tools.list_ports as list_ports_
 
 class PTL_API:
     def __init__(self, port):
-        self.port = port
+        self.port = str(port)
         self.baudrate = 9600
         self.serial = serial.Serial(
             port=self.port, baudrate=self.baudrate, timeout=0.25
@@ -112,6 +112,7 @@ class PTL_API:
             raise Exception(
                 f"Value {LED} for slot ID is out of range {len(self.slot_to_strip_map)}"
             )
+
         led = self.slot_to_strip_map[LED - 1]
         led_c = int(str(led).zfill(3)[0])  # hundred bit (123 -> 1)
         led_d = int(str(led).zfill(3)[1:])  # decimal bit (123 -> 23)
@@ -161,42 +162,84 @@ class PTL_API:
             gateway=1, controller=shelf, command=11, code=lamp, R=R, G=G, B=B
         )
 
-    def led_off(self, shelf, lamp):
+    def led_off(self, shelf=1, lamp=1001):
         self.LED_slot_code_control(gateway=1, controller=shelf, command=21, code=lamp)
 
-    def reset_leds(self):
+    def reset_leds(self, working_light=None):
         self._LED_strip_control(command=23)
+        self._LED_strip_control(command=23, controller=2)
 
+    def test_lower_layer(self, inf=False):
+        ceil = 2
+        k = 1
+        if inf:
+            ceil = 100
+        while k < ceil:
+            vals = list(range(1, 150))
+            for j, i in enumerate(vals):
+                r = 255 if j % 3 == 2 else 0
+                g = 255 if j % 3 == 1 else 0
+                b = 255 if j % 3 == 0 else 0
+                c = str(i).zfill(3)[0]
+                d = str(i).zfill(3)[1:]
+                self._LED_strip_control(
+                    led_C=int(c), led_D=int(d), R=r, G=g, B=b, channel=(k % 4 + 1)
+                )
+            if k % 4 == 0:
+                self.reset_leds()
+            k += 1
 
-pp([p.__str__() for p in list_ports_.comports()])
-ptl = PTL_API("COM16")
-ptl.reset_leds()
+    def test_higher_layer(self, step=False, inf=False):
+        ceil = 2
+        j = 1
+        if inf:
+            ceil = 100
+        while j < ceil:
+            for i in (
+                []
+                + list(range(1001, 1051))
+                + list(range(2002, 2051))
+                + list(range(3002, 3051))
+                + list(range(4002, 4051))
+            ):
+                c = ["red", "green", "blue", "yellow"][i % 4]
+                self.led_on(lamp=i, color=c, shelf=1)
+                if step:
+                    input(f"{i=}, {c=}")
+                print()
+            j += 1
+            self.reset_leds()
 
-
-def test_lower_layer():
-    vals = list(range(1, 140))
-    for j, i in enumerate(vals):
-        r = 255 if j % 3 == 2 else 0
-        g = 255 if j % 3 == 1 else 0
-        b = 255 if j % 3 == 0 else 0
-        c = str(i).zfill(3)[0]
-        d = str(i).zfill(3)[1:]
-        ptl._LED_strip_control(led_C=int(c), led_D=int(d), R=r, G=g, B=b)
-    ptl.reset_leds()
-
-
-def test_higher_layer():
-    for i in (
-        []
-        + list(range(1001, 1051))
-        + list(range(2002, 2051))
-        + list(range(3002, 3051))
-        + list(range(4002, 4051))
-    ):
-        c = ["red", "green", "blue", "yellow"][i % 4]
-        ptl.led_on(lamp=i, color=c)
-        print()
-    ptl.reset_leds()
+    def test(self, step=False, inf=False):
+        ceil = 2
+        j = 1
+        if inf:
+            ceil = 100
+        while j < ceil:
+            for i in (
+                []
+                + list(range(1001, 1051))
+                + list(range(2002, 2051))
+                + list(range(3002, 3051))
+                + list(range(4002, 4051))
+            ):
+                c = ["red", "green", "blue", "yellow"][i % 4]
+                self.led_on(lamp=i, color=c, shelf=1)
+                if step:
+                    input(f"{i=}, {c=}")
+            for k in (
+                []
+                + list(range(1001, 1051))
+                + list(range(2002, 2051))
+                + list(range(3002, 3051))
+                + list(range(4002, 4051))
+            ):
+                if k % 2 == 0:
+                    continue
+                self.led_off(shelf=1, lamp=k)
+                self.led_off(shelf=2, lamp=k)
+            j += 1
+            self.reset_leds()
 
 
 # test_higher_layer()
