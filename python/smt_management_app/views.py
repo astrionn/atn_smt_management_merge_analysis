@@ -1,6 +1,7 @@
 import json
 import csv
 from pprint import pprint as pp
+import re
 
 import operator
 from functools import reduce
@@ -55,13 +56,17 @@ try:
         def __init__(self):
             self.xgate = XGateHandler("192.168.0.10")
 
+        def slot_to_row_led(self,lamp):
+            row_part, led_part = lamp.split("-")
+            return int(re.sub("B","1",re.sub("A","",row_part))),int(led_part)
+            
         def led_on(self, lamp, color):
-            print(f"led on {lamp=}, {color=}")
-            pass
+            row, led = self.slot_to_row_led(lamp)
+            print(f"led switch: slot = {lamp} ; {row=} ; {led=}")
+            self.xgate.switch_lights(address=row,lamp=led,col=color,blink=False)
 
         def led_off(self, lamp):
-            print(f"led off {lamp=}")
-            pass
+            self.led_on(lamp,"off")
 
         def reset_leds(self, working_light=False):
             print("reset leds")
@@ -198,6 +203,9 @@ def store_carrier_confirm(request, carrier, slot):
     # print(slot)
     carrier = carrier.strip()
     slot = slot.strip()
+    # next 2 lines only for sophia at siemens wien
+    slot = slot[-5:]
+    slot = f"{slot[:2]}-{slot[2:]}"
     queryset = Carrier.objects.filter(name=carrier)
     if not queryset:
         return JsonResponse({"success": False, "message": "Carrier not found."})

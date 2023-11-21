@@ -1,7 +1,8 @@
 import clr
 import time
-
-clr.AddReference(r"Ptl.Device")
+import os
+print(os.getcwd())
+clr.AddReference(r"smt_management_app/Ptl.Device")
 clr.AddReference(r"System.Collections")
 clr.AddReference(r"System")
 
