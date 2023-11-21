@@ -44,11 +44,30 @@ from .models import (
 
 from .neolight_handler import NeoLightAPI
 from .PTL_handler import PTL_API
+from .xgate_handler import XGateHandler
+
 from threading import Thread, Timer
 
 try:
-    neo = NeoLightAPI("192.168.178.11")
+    # neo = NeoLightAPI("192.168.178.11")
     # neo = PTL_API("COM16")
+    class Neo:
+        def __init__(self):
+            self.xgate = XGateHandler("192.168.0.10")
+
+        def led_on(self, lamp, color):
+            print(f"led on {lamp=}, {color=}")
+            pass
+
+        def led_off(self, lamp):
+            print(f"led off {lamp=}")
+            pass
+
+        def reset_leds(self, working_light=False):
+            print("reset leds")
+            self.xgate.clear_leds()
+
+    neo = Neo()
 except Exception as e:
     print(666, e)
 
