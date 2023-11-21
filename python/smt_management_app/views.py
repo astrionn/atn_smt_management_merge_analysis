@@ -1,6 +1,7 @@
 import json
 import csv
 from pprint import pprint as pp
+import re
 
 import operator
 from functools import reduce
@@ -44,11 +45,34 @@ from .models import (
 
 from .neolight_handler import NeoLightAPI
 from .PTL_handler import PTL_API
-from threading import Thread, Timer
+from .xgate_handler import XGateHandler
+
+from threading import Thread
 
 try:
-    neo = NeoLightAPI("192.168.178.11")
+    # neo = NeoLightAPI("192.168.178.11")
     # neo = PTL_API("COM16")
+    class Neo:
+        def __init__(self):
+            self.xgate = XGateHandler("192.168.0.10")
+
+        def slot_to_row_led(self,lamp):
+            row_part, led_part = lamp.split("-")
+            return int(re.sub("B","1",re.sub("A","",row_part))),int(led_part)
+            
+        def led_on(self, lamp, color):
+            row, led = self.slot_to_row_led(lamp)
+            print(f"led switch: slot = {lamp} ; {row=} ; {led=}")
+            self.xgate.switch_lights(address=row,lamp=led,col=color,blink=False)
+
+        def led_off(self, lamp):
+            self.led_on(lamp,"off")
+
+        def reset_leds(self, working_light=False):
+            print("reset leds")
+            self.xgate.clear_leds()
+
+    neo = Neo()
 except Exception as e:
     print(666, e)
 
@@ -85,6 +109,7 @@ def dashboard_data(request):
 @csrf_exempt
 def reset_leds(request, storage):
     Thread(target=neo.reset_leds, kwargs={"working_light": True}).start()
+    StorageSlot.objects.all().update(led_state=0)
     return JsonResponse({"reset_led": storage})
 
 
@@ -179,6 +204,9 @@ def store_carrier_confirm(request, carrier, slot):
     # print(slot)
     carrier = carrier.strip()
     slot = slot.strip()
+    # next 2 lines only for sophia at siemens wien
+    slot = slot[-5:]
+    slot = f"{slot[:2]}-{slot[2:]}"
     queryset = Carrier.objects.filter(name=carrier)
     if not queryset:
         return JsonResponse({"success": False, "message": "Carrier not found."})
@@ -196,13 +224,11 @@ def store_carrier_confirm(request, carrier, slot):
     ss.led_state = 0
     # thread to ledstate 0 in 15s
     Thread(
-        target=neo.led_on,
+        target=neo.led_off,
         kwargs={
             "lamp": slot,
-            "color": "yellow",
         },
     ).start()
-    Timer(interval=5, function=neo.led_off, kwargs={"lamp": slot}).start()
     ss.save()
     return JsonResponse({"success": True})
 
@@ -260,20 +286,11 @@ def collect_carrier_confirm(request, carrier, slot):
     c.storage_slot.led_state = 0
     c.save()
     Thread(
-        target=neo.led_on,
+        target=neo.led_off,
         kwargs={
-            "lamp": c.storage_slot.name,
-            "color": "yellow",
+            "lamp": c.storage_slot.name
         },
     ).start()
-    Timer(
-        interval=5,
-        function=neo.led_off,
-        kwargs={
-            "lamp": c.storage_slot.name,
-        },
-    ).start()
-    # thread led state off in 15s
 
     # set slot to null
     c.storage_slot = None
