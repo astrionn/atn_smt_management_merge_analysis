@@ -47,7 +47,7 @@ from .neolight_handler import NeoLightAPI
 from .PTL_handler import PTL_API
 from .xgate_handler import XGateHandler
 
-from threading import Thread, Timer
+from threading import Thread
 
 try:
     # neo = NeoLightAPI("192.168.178.11")
@@ -224,13 +224,11 @@ def store_carrier_confirm(request, carrier, slot):
     ss.led_state = 0
     # thread to ledstate 0 in 15s
     Thread(
-        target=neo.led_on,
+        target=neo.led_off,
         kwargs={
             "lamp": slot,
-            "color": "yellow",
         },
     ).start()
-    Timer(interval=5, function=neo.led_off, kwargs={"lamp": slot}).start()
     ss.save()
     return JsonResponse({"success": True})
 
@@ -288,20 +286,11 @@ def collect_carrier_confirm(request, carrier, slot):
     c.storage_slot.led_state = 0
     c.save()
     Thread(
-        target=neo.led_on,
+        target=neo.led_off,
         kwargs={
-            "lamp": c.storage_slot.name,
-            "color": "yellow",
+            "lamp": c.storage_slot.name
         },
     ).start()
-    Timer(
-        interval=5,
-        function=neo.led_off,
-        kwargs={
-            "lamp": c.storage_slot.name,
-        },
-    ).start()
-    # thread led state off in 15s
 
     # set slot to null
     c.storage_slot = None
