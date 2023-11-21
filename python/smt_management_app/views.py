@@ -109,6 +109,7 @@ def dashboard_data(request):
 @csrf_exempt
 def reset_leds(request, storage):
     Thread(target=neo.reset_leds, kwargs={"working_light": True}).start()
+    StorageSlot.objects.all().update(led_state=0)
     return JsonResponse({"reset_led": storage})
 
 
