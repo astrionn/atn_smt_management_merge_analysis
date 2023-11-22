@@ -60,6 +60,9 @@ How to install the backend
     .\venv\Scripts\python.exe -m pip install djangorestframework
     .\venv\Scripts\python.exe -m pip install django-filter
     .\venv\Scripts\python.exe -m pip install django-cors-headers
+    .\venv\Scripts\python.exe -m pip install requests
+    .\venv\Scripts\python.exe -m pip install tk
+    .\venv\Scripts\python.exe -m pip install pywin32
   #+end_src
 - start django project and create app
   #+begin_src

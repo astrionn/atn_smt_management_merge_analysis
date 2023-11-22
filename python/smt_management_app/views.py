@@ -46,10 +46,14 @@ from .models import (
 from .neolight_handler import NeoLightAPI
 from .PTL_handler import PTL_API
 from .xgate_handler import XGateHandler
+from .dymoHandler import DymoHandler
 
 from threading import Thread
 
 try:
+    dymo = None
+    # dymo = DymoHandler()
+
     # neo = NeoLightAPI("192.168.178.11")
     # neo = PTL_API("COM16")
     class Neo:
@@ -78,6 +82,22 @@ except Exception as e:
 
 # created by todo.org tangle
 # Create your views here.
+
+
+@csrf_exempt
+def print_carrier(request, carrier):
+    carrierF = Carrier.objects.filter(name=carrier)
+    if len(carrierF) > 0:
+        carrier = carrierF.first()
+        article = carrier.article
+        if not dymo:
+            return JsonResponse({"success": False})
+        Thread(
+            target=dymo.print_label, args=(carrier.name, article.name), daemon=True
+        ).start()
+        # dymo.print_label(carrier.name, article.name)
+        return JsonResponse({"success": True})
+    return JsonResponse({"success": False})
 
 
 @csrf_exempt

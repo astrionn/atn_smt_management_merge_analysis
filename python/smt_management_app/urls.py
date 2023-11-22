@@ -137,3 +137,11 @@ urlpatterns.append(
         name="confirm_carrier_by_article",
     )
 )
+
+urlpatterns.append(
+    path(
+        "print_carrier/<carrier>/",
+        views.print_carrier,
+        name="print_carrier",
+    )
+)
