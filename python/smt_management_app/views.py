@@ -52,7 +52,7 @@ from threading import Thread
 
 try:
     dymo = None
-    # dymo = DymoHandler()
+    dymo = DymoHandler()
 
     # neo = NeoLightAPI("192.168.178.11")
     # neo = PTL_API("COM16")
