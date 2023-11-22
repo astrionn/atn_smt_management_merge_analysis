@@ -121,3 +121,19 @@ urlpatterns.append(
         name="test_leds",
     )
 )
+
+urlpatterns.append(
+    path(
+        "collectCarrierByArticle/<storage>/<article>/",
+        views.collect_carrier_by_article,
+        name="collect_carrier_by_article",
+    )
+)
+
+urlpatterns.append(
+    path(
+        "confirmCarrierByArticle/<storage>/<article>/<carrier>/",
+        views.confirm_carrier_by_article,
+        name="confirm_carrier_by_article",
+    )
+)

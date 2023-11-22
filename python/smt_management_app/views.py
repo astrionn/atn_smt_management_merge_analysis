@@ -82,6 +82,25 @@ def dashboard_data(request):
     )
 
 
+def collect_carrier_by_article(request, storage, article):
+    slots = StorageSlot.objects.filter(carrier__article__name=article, storage=storage)
+    print(slots)
+    if len(slots) == 0:
+        return JsonResponse({"success": False})
+    for slot in slots:
+        Thread(target=neo.led_on, kwargs={"lamp": slot.name, "color": "green"}).start()
+
+    return JsonResponse({"success": True})
+
+
+def confirm_carrier_by_article(request, storage, article, carrier):
+    slot = StorageSlot.objects.filter(
+        carrier__article__name=article, storage=storage, carrier__name=carrier
+    )
+    print(slot)
+    Thread(target=neo.reset_leds).start()
+
+
 @csrf_exempt
 def reset_leds(request, storage):
     Thread(target=neo.reset_leds, kwargs={"working_light": True}).start()
