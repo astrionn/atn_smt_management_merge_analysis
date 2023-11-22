@@ -3,13 +3,9 @@ import csv
 from pprint import pprint as pp
 import re
 
-import operator
 from functools import reduce
-from django.forms import JSONField
 
 from django_filters.rest_framework import DjangoFilterBackend
-import operator
-from functools import reduce
 
 from django.middleware.csrf import get_token
 from django.views.decorators.csrf import requires_csrf_token, csrf_exempt
@@ -18,17 +14,14 @@ from django.views.decorators.csrf import requires_csrf_token, csrf_exempt
 from django_filters import rest_framework as rest_filter
 import django_filters
 from rest_framework import viewsets, filters, generics
-from rest_framework.authtoken.models import Token
 
 from django.http import JsonResponse
 from django.core.files import File
-from django.apps import AppConfig
 
 
 from .serializers import *
 
 from .models import (
-    AbstractBaseModel,
     Manufacturer,
     Provider,
     Article,
@@ -51,12 +44,10 @@ from .dymoHandler import DymoHandler
 from threading import Thread
 
 try:
-    dymo = None
-    dymo = DymoHandler()
 
     # neo = NeoLightAPI("192.168.178.11")
     # neo = PTL_API("COM16")
-    class Neo:
+    class NeoWrapperXGate:
         def __init__(self):
             self.xgate = XGateHandler("192.168.0.10")
 
@@ -76,7 +67,28 @@ try:
             print("reset leds")
             self.xgate.clear_leds()
 
-    neo = Neo()
+    class NeoDummy:
+        def __init__(self):
+            pass
+
+        def led_on(self, lamp, color):
+            print(f"led on {lamp=} ; {color=}")
+
+        def led_off(self, lamp):
+            print(f"led of {lamp=}")
+
+        def reset_leds(self, working_light=False):
+            print("reset leds")
+
+    neo = NeoDummy()
+
+    class DymoDummy:
+        def print_label(self, text1, text2):
+            print(f"printing label {text1,text2}")
+
+    dymo = DymoDummy()
+    # dymo = DymoHandler()
+
 except Exception as e:
     print(666, e)
 
@@ -95,7 +107,6 @@ def print_carrier(request, carrier):
         Thread(
             target=dymo.print_label, args=(carrier.name, article.name), daemon=True
         ).start()
-        # dymo.print_label(carrier.name, article.name)
         return JsonResponse({"success": True})
     return JsonResponse({"success": False})
 
@@ -128,7 +139,7 @@ def dashboard_data(request):
 
 def collect_carrier_by_article(request, storage, article):
     slots = StorageSlot.objects.filter(carrier__article__name=article, storage=storage)
-    print(slots)
+
     if len(slots) == 0:
         return JsonResponse({"success": False})
     for slot in slots:
@@ -141,7 +152,7 @@ def confirm_carrier_by_article(request, storage, article, carrier):
     slot = StorageSlot.objects.filter(
         carrier__article__name=article, storage=storage, carrier__name=carrier
     )
-    print(slot)
+
     if len(slot) == 0:
         return JsonResponse({"success": False})
     c = Carrier.objects.get(name=carrier)
@@ -198,18 +209,12 @@ def get_csrf_token(request):
 
 @csrf_exempt
 def store_carrier(request, carrier, storage):
-    # is carrier storable ?
-    # print(carrier,storage)
     carrier = carrier.strip()
     carriers = Carrier.objects.filter(name=carrier)
-    # print(carriers)
     if not carriers:
-        print("carrier not found")
         return JsonResponse({"success": False, "message": "Carrier not found."})
     c = carriers.first()
-    # print(c.__dict__)
     if c.collecting:
-        print("carrier is collecting")
         return JsonResponse({"success": False, "message": "Carrier is collecting."})
     if c.archived:
         return JsonResponse({"success": False, "message": "Carrier has been archived."})
@@ -222,15 +227,12 @@ def store_carrier(request, carrier, storage):
     if c.machine_slot:
         return JsonResponse({"success": False})
 
-    # free storage slot for storage ?
     storages = Storage.objects.filter(name=storage)
-    # print(storages)
     if not storages:
         return JsonResponse({"success": False, "message": "No free storage slot."})
     storage = storages.first()
 
     free_slots = StorageSlot.objects.filter(carrier__isnull=True, storage=storage)
-    # print(free_slots)
     fs = free_slots.first()
     fs.led_state = 2
     fs.save()
@@ -245,19 +247,12 @@ def store_carrier(request, carrier, storage):
 
 @csrf_exempt
 def store_carrier_confirm(request, carrier, slot):
-    # pp(request.__dict__)
-    # print(carrier)
-    # print(slot)
     carrier = carrier.strip()
     slot = slot.strip()
-    # next 2 lines only for sophia at siemens wien
-    slot = slot[-5:]
-    slot = f"{slot[:2]}-{slot[2:]}"
     queryset = Carrier.objects.filter(name=carrier)
     if not queryset:
         return JsonResponse({"success": False, "message": "Carrier not found."})
 
-    # print(slot)
     queryset2 = StorageSlot.objects.filter(name=slot)
     if not queryset2:
         return JsonResponse({"success": False, "message": "no slot found"})
@@ -268,7 +263,6 @@ def store_carrier_confirm(request, carrier, slot):
     c.storage_slot = ss
     c.save()
     ss.led_state = 0
-    # thread to ledstate 0 in 15s
     Thread(
         target=neo.led_off,
         kwargs={
@@ -283,15 +277,12 @@ def collect_carrier(request, carrier):
     carrier = carrier.strip()
     c = Carrier.objects.filter(name=carrier).first()
 
-    # get queue and add
     queryset = Carrier.objects.filter(collecting=True)
-    # print(queryset)
     if c in queryset:
         return JsonResponse({"success": False, "message": "Already in queue."})
     c.collecting = True
     c.save()
     queryset = Carrier.objects.filter(collecting=True)
-    # print(queryset)
     queue = [
         {
             "carrier": cc.name,
@@ -317,16 +308,13 @@ def collect_carrier(request, carrier):
 def collect_carrier_confirm(request, carrier, slot):
     carrier = carrier.strip()
     slot = slot.strip()
-    # get queue
     queryset = Carrier.objects.filter(collecting=True)
-    # check membership
     queryset = queryset.filter(name=carrier)
 
     if not queryset:
         return
     c = queryset.first()
 
-    # check slot correct
     if c.storage_slot.name != slot:
         return
     c.storage_slot.led_state = 0
@@ -336,12 +324,9 @@ def collect_carrier_confirm(request, carrier, slot):
         kwargs={"lamp": c.storage_slot.name},
     ).start()
 
-    # set slot to null
     c.storage_slot = None
-    # remove vom queue
     c.collecting = False
     c.save()
-    # return storage, slot, carrier queue
     queryset = Carrier.objects.filter(collecting=True)
     queue = [
         {
@@ -402,7 +387,6 @@ def user_mapping_and_file_processing(request):
                         msg["fail"].append(
                             f"{board_article_dict['article']} does not exist."
                         )
-                        # print(msg)
                         break
                     if (
                         not board_article_dict.get("count", None)
@@ -442,7 +426,6 @@ def user_mapping_and_file_processing(request):
                     article_dict = {
                         k[0]: l[a_headers.index(k[1])] for k in map_ordered_l
                     }
-                    print(0, article_dict)
 
                     if (
                         "manufacturer" in article_dict.keys()
@@ -456,7 +439,6 @@ def user_mapping_and_file_processing(request):
                             msg["created"].append(o_m.name)
 
                     if "provider1" in article_dict.keys() and article_dict["provider1"]:
-                        print(f'creating provider1 :{article_dict["provider1"]}')
                         (
                             provider1_object,
                             provider1_created,
@@ -464,7 +446,6 @@ def user_mapping_and_file_processing(request):
                             name=article_dict["provider1"]
                         )
                         article_dict["provider1"] = provider1_object
-                        print(provider1_object)
                         if provider1_created:
                             msg["created"].append(provider1_object.name)
                     if "provider2" in article_dict.keys() and article_dict["provider2"]:
@@ -514,7 +495,6 @@ def user_mapping_and_file_processing(request):
                     ):
                         del article_dict["boardarticle"]
                     if not Article.objects.filter(name=article_dict["name"]).exists():
-                        pp(article_dict)
                         o_a = Article.objects.create(
                             **{k: v for k, v in article_dict.items() if k and v}
                         )
@@ -534,15 +514,11 @@ def user_mapping_and_file_processing(request):
 
 @csrf_exempt
 def save_file_and_get_headers(request):
-    # print(request.FILES)
-    # print(request.POST)
-
     if request.FILES and request.POST:
         lf = LocalFile.objects.create(
             file_object=File(request.FILES["file"]),
             upload_type=request.POST["upload_type"],
         )
-        # open file
         with open(lf.file_object.path, newline="") as f:
             csv_reader = csv.reader(f, delimiter=",")
             lf.headers = list(csv_reader.__next__())
@@ -647,8 +623,6 @@ class CarrierNameViewSet(generics.ListAPIView):
 
 
 class CarrierFilter(django_filters.FilterSet):
-    # There is no default filtering system for selection fields,
-    # I implemented a custom option for gt and lt, if you don’t need them, you can simply delete them
     article__provider1__name = rest_filter.CharFilter(method="article_provider_filter")
     article__provider2__name = rest_filter.CharFilter(method="article_provider_filter")
     article__provider3__name = rest_filter.CharFilter(method="article_provider_filter")
