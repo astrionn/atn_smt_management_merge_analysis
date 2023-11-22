@@ -56,17 +56,17 @@ try:
         def __init__(self):
             self.xgate = XGateHandler("192.168.0.10")
 
-        def slot_to_row_led(self,lamp):
+        def slot_to_row_led(self, lamp):
             row_part, led_part = lamp.split("-")
-            return int(re.sub("B","1",re.sub("A","",row_part))),int(led_part)
-            
+            return int(re.sub("B", "1", re.sub("A", "", row_part))), int(led_part)
+
         def led_on(self, lamp, color):
             row, led = self.slot_to_row_led(lamp)
             print(f"led switch: slot = {lamp} ; {row=} ; {led=}")
-            self.xgate.switch_lights(address=row,lamp=led,col=color,blink=False)
+            self.xgate.switch_lights(address=row, lamp=led, col=color, blink=False)
 
         def led_off(self, lamp):
-            self.led_on(lamp,"off")
+            self.led_on(lamp, "off")
 
         def reset_leds(self, working_light=False):
             print("reset leds")
@@ -122,7 +122,14 @@ def confirm_carrier_by_article(request, storage, article, carrier):
         carrier__article__name=article, storage=storage, carrier__name=carrier
     )
     print(slot)
+    if len(slot) == 0:
+        return JsonResponse({"success": False})
+    c = Carrier.objects.get(name=carrier)
+    c.storage_slot = None
+    c.storage = None
+    c.save()
     Thread(target=neo.reset_leds).start()
+    return JsonResponse({"success": True})
 
 
 @csrf_exempt
@@ -306,9 +313,7 @@ def collect_carrier_confirm(request, carrier, slot):
     c.save()
     Thread(
         target=neo.led_off,
-        kwargs={
-            "lamp": c.storage_slot.name
-        },
+        kwargs={"lamp": c.storage_slot.name},
     ).start()
 
     # set slot to null
