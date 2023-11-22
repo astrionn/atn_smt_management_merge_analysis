@@ -1,6 +1,7 @@
 import clr
 import time
-
+import os
+print(os.getcwd())
 clr.AddReference(r"smt_management_app/Ptl.Device")
 clr.AddReference(r"System.Collections")
 clr.AddReference(r"System")
@@ -307,3 +308,13 @@ class XGateHandler:
             self.PtlIBS.Lighthouses[2].Clear()
             self.PtlIBS.Lighthouses[1].Clear()
             self.PtlIBS.Lighthouses[0].Clear()
+
+    def test(self,step=False):
+        xgate = self
+        xgate.light_house_on()
+        for i in [1,2,3,4,5,6,7,11,12,13,14,15,16,17]:
+            for j in range(1,101):
+                xgate.switch_lights(address=i,lamp=j,col="red",blink=False)
+                print(f"ROW {i} lamp {j}")
+                if step: input()
+                time.sleep(0.25)

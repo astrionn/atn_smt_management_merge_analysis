@@ -18,13 +18,20 @@ url5 = "http://localhost:8000/api/manufacturer/"
 resp_storage = client.get(url4)
 storage = resp_storage.json()
 if not storage["results"]:
-    resp_create_storage = client.post(url4, {"name": "storage1", "capacity": 1000})
+    resp_create_storage = client.post(
+        url4, {"name": "ATN PickToLight-Regal", "capacity": 1400}
+    )
     pp(resp_create_storage.json())
-    for i in range(1, 1401):
-        data3 = {"name": f"{str(i).zfill(3)}", "storage": "storage1"}
-        resp3 = client.post(url3, json=data3)
+    for i in ["A", "B"]:
+        for j in range(1, 8):
+            for k in range(1, 101):
+                data3 = {
+                    "name": f"{i}{j}-{str(k).zfill(3)}",
+                    "storage": "ATN PickToLight-Regal",
+                }
+                resp3 = client.post(url3, json=data3)
 
-input("more than storage ?")
+input("more than storage creation ?")
 with open(path, encoding="latin_1") as f:
     data = list(csv.reader(f, delimiter=","))
 
