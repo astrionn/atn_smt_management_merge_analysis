@@ -1,8 +1,10 @@
 import clr
 import time
 import os
+import re
+
 print(os.getcwd())
-clr.AddReference(r"smt_management_app/Ptl.Device")
+clr.AddReference(r"smt_management_app/utils/Ptl.Device")
 clr.AddReference(r"System.Collections")
 clr.AddReference(r"System")
 
@@ -309,12 +311,44 @@ class XGateHandler:
             self.PtlIBS.Lighthouses[1].Clear()
             self.PtlIBS.Lighthouses[0].Clear()
 
-    def test(self,step=False):
+    def test(self, step=False):
         xgate = self
         xgate.light_house_on()
-        for i in [1,2,3,4,5,6,7,11,12,13,14,15,16,17]:
-            for j in range(1,101):
-                xgate.switch_lights(address=i,lamp=j,col="red",blink=False)
+        for i in [1, 2, 3, 4, 5, 6, 7, 11, 12, 13, 14, 15, 16, 17]:
+            for j in range(1, 101):
+                xgate.switch_lights(address=i, lamp=j, col="red", blink=False)
                 print(f"ROW {i} lamp {j}")
-                if step: input()
+                if step:
+                    input()
                 time.sleep(0.25)
+
+
+class NeoWrapperXGate:  # sophia rack siemens wien
+    # this wrapper is mainly to keep the smart shelf calls consistent across different libs
+    def __init__(self, address):
+        self.xgate = XGateHandler(address)
+
+    def slot_to_row_led(self, lamp):
+        # the barcodes on the storage slots have a 5 char long prefix and the slot id is formatted a little differntly then its printed under the barcode
+        # barcode value: L1607A1001
+        # text beneath: A1-001
+        # xgate call signature for this slot: row 1 lamp 1
+        # there is 7 rows per side of the shelf, then it wraps to the 2nd side
+        # barcode value: L1607B1001
+        # text beneath: B1-001
+        # xgate call signature for this slot: row 11 lamp 1
+
+        row_part, led_part = lamp.split("-")
+        return int(re.sub("B", "1", re.sub("A", "", row_part))), int(led_part)
+
+    def led_on(self, lamp, color):
+        row, led = self.slot_to_row_led(lamp)
+        print(f"led switch: slot = {lamp} ; {row=} ; {led=}")
+        self.xgate.switch_lights(address=row, lamp=led, col=color, blink=False)
+
+    def led_off(self, lamp):
+        self.led_on(lamp, "off")
+
+    def reset_leds(self, working_light=False):
+        print("reset leds")
+        self.xgate.clear_leds()

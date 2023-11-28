@@ -63,6 +63,7 @@ if not storage["results"]:
         print(i, data3)
         resp3 = client.post(url3, json=data3)
 
+input("more than storage creation ?")
 
 with open(path, encoding="latin_1") as f:
     data = list(csv.reader(f, delimiter=","))

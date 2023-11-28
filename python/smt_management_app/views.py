@@ -1,7 +1,6 @@
 import json
 import csv
 from pprint import pprint as pp
-import re
 
 from functools import reduce
 
@@ -36,47 +35,16 @@ from .models import (
     LocalFile,
 )
 
-from .neolight_handler import NeoLightAPI
-from .PTL_handler import PTL_API
-from .xgate_handler import XGateHandler
-from .dymoHandler import DymoHandler
+# from .utils.neolight_handler import NeoLightAPI
+# from .utils.PTL_handler import PTL_API
+# from .utils.xgate_handler import NeoWrapperXGate
+
+# from .utils.dymoHandler import DymoHandler
 
 from threading import Thread
 
 try:
-    # initalize 3rd party handlers for connected devices like smart shelfs and label printers if needed
-
-    # neo = NeoLightAPI("192.168.178.11") #weytronik
-    # neo = PTL_API("COM16") # ATN inhouse
-    class NeoWrapperXGate:  # sophia rack siemens wien
-        # this wrapper is mainly to keep the smart shelf calls consistent across different libs
-        def __init__(self):
-            self.xgate = XGateHandler("192.168.0.10")
-
-        def slot_to_row_led(self, lamp):
-            # the barcodes on the storage slots have a 5 char long prefix and the slot id is formatted a little differntly then its printed under the barcode
-            # barcode value: L1607A1001
-            # text beneath: A1-001
-            # xgate call signature for this slot: row 1 lamp 1
-            # there is 7 rows per side of the shelf, then it wraps to the 2nd side
-            # barcode value: L1607B1001
-            # text beneath: B1-001
-            # xgate call signature for this slot: row 11 lamp 1
-
-            row_part, led_part = lamp.split("-")
-            return int(re.sub("B", "1", re.sub("A", "", row_part))), int(led_part)
-
-        def led_on(self, lamp, color):
-            row, led = self.slot_to_row_led(lamp)
-            print(f"led switch: slot = {lamp} ; {row=} ; {led=}")
-            self.xgate.switch_lights(address=row, lamp=led, col=color, blink=False)
-
-        def led_off(self, lamp):
-            self.led_on(lamp, "off")
-
-        def reset_leds(self, working_light=False):
-            print("reset leds")
-            self.xgate.clear_leds()
+    # initalize 3rd party handlers for connected devices like smart shelfs and label printers
 
     class NeoDummy:
         # for developement without actually having to connect a shelf
@@ -94,6 +62,10 @@ try:
 
     neo = NeoDummy()
 
+    # neo = NeoLightAPI("192.168.178.11") #weytronik
+    # neo = PTL_API("COM16") # ATN inhouse
+    # neo = NeoWrapperXGate("192.168.0.10")
+
     class DymoDummy:
         # for developement without actually having to connect a printer
         def print_label(self, text1, text2):
@@ -108,20 +80,36 @@ except Exception as e:
 
 @csrf_exempt
 def print_carrier(request, carrier):
-    # prints a label for the carrier containing a barcode for the carrier ID and article and the respective names beneath
-    carrierF = Carrier.objects.filter(name=carrier)
-    if len(carrierF) > 0:
-        carrier = carrierF.first()
-        article = carrier.article
-        if not dymo:
-            return JsonResponse(
-                {"success": False, "message": "Dymo label printer not reachable"}
-            )
-        Thread(
-            target=dymo.print_label, args=(carrier.name, article.name), daemon=True
-        ).start()
-        return JsonResponse({"success": True})
-    return JsonResponse({"success": False, "message": "Carrier not found"})
+    """
+    Print a label for the given carrier containing barcode information.
+
+    Args:
+    - request: HTTP request object
+    - carrier: Name of the carrier to print the label for
+
+    Returns:
+    - JsonResponse: Success or failure message
+    """
+
+    # Check if the carrier exists
+    try:
+        carrier_obj = Carrier.objects.get(name=carrier)
+    except Carrier.DoesNotExist:
+        return JsonResponse({"success": False, "message": "Carrier not found"})
+
+    article = carrier_obj.article
+
+    if not dymo:  # Assuming dymo is defined somewhere
+        return JsonResponse(
+            {"success": False, "message": "Dymo label printer not reachable"}
+        )
+
+    # Start a thread to print the label
+    Thread(
+        target=dymo.print_label, args=(carrier_obj.name, article.name), daemon=True
+    ).start()
+
+    return JsonResponse({"success": True})
 
 
 @csrf_exempt
@@ -134,36 +122,55 @@ def test_leds(request):
 
 
 def dashboard_data(request):
-    total = Carrier.objects.filter(archived=False).count()
-    undelivered = Carrier.objects.filter(archived=False, delivered=False).count()
-    stored = Carrier.objects.filter(archived=False, storage_slot__isnull=False).count()
+    """
+    Fetches data for the dashboard including total carriers, undelivered carriers,
+    carriers in storage, available storage slots, and active storages.
+    """
+    total_carriers = Carrier.objects.filter(archived=False).count()
+    undelivered_carriers = Carrier.objects.filter(
+        archived=False, delivered=False
+    ).count()
+    carriers_in_storage = Carrier.objects.filter(
+        archived=False, storage_slot__isnull=False
+    ).count()
     free_slots = StorageSlot.objects.filter(carrier__isnull=True).count()
-    storages = Storage.objects.filter(archived=False).count()
+    active_storages = Storage.objects.filter(archived=False).count()
 
     return JsonResponse(
         {
-            "total_carriers": total,
-            "not_delivered": undelivered,
-            "in_storage": stored,
-            "storages": storages,
+            "total_carriers": total_carriers,
+            "not_delivered": undelivered_carriers,
+            "in_storage": carriers_in_storage,
             "free_slots": free_slots,
+            "storages": active_storages,
         }
     )
 
 
 def collect_carrier_by_article(request, storage, article):
-    # the user provides the article number he would like to collect from a certain storage, the shelf lights up all slots that contain a reel with said article
-    # in the next step the user scans the collected carrier, the slots is emptied and the all leds get turned off
+    """
+    Collects a carrier by article from a storage unit.
+    Lights up slots containing the specified article.
 
+    Args:
+    - request: HTTP request object
+    - storage: Storage object where the article is stored
+    - article: Article number to collect
+
+    Returns:
+    - JsonResponse indicating success or failure
+    """
     slots = StorageSlot.objects.filter(carrier__article__name=article, storage=storage)
 
-    if len(slots) == 0:
+    if not slots.exists():
         return JsonResponse(
             {
                 "success": False,
                 "message": f"Could not find a slot with article {article} in storage {storage}",
             }
         )
+
+    # Activate LEDs for slots containing the article
     for slot in slots:
         Thread(target=neo.led_on, kwargs={"lamp": slot.name, "color": "green"}).start()
 
@@ -171,31 +178,61 @@ def collect_carrier_by_article(request, storage, article):
 
 
 def confirm_carrier_by_article(request, storage, article, carrier):
-    # see collect_carrier_by_article
+    """
+    Confirms carrier by article from a storage unit.
+    Empties the slot and resets LEDs upon carrier confirmation.
+
+    Args:
+    - request: HTTP request object
+    - storage: Storage object where the carrier is located
+    - article: Article number of the carrier
+    - carrier: Carrier name to confirm
+
+    Returns:
+    - JsonResponse indicating success or failure
+    """
     slot = StorageSlot.objects.filter(
         carrier__article__name=article, storage=storage, carrier__name=carrier
     )
 
-    if len(slot) == 0:
+    if not slot.exists():
         return JsonResponse(
             {
                 "success": False,
-                "message": f"Could not find a slot in storage {storage} that contains carrier {carrier} with article {article} ",
+                "message": f"Could not find a slot in storage {storage} that contains carrier {carrier} with article {article}",
             }
         )
+
     c = Carrier.objects.get(name=carrier)
     c.storage_slot = None
     c.storage = None
     c.save()
+
+    # Reset LEDs after carrier confirmation
     Thread(target=neo.reset_leds).start()
+
     return JsonResponse({"success": True})
 
 
 @csrf_exempt
 def reset_leds(request, storage):
-    # turn off all leds and update each slots led state
+    """
+    Resets LEDs and updates the LED state of storage slots.
+
+    Args:
+    - request: HTTP request object.
+    - storage: Storage information.
+
+    Returns:
+    - JsonResponse: JSON response indicating LED reset status.
+    """
+    # Start a new thread to reset LEDs with working_light set to True
     Thread(target=neo.reset_leds, kwargs={"working_light": True}).start()
+
+    # Update LED state for all storage slots to 0
     StorageSlot.objects.all().update(led_state=0)
+
+    # Return JSON response indicating LED reset for the given storage
     return JsonResponse({"reset_led": storage})
 
 
@@ -398,10 +435,43 @@ def collect_carrier_confirm(request, carrier, slot):
 
 
 @csrf_exempt
+def save_file_and_get_headers(request):
+    # first step of a 2 step workflow to create articles/carriers from a csv file
+    # this step saves the file for future processing and returns the headers of said csv file
+    if request.FILES and request.POST:
+        lf = LocalFile.objects.create(
+            file_object=File(request.FILES["file"]),
+            upload_type=request.POST["upload_type"],
+        )
+        try:
+            with open(lf.file_object.path, newline="") as f:
+                csv_reader = csv.reader(f, delimiter=",")
+                lf.headers = list(csv_reader.__next__())
+                lf.save()
+                if lf.upload_type == "article":
+                    model_fields = [f.name for f in Article._meta.get_fields()]
+                elif lf.upload_type == "carrier":
+                    model_fields = [f.name for f in Carrier._meta.get_fields()]
+                elif lf.upload_type == "board":
+                    model_fields = ["article", "count"]
+                return JsonResponse(
+                    {
+                        "object_fields": sorted(model_fields),
+                        "header_fields": sorted(lf.headers),
+                        "file_name": lf.name,
+                    }
+                )
+        except Exception as e:
+            print(e)
+            return JsonResponse({"success": False})
+    return JsonResponse({"success": False})
+
+
+@csrf_exempt
 def user_mapping_and_file_processing(request):
     # first of all i am sorry for this monster, feel free to refactor when bored
     # this function is the abstraction for the user uploading csv files to create model instances with them, but the csv headers names do not have to correspond with
-    # the models field names, because the user creates a mapping from the csv header names to the models field names
+    # the models field names, because the user creates a mapping from the csv header names to the models field names in the frontend
 
     if request.POST:
         file_name = request.POST["file_name"]
@@ -418,8 +488,9 @@ def user_mapping_and_file_processing(request):
         with open(lf.file_object.name) as f:
             csv_reader = csv.reader(f, delimiter=",")
 
-            a_headers = csv_reader.__next__()
-            # the following comprehensions takes the text to taxt mapping from the user to a index based mapping i.e. nth csv header corresponds to the mth model field
+            a_headers = csv_reader.__next__()  # 1st row contains the column headers
+
+            # the following comprehensions takes the text to text mapping from the user to a index based mapping i.e. nth csv header corresponds to the mth model field
             index_map = {value: index for index, value in enumerate(a_headers)}
             map_ordered_l = sorted(map_l, key=lambda x: index_map[x[1]])
 
@@ -474,6 +545,21 @@ def user_mapping_and_file_processing(request):
                         carrier_dict["machine_slot"] = None
                     if not carrier_dict.get("boardarticle", None):
                         carrier_dict["boardarticle"] = None
+                    if not carrier_dict.get("diameter", None):
+                        carrier_dict["diameter"] = 7
+                    if not carrier_dict.get("width", None):
+                        carrier_dict["width"] = 8
+                    if not carrier_dict.get("container_type", None):
+                        carrier_dict["container_type"] = 0
+                    elif carrier_dict.get("container_type").lower() == "reel":
+                        carrier_dict["container_type"] = 0
+                    elif carrier_dict.get("container_type").lower() == "tray":
+                        carrier_dict["container_type"] = 1
+                    elif carrier_dict.get("container_type").lower() == "bag":
+                        carrier_dict["container_type"] = 2
+                    elif carrier_dict.get("container_type").lower() == "single":
+                        carrier_dict["container_type"] = 3
+
                     if not Carrier.objects.filter(name=carrier_dict["name"]).exists():
                         c = Carrier.objects.create(**carrier_dict)
                         msg["created"].append(c.name)
@@ -570,49 +656,27 @@ def user_mapping_and_file_processing(request):
     return JsonResponse({"success": "false"})
 
 
-@csrf_exempt
-def save_file_and_get_headers(request):
-    if request.FILES and request.POST:
-        lf = LocalFile.objects.create(
-            file_object=File(request.FILES["file"]),
-            upload_type=request.POST["upload_type"],
-        )
-        with open(lf.file_object.path, newline="") as f:
-            csv_reader = csv.reader(f, delimiter=",")
-            lf.headers = list(csv_reader.__next__())
-            lf.save()
-            if lf.upload_type == "article":
-                model_fields = [f.name for f in Article._meta.get_fields()]
-            elif lf.upload_type == "carrier":
-                model_fields = [f.name for f in Carrier._meta.get_fields()]
-            elif lf.upload_type == "board":
-                model_fields = ["article", "count"]
-            return JsonResponse(
-                {
-                    "object_fields": sorted(model_fields),
-                    "header_fields": sorted(lf.headers),
-                    "file_name": lf.name,
-                }
-            )
-    return JsonResponse({"success": False})
-
-
 class ListStoragesAPI(generics.ListAPIView):
+    """List Storages API"""
+
     model = Carrier
     serializer_class = CarrierSerializer
 
     def get_queryset(self):
+        """Retrieve Carrier queryset based on storage slots"""
         storage = self.kwargs["storage"]
-        s = Storage.objects.get(name=storage)
-        slots_qs = StorageSlot.objects.filter(storage=s)
+        slots_qs = StorageSlot.objects.filter(storage__name=storage)
         queryset = Carrier.objects.filter(storage_slot__in=slots_qs)
         return queryset
 
 
 class ArticleNameViewSet(generics.ListAPIView):
+    """Article Name ViewSet"""
+
     model = Article
 
     def get(self, request):
+        """Get all articles and serialize their names"""
         queryset = Article.objects.all()
         serializer = ArticleNameSerializer(queryset, many=True)
         data = [{k: v for k, v in a.items()} for a in serializer.data]
