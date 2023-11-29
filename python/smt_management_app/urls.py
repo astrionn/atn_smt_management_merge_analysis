@@ -61,6 +61,22 @@ urlpatterns.append(
         name="store_carrier_confirm",
     )
 )
+
+urlpatterns.append(
+    path(
+        "store_carrier_choose_slot/<carrier>/<storage>/",
+        views.store_carrier_choose_slot,
+        name="store_carrier_choose_slot",
+    )
+)
+urlpatterns.append(
+    path(
+        "store_carrier_choose_slot_confirm/<carrier>/<slot>/",
+        views.store_carrier_choose_slot_confirm,
+        name="store_carrier_choose_slot_confirm",
+    )
+)
+
 urlpatterns.append(
     path("articlelist/", views.ArticleNameViewSet.as_view(), name="articlelist")
 )

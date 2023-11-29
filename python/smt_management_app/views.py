@@ -276,6 +276,88 @@ def get_csrf_token(request):
 
 
 @csrf_exempt
+def store_carrier_choose_slot(request, carrier, storage):
+    # the user asks to store a carrier in a storage, if that is possible all possible slots LEDs for the storage get turned on, we send back the storage and slots for the user to confirm collection in the next step
+    carrier = carrier.strip()  # remove whitespace
+    carriers = Carrier.objects.filter(name=carrier)
+    if not carriers:
+        return JsonResponse({"success": False, "message": "Carrier not found."})
+    c = carriers.first()
+    if c.collecting:
+        return JsonResponse({"success": False, "message": "Carrier is collecting."})
+    if c.archived:
+        return JsonResponse({"success": False, "message": "Carrier has been archived."})
+    if not c.delivered:
+        return JsonResponse(
+            {"success": False, "message": "Carrier has not been delivered."}
+        )
+    if c.storage_slot:
+        return JsonResponse({"success": False, "message": "Carrier is stored already."})
+    if c.machine_slot:
+        return JsonResponse({"success": False})
+
+    storages = Storage.objects.filter(name=storage)
+    if not storages:
+        return JsonResponse({"success": False, "message": "No storage found."})
+    storage = storages.first()
+
+    free_slots = StorageSlot.objects.filter(
+        carrier__isnull=True, storage=storage
+    )  # later on take carrier size into consideration here
+    if len(free_slots) == 0:
+        return JsonResponse(
+            {
+                "success": False,
+                "message": f"No free storage slots found in {storage.name}.",
+            }
+        )
+    msg = {"storage": storage.name, "carrier": c.name, "slots": [], "success": True}
+    for fs in free_slots:
+        fs.led_state = 2
+        fs.save()
+        Thread(
+            target=neo.led_on,
+            kwargs={"lamp": fs.name, "color": "blue"},
+        ).start()
+        msg["slots"].append(fs.name)
+
+    return JsonResponse(msg)
+
+
+@csrf_exempt
+def store_carrier_choose_slot_confirm(request, carrier, slot):
+    # see store carrier choose slot
+
+    carrier = carrier.strip()  # remove whitespace
+    slot = slot.strip()  # remove whitespace
+    queryset = Carrier.objects.filter(name=carrier)
+    if not queryset:
+        return JsonResponse({"success": False, "message": "Carrier not found."})
+
+    queryset2 = StorageSlot.objects.filter(name=slot)
+    if not queryset2:
+        return JsonResponse({"success": False, "message": "no slot found"})
+    c = queryset.first()
+    ss = queryset2.first()
+    if ss.led_state == 0:
+        return JsonResponse({"success": False, "message": "led is off but shouldn't"})
+    c.storage_slot = ss
+    c.save()
+    ss.led_state = 0
+    ss.save()
+    Thread(
+        target=neo.reset_leds,
+    ).start()
+
+    return JsonResponse(
+        {
+            "success": True,
+            "message": f"Carrier {c.name} stored in storage {ss.storage.name} slot {ss.name}.",
+        }
+    )
+
+
+@csrf_exempt
 def store_carrier(request, carrier, storage):
     # the user asks to store a carrier in a storage, if that is possible a slot is chosen and the corresponding LED turned on, we send back the storage and slot for the user to confirm collection in the next step
     carrier = carrier.strip()  # remove whitespace
