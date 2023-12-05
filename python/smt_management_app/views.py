@@ -68,7 +68,7 @@ try:
 
     neo = NeoDummy()
 
-    # neo = NeoLightAPI("192.168.178.11")  # weytronik
+    neo = NeoLightAPI("192.168.178.11")  # weytronik
     # neo = PTL_API("COM16") # ATN inhouse
     # neo = NeoWrapperXGate("192.168.0.10")
 
