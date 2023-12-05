@@ -84,6 +84,11 @@ except Exception as e:
     print(666, e)
 
 
+def deliver_all_carriers(request):
+    i = Carrier.objects.all().update(delivered=True)
+    return JsonResponse({"success": True, "updated_amount": i})
+
+
 @csrf_exempt
 def print_carrier(request, carrier):
     """
