@@ -165,3 +165,9 @@ urlpatterns.append(
 urlpatterns.append(
     path("create_qr_code/<code>/", views.create_qr_code, name="create_qr_code")
 )
+
+urlpatterns.append(
+    path(
+        "deliver_all_carriers", views.deliver_all_carriers, name="deliver_all_carriers"
+    )
+)
