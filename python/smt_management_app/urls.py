@@ -161,3 +161,7 @@ urlpatterns.append(
         name="print_carrier",
     )
 )
+
+urlpatterns.append(
+    path("create_qr_code/<code>/", views.create_qr_code, name="create_qr_code")
+)

@@ -2,6 +2,10 @@ import json
 import csv
 from pprint import pprint as pp
 
+import io
+import qrcode
+from PIL import Image
+
 from functools import reduce
 
 from django_filters.rest_framework import DjangoFilterBackend
@@ -14,7 +18,7 @@ from django_filters import rest_framework as rest_filter
 import django_filters
 from rest_framework import viewsets, filters, generics
 
-from django.http import JsonResponse
+from django.http import FileResponse, JsonResponse
 from django.core.files import File
 
 
@@ -35,7 +39,9 @@ from .models import (
     LocalFile,
 )
 
-# from .utils.neolight_handler import NeoLightAPI
+
+from .utils.neolight_handler import NeoLightAPI
+
 # from .utils.PTL_handler import PTL_API
 # from .utils.xgate_handler import NeoWrapperXGate
 
@@ -62,7 +68,7 @@ try:
 
     neo = NeoDummy()
 
-    # neo = NeoLightAPI("192.168.178.11") #weytronik
+    # neo = NeoLightAPI("192.168.178.11")  # weytronik
     # neo = PTL_API("COM16") # ATN inhouse
     # neo = NeoWrapperXGate("192.168.0.10")
 
@@ -311,15 +317,25 @@ def store_carrier_choose_slot(request, carrier, storage):
                 "message": f"No free storage slots found in {storage.name}.",
             }
         )
-    msg = {"storage": storage.name, "carrier": c.name, "slots": [], "success": True}
-    for fs in free_slots:
-        fs.led_state = 2
-        fs.save()
-        Thread(
-            target=neo.led_on,
-            kwargs={"lamp": fs.name, "color": "blue"},
-        ).start()
-        msg["slots"].append(fs.name)
+    msg = {"storage": storage.name, "carrier": c.name, "slot": [], "success": True}
+    if not hasattr(neo, "_LED_On_Control"):
+        for fs in free_slots:
+            fs.led_state = 2
+            fs.save()
+            Thread(
+                target=neo.led_on,
+                kwargs={"lamp": fs.name, "color": "blue"},
+            ).start()
+            msg["slot"].append(fs.name)
+    else:
+        neo._LED_On_Control(
+            {
+                "lamps": {
+                    neo.side_row_lamp_to_led_address(fs.name): "blue"
+                    for fs in free_slots
+                }
+            }
+        )
 
     return JsonResponse(msg)
 
@@ -736,6 +752,14 @@ def user_mapping_and_file_processing(request):
         msg_j = json.dumps(msg)
         return JsonResponse(msg, safe=False)
     return JsonResponse({"success": "false"})
+
+
+def create_qr_code(request, code):
+    img = qrcode.make(code)
+    buffer = io.BytesIO()
+    img.save(buffer)
+    buffer.seek(0)
+    return FileResponse(buffer, filename=f"{code}.png")
 
 
 class ListStoragesAPI(generics.ListAPIView):
