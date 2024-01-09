@@ -171,3 +171,11 @@ urlpatterns.append(
         "deliver_all_carriers", views.deliver_all_carriers, name="deliver_all_carriers"
     )
 )
+
+urlpatterns.append(
+    path(
+        "assign_carrier_to_job/<job>/<carrier>/",
+        views.assign_carrier_to_job,
+        name="assign_carrier_to_job",
+    )
+)

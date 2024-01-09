@@ -42,6 +42,7 @@ class LocalFile(models.Model):
     )
     file_object = models.FileField(upload_to=get_upload_path)
     headers = models.CharField(max_length=5000, null=True, blank=True)
+    board_name = models.CharField(max_length=5000, null=True, blank=True)
 
 
 class Storage(AbstractBaseModel):
@@ -161,6 +162,7 @@ class Carrier(AbstractBaseModel):
             self.storage = storage
         else:
             self.storage = None
+
         super(Carrier, self).save(*args, **kwargs)
 
     def get_absolute_url(self):
@@ -196,6 +198,7 @@ class StorageSlot(AbstractBaseModel):
     STATE_CHOICES = [(0, "off"), (1, "green"), (2, "yellow"), (3, "blue"), (4, "red")]
     storage = models.ForeignKey(Storage, on_delete=models.CASCADE)
     led_state = models.IntegerField(default=0, choices=STATE_CHOICES)
+    qr_value = models.CharField(max_length=5000, blank=True, null=True)
 
     def get_absolute_url(self):
         return reverse(
@@ -220,6 +223,7 @@ class Job(AbstractBaseModel):
     start_at = models.DateTimeField()
     finish_at = models.DateTimeField()
     status = models.IntegerField(default=0, choices=STATUS_CHOICES)
+    carriers = models.ManyToManyField(Carrier, blank=True, null=True)
 
     def get_absolute_url(self):
         return reverse("smt_management_app:job-detail", kwargs={"name": self.name})
@@ -236,9 +240,6 @@ class BoardArticle(AbstractBaseModel):
     article = models.OneToOneField(Article, on_delete=models.CASCADE)
     board = models.ForeignKey(Board, on_delete=models.CASCADE)
     count = models.PositiveIntegerField()
-    carrier = models.ForeignKey(
-        Carrier, on_delete=models.SET_NULL, null=True, blank=True
-    )
 
     def get_absolute_url(self):
         return reverse(

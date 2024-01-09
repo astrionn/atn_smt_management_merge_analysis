@@ -144,26 +144,6 @@ class BoardArticleSerializer(serializers.ModelSerializer):
             name=validated_data.get("name", None),
             count=validated_data.get("count", None),
             board=validated_data.get("board", None),
-            carrier=validated_data.get("carrier", None),
-        )
-        return ba
-
-
-class BoardSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Board
-        fields = "__all__"
-
-    def create(self, validated_data):
-        # print("BoardArticel Serializer create:")
-        # pp(validated_data)
-
-        ba, created = BoardArticle.objects.update_or_create(
-            article=validated_data.get("article", None),
-            name=validated_data.get("name", None),
-            count=validated_data.get("count", None),
-            board=validated_data.get("board", None),
-            carrier=validated_data.get("carrier", None),
         )
         return ba
 

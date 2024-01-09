@@ -84,6 +84,18 @@ except Exception as e:
     print(666, e)
 
 
+def assign_carrier_to_job(request, job, carrier):
+    job_object = Job.objects.filter(name=job).first()
+    carrier_object = Carrier.objects.filter(name=carrier).first()
+
+    if job_object and carrier_object:
+        job_object.carriers.add(carrier_object)
+        job_object.save()
+        return JsonResponse({"success": True})
+    else:
+        return JsonResponse({"success": False})
+
+
 def deliver_all_carriers(request):
     i = Carrier.objects.all().update(delivered=True)
     return JsonResponse({"success": True, "updated_amount": i})
@@ -125,7 +137,7 @@ def print_carrier(request, carrier):
 
 @csrf_exempt
 def test_leds(request):
-    # only used for messe demonstrations, usually hidden from the frontend
+    # only used for messe demonstrations, hidden from the frontend
     Thread(
         target=neo.test_higher_layer(),
     ).start()
@@ -221,6 +233,8 @@ def confirm_carrier_by_article(request, storage, article, carrier):
 
     # Reset LEDs after carrier confirmation
     Thread(target=neo.reset_leds).start()
+    # Update LED state for all storage slots to 0
+    StorageSlot.objects.all().update(led_state=0)
 
     return JsonResponse({"success": True})
 
@@ -323,7 +337,9 @@ def store_carrier_choose_slot(request, carrier, storage):
             }
         )
     msg = {"storage": storage.name, "carrier": c.name, "slot": [], "success": True}
-    if not hasattr(neo, "_LED_On_Control"):
+    if not hasattr(
+        neo, "_LED_On_Control"
+    ):  # iterative enabling for PTL from ATN via USB, see neo definition at the top
         for fs in free_slots:
             fs.led_state = 2
             fs.save()
@@ -332,15 +348,8 @@ def store_carrier_choose_slot(request, carrier, storage):
                 kwargs={"lamp": fs.name, "color": "blue"},
             ).start()
             msg["slot"].append(fs.name)
-    else:
-        neo._LED_On_Control(
-            {
-                "lamps": {
-                    neo.side_row_lamp_to_led_address(fs.name): "blue"
-                    for fs in free_slots
-                }
-            }
-        )
+    else:  # compound enabling for neotel rack
+        neo._LED_On_Control({"lamps": {neo.fs.name: "blue" for fs in free_slots}})
 
     return JsonResponse(msg)
 
@@ -355,7 +364,7 @@ def store_carrier_choose_slot_confirm(request, carrier, slot):
     if not queryset:
         return JsonResponse({"success": False, "message": "Carrier not found."})
 
-    queryset2 = StorageSlot.objects.filter(name=slot)
+    queryset2 = StorageSlot.objects.filter(qr_value=slot)
     if not queryset2:
         return JsonResponse({"success": False, "message": "no slot found"})
     c = queryset.first()
@@ -373,7 +382,7 @@ def store_carrier_choose_slot_confirm(request, carrier, slot):
     return JsonResponse(
         {
             "success": True,
-            "message": f"Carrier {c.name} stored in storage {ss.storage.name} slot {ss.name}.",
+            "message": f"Carrier {c.name} stored in storage {ss.storage.name} slot {ss.qr_value}.",
         }
     )
 
@@ -415,7 +424,12 @@ def store_carrier(request, carrier, storage):
         kwargs={"lamp": fs.name, "color": "blue"},
     ).start()
 
-    msg = {"storage": storage.name, "slot": fs.name, "carrier": c.name, "success": True}
+    msg = {
+        "storage": storage.name,
+        "slot": fs.qr_value,
+        "carrier": c.name,
+        "success": True,
+    }
     return JsonResponse(msg)
 
 
@@ -429,7 +443,7 @@ def store_carrier_confirm(request, carrier, slot):
     if not queryset:
         return JsonResponse({"success": False, "message": "Carrier not found."})
 
-    queryset2 = StorageSlot.objects.filter(name=slot)
+    queryset2 = StorageSlot.objects.filter(qr_value=slot)
     if not queryset2:
         return JsonResponse({"success": False, "message": "no slot found"})
     c = queryset.first()
@@ -442,7 +456,7 @@ def store_carrier_confirm(request, carrier, slot):
     Thread(
         target=neo.led_off,
         kwargs={
-            "lamp": slot,
+            "lamp": ss.name,
         },
     ).start()
     ss.save()
@@ -465,14 +479,14 @@ def collect_carrier(request, carrier):
         {
             "carrier": cc.name,
             "storage": cc.storage_slot.storage.name,
-            "slot": cc.storage_slot.name,
+            "slot": cc.storage_slot.qr_value,
         }
         for cc in queryset
     ]
 
     msg = {
         "storage": c.storage_slot.storage.name,
-        "slot": c.storage_slot.name,
+        "slot": c.storage_slot.qr_value,
         "carrier": c.name,
         "queue": queue,
     }
@@ -500,11 +514,11 @@ def collect_carrier_confirm(request, carrier, slot):
         )
     c = queryset.first()
 
-    if c.storage_slot.name != slot:
+    if c.storage_slot.qr_value != slot:
         return JsonResponse(
             {
                 "success": False,
-                "message": f"Carrier {carrier} is in slot {c.storage_slot.name} not in slot {slot}",
+                "message": f"Carrier {carrier} is in slot {c.storage_slot.qr_value} not in slot {slot}",
             }
         )
     c.storage_slot.led_state = 0
@@ -522,7 +536,7 @@ def collect_carrier_confirm(request, carrier, slot):
         {
             "carrier": cc.name,
             "storage": cc.storage_slot.storage.name,
-            "slot": cc.storage_slot.name,
+            "slot": cc.storage_slot.qr_value,
         }
         for cc in queryset
     ]
@@ -557,6 +571,9 @@ def save_file_and_get_headers(request):
                     model_fields = [f.name for f in Carrier._meta.get_fields()]
                 elif lf.upload_type == "board":
                     model_fields = ["article", "count"]
+                    if "board_name" in request.POST.keys():
+                        lf.board_name = request.POST["board_name"]
+                        lf.save()
                 return JsonResponse(
                     {
                         "object_fields": sorted(model_fields),
@@ -599,14 +616,17 @@ def user_mapping_and_file_processing(request):
 
             for l in csv_reader:
                 if lf.upload_type == "board":
-                    if not request.POST["board"] or not Board.objects.filter(
-                        name=request.POST["board"]
+                    # print(f"\n\n")
+                    # pp(request.POST)
+                    # print(f"\n\n")
+                    if not lf.board_name or not Board.objects.filter(
+                        name=lf.board_name
                     ):
                         msg["fail"].append(
                             f"Board {request.POST['board']} does not exist."
                         )
                         break
-                    board = Board.objects.get(name=request.POST["board"])
+                    board = Board.objects.get(name=lf.board_name)
 
                     board_article_dict = {
                         k[0]: l[a_headers.index(k[1])] for k in map_ordered_l
@@ -644,10 +664,10 @@ def user_mapping_and_file_processing(request):
                         carrier_dict["article"] = a
                     if not carrier_dict.get("storage_slot", None):
                         carrier_dict["storage_slot"] = None
+                    if not carrier_dict.get("storage", None):
+                        carrier_dict["storage"] = None
                     if not carrier_dict.get("machine_slot", None):
                         carrier_dict["machine_slot"] = None
-                    if not carrier_dict.get("boardarticle", None):
-                        carrier_dict["boardarticle"] = None
                     if not carrier_dict.get("diameter", None):
                         carrier_dict["diameter"] = 7
                     if not carrier_dict.get("width", None):
@@ -847,14 +867,38 @@ class ArticleViewSet(viewsets.ModelViewSet):
     ordering_fields = "__all__"
 
 
+class BoardFilter(rest_filter.FilterSet):
+    class Meta:
+        model = Board
+        fields = "__all__"
+
+
 class BoardViewSet(viewsets.ModelViewSet):
     queryset = Board.objects.all()
     serializer_class = BoardSerializer
+    filter_backends = (
+        rest_filter.DjangoFilterBackend,
+        filters.SearchFilter,
+        filters.OrderingFilter,
+    )
+    filterset_class = BoardFilter
+
+
+class BoardArticleFilter(rest_filter.FilterSet):
+    class Meta:
+        model = BoardArticle
+        fields = "__all__"
 
 
 class BoardArticleViewSet(viewsets.ModelViewSet):
     queryset = BoardArticle.objects.all()
     serializer_class = BoardArticleSerializer
+    filter_backends = (
+        rest_filter.DjangoFilterBackend,
+        filters.SearchFilter,
+        filters.OrderingFilter,
+    )
+    filterset_class = BoardArticleFilter
 
 
 class CarrierNameViewSet(generics.ListAPIView):

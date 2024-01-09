@@ -131,7 +131,7 @@ class NeoLightAPI:
 
     def led_on(self, lamp, color):
         # print(f"in led_on lamp={lamp},color={color}")
-        lamp = self.side_row_lamp_to_led_address(lamp)
+        # lamp = self.side_row_lamp_to_led_address(lamp)
         if color not in self.led_colors:
             raise ValueError(
                 f"Invalid color {color} for LED. Possible values are {self.led_colors}"
@@ -142,7 +142,7 @@ class NeoLightAPI:
         return self._LED_On_Control(lights_dict)
 
     def led_off(self, lamp):
-        lamp = self.side_row_lamp_to_led_address(lamp)
+        # lamp = self.side_row_lamp_to_led_address(lamp)
         return self._LED_Off_Control([str(lamp)])
 
     def reset_leds(self, working_light=False):

@@ -111,8 +111,6 @@ class CommonSetUpTestCase(TestCase):
         resp_display = cls.CLIENT.get(f"/api/article/{rand_name}/?format=json")
 
         jdata2 = resp_display.json()
-        pp(jdata)
-        # pp(jdata2)
         cls.assertEqual(jdata, jdata2)
         return jdata2
 
@@ -147,8 +145,16 @@ class CommonSetUpTestCase(TestCase):
         # all fields and relations of Article model
         headers = [
             "name",
-            "provider",
-            "provider_description",
+            "provider1",
+            "provider1_description",
+            "provider2",
+            "provider2_description",
+            "provider3",
+            "provider3_description",
+            "provider4",
+            "provider4_description",
+            "provider5",
+            "provider5_description",
             "manufacturer",
             "manufacturer_description",
             "description",
@@ -160,9 +166,13 @@ class CommonSetUpTestCase(TestCase):
             "boardarticle",
             "carrier",
         ]
+        # print("\narticle headers")
+        # pp(headers)
 
         # add some random to it to simulate the user having different names to our internal representation
         headers_salted = [k + cls.get_random_name("_aaaa") for k in headers]
+        # print("\nsalted article headers")
+        # pp(headers_salted)
 
         # build csv file
         file_content = ",".join(headers_salted)
@@ -182,7 +192,7 @@ class CommonSetUpTestCase(TestCase):
 
             file_content += ",".join(values)
             file_content += "\n"
-
+        # print("\ncsv data: ", file_content)
         f = SimpleUploadedFile(
             "file.csv", bytes(file_content, encoding="utf8"), content_type="text/plain"
         )
@@ -192,22 +202,39 @@ class CommonSetUpTestCase(TestCase):
             "/api/save_file_and_get_headers/", {"file": f, "upload_type": "article"}
         )
         resp_create_json = resp_create.json()
-
+        # print("\ncreated articles response ")
+        # print(resp_create_json)
         headers_salted2 = resp_create_json["header_fields"]
-        headers2 = resp_create_json["object_fields"]
-        file_name = resp_create_json["file_name"]
+        # print("\nheaders of the file")
+        # pp(headers_salted2)
 
+        headers2 = resp_create_json["object_fields"]
+        # print("fields of the model")
+        # pp(headers2)
+        file_name = resp_create_json["file_name"]
+        # print("\nComparing salted headers")
+        # pp(headers_salted)
+        # pp(headers_salted2)
         cls.assertEqual(sorted(headers_salted), sorted(headers_salted2))
+        # print("\nComparing headers")
+        # pp(headers)
+        # pp(headers2)
         cls.assertEqual(sorted(headers), sorted(headers2))
 
         # provide user mapping
         map_ = {k: v for k, v in zip(sorted(headers), sorted(headers_salted2))}
+
+        # print("\nuser mapping:")
+        # pp(map_)
+
         # post
         resp_map = cls.CLIENT.post(
             "/api/user_mapping_and_file_processing/",
             {"file_name": file_name, "map": json.dumps(map_)},
         )
         msg = resp_map.json()
+        # print("created response")
+        # pp(msg)
 
     def test_view_creating_carriers_from_file(cls):
         """tests a 2-step workflow:
@@ -222,7 +249,6 @@ class CommonSetUpTestCase(TestCase):
             "updated_at",
             "archived",
             "article",
-            "boardarticle",
             "diameter",
             "width",
             "container_type",
@@ -232,8 +258,10 @@ class CommonSetUpTestCase(TestCase):
             "reserved",
             "delivered",
             "collecting",
+            "storage",
             "storage_slot",
             "machine_slot",
+            "job",
         ]
 
         # add some random to it to simulate the user having different names to our internal representation
@@ -253,9 +281,9 @@ class CommonSetUpTestCase(TestCase):
                 elif h in [
                     "created_at",
                     "updated_at",
+                    "storage",
                     "storage_slot",
                     "machine_slot",
-                    "boardarticle",
                 ]:
                     values.append("")
                 elif h in ["article"]:
@@ -382,22 +410,20 @@ class CommonSetUpTestCase(TestCase):
         # edit_carrier()
         # Carrier.objects.all
         # assertEqual
-        # assert fail for old data
         art_randname = cls.get_random_name("article")
         a = Article.objects.create(name=art_randname)
 
         car_randname = cls.get_random_name("carrier")
         c = Carrier.objects.create(name=car_randname, article=a, quantity_current=1000)
 
-        c_qs = Carrier.objects.filter(name=car_randname).first()
-        # pp(c_qs.__dict__)
-        cls.assertEqual(c, c_qs)
-
         resp_edit = cls.CLIENT.patch(
-            f"/api/carrier/{car_randname}/", {"quantity_current": 999}
+            f"/api/carrier/{car_randname}/",
+            json.dumps({"quantity_current": 999, "delivered": True}),
+            content_type="application/json",
         )
-        c_qs_1 = Carrier.objects.filter(name=car_randname).first()
-        # pp(c_qs_1.__dict__)
+        resp_display = cls.CLIENT.get(f"/api/carrier/?name={car_randname}")
+        cls.assertEqual(resp_display.json()["results"][0]["delivered"], True)
+        cls.assertEqual(resp_display.json()["results"][0]["quantity_current"], 999)
 
     def test_view_QR_printing_carriers(cls):
         pass
@@ -457,10 +483,16 @@ class CommonSetUpTestCase(TestCase):
         s = Storage.objects.create(name=stor_randname, capacity=1000)
 
         stor_slot_randname = cls.get_random_name("storage_slot")
-        ss = StorageSlot.objects.create(name=stor_slot_randname, storage=s)
+        stor_slot_randqr = f"qrval_{stor_slot_randname[-3:]}"
+        ss = StorageSlot.objects.create(
+            name=stor_slot_randname, qr_value=stor_slot_randqr, storage=s
+        )
 
         stor_slot_randname2 = cls.get_random_name("storage_slot")
-        ss2 = StorageSlot.objects.create(name=stor_slot_randname2, storage=s)
+        stor_slot_randqr2 = f"qrval_{stor_slot_randname2[-3:]}"
+        ss2 = StorageSlot.objects.create(
+            name=stor_slot_randname2, qr_value=stor_slot_randqr2, storage=s
+        )
 
         c.storage_slot = ss
         c.save()
@@ -470,12 +502,29 @@ class CommonSetUpTestCase(TestCase):
         # collect_carrier(carrier) -> storage, slot, carrier, queue
         resp_collect = cls.CLIENT.get(f"/api/collect_carrier/{car_randname}/")
         resp_collect2 = cls.CLIENT.get(f"/api/collect_carrier/{car_randname2}/")
-        # pp(resp_collect.__dict__)
-        # pp(resp_collect2.__dict__)
+        # pp(resp_collect.json())
+        # pp(resp_collect2.json())
         jdata = resp_collect.json()
         jdata2 = resp_collect2.json()
 
-        # pp(jdata2)
+        cls.assertIn(
+            {
+                "carrier": car_randname,
+                "slot": stor_slot_randqr,
+                "storage": stor_randname,
+            },
+            jdata2["queue"],
+        )
+
+        cls.assertIn(
+            {
+                "carrier": car_randname2,
+                "slot": stor_slot_randqr2,
+                "storage": stor_randname,
+            },
+            jdata2["queue"],
+        )
+
         slot = jdata["slot"]
         slot2 = jdata2["slot"]
         # collect carrier_confirm_slot(slot, carrier) -> storage, slot, carrier, queue
@@ -487,6 +536,7 @@ class CommonSetUpTestCase(TestCase):
             f"/api/collect_carrier_confirm/{car_randname2}/{slot2}/"
         )
         # pp(resp_confirm2.json())
+        cls.assertTrue(not resp_confirm2.json()["queue"])
 
     def test_view_collect_carriers_job(cls):
         art_randname = cls.get_random_name("article")
@@ -683,6 +733,7 @@ class CommonSetUpTestCase(TestCase):
         # pp(resp_job_display.__dict__)
 
     def test_view_creating_board_from_file(cls):
+        # create articles, carriers, storage, storage_slots
         art_randname = cls.get_random_name("article")
         a = Article.objects.create(name=art_randname)
 
@@ -711,6 +762,8 @@ class CommonSetUpTestCase(TestCase):
         c2.storage_slot = ss2
         c2.save()
 
+        # create new empty board
+
         bor_randname = cls.get_random_name("board")
         resp_board_create = cls.CLIENT.post(
             "/api/board/",
@@ -718,6 +771,103 @@ class CommonSetUpTestCase(TestCase):
                 "name": bor_randname,
             },
         )
+
+        # create a csv file with bunch of article names and counts
+        # get_csv_headers(file) -> file_name
+        # create_board_from_file(file_name,headers) -> created X didnt create Y
+        # assert equal
+        articles = [art_randname, art_randname2]
+        counts = [random.randint(1, 100), random.randint(1, 100)]
+        csv_string = "article123,count123\n"
+        for a, c in zip(articles, counts):
+            csv_string += f"{a},{c}\n"
+
+        f = SimpleUploadedFile("file.csv", bytes(csv_string, encoding="utf8"))
+        resp_create = cls.CLIENT.post(
+            "/api/save_file_and_get_headers/",
+            {"file": f, "upload_type": "board", "board_name": bor_randname},
+        )
+        resp_create_json = resp_create.json()
+        headers = resp_create_json["header_fields"]
+        file_name = resp_create_json["file_name"]
+        # print(f"response")
+        # pp(resp_create_json)
+        # print(f"headers")
+        # pp(headers)
+        # print(f"filename")
+        # pp(file_name)
+
+        map_ = {k: v for k, v in zip(["article", "count"], headers)}
+        # print(f"map_")
+        # pp(map_)
+        resp_map = cls.CLIENT.post(
+            "/api/user_mapping_and_file_processing/",
+            {"file_name": file_name, "map": json.dumps(map_)},
+        )
+        msg = resp_map.json()
+        # print(f"resp file upload")
+        # pp(msg)
+
+        resp_board = cls.CLIENT.get(
+            f"/api/boardarticle/?board={bor_randname}&format=json"
+        )
+        resp_board_json = resp_board.json()["results"]
+        # print("resp_board_json")
+        # pp(resp_board_json)
+
+        cls.assertEqual(len(articles), len(resp_board_json))
+
+        for ba in resp_board_json:
+            cls.assertEqual(articles.index(ba["article"]), counts.index(ba["count"]))
+
+    def test_create_and_prepare_job(cls):
+        art_randname = cls.get_random_name("article")
+        a = Article.objects.create(name=art_randname)
+
+        art_randname2 = cls.get_random_name("article")
+        a2 = Article.objects.create(name=art_randname2)
+
+        car_randname = cls.get_random_name("carrier")
+        c = Carrier.objects.create(name=car_randname, article=a, quantity_current=1000)
+
+        car_randname2 = cls.get_random_name("carrier")
+        c2 = Carrier.objects.create(
+            name=car_randname2, article=a2, quantity_current=1000
+        )
+
+        stor_randname = cls.get_random_name("storage")
+        s = Storage.objects.create(name=stor_randname, capacity=1000)
+
+        stor_slot_randname = cls.get_random_name("storage_slot")
+        ss = StorageSlot.objects.create(name=stor_slot_randname, storage=s)
+
+        stor_slot_randname2 = cls.get_random_name("storage_slot")
+        ss2 = StorageSlot.objects.create(name=stor_slot_randname2, storage=s)
+
+        c.storage_slot = ss
+        c.save()
+        c2.storage_slot = ss2
+        c2.save()
+
+        bor_randname = cls.get_random_name("board")
+        resp_board_create = cls.CLIENT.post(
+            "/api/board/",
+            {
+                "name": bor_randname,
+            },
+        )
+        """in the frontend form for creating a job there is a field for the board 
+           with a dropdown of existing boards and an additional option at the bottom of the dropdown to create a new one.
+           
+           If an existing board is selected, fetch all boardarticles and display them in a non editable fashion.
+           
+           If a new board is created the user can optionally load the board via a file(2 columns of a csv file with header matching akin to article/carrier file upload)
+           The displayed board is then uneditable aswell, since its been created and saved.
+           
+           If a new board is created without fileupload the user can manually choose article-count pairs.
+
+           Either way the board is created, it is firstly created empty with just a name and boardarticles are associated in the following step.
+        """
 
         for ba in [art_randname, art_randname2]:
             resp_boardarticles_create = cls.CLIENT.post(
@@ -731,11 +881,11 @@ class CommonSetUpTestCase(TestCase):
             )
             # pp(resp_boardarticles_create.__dict__)
 
+        """ The above shows the manual option.
+        """
+
         bb = Board.objects.all()
         b = bb.first()
-        # print(b)
-        # print(b.boardarticle_set.all())
-        # print(b.articles.all())
         job = {
             "name": cls.get_random_name("job"),
             "board": b.name,
@@ -744,26 +894,55 @@ class CommonSetUpTestCase(TestCase):
             "finish_at": "2023-01-01 18:00:00.000",
         }
         resp_job_create = cls.CLIENT.post("/api/job/", job)
-        # pp(resp_job_create.json())
 
         resp_job_display = cls.CLIENT.get(f'/api/job/{job["name"]}/?format=json')
-        # pp(resp_job_display.json())
 
         resp_job_display_boardarticles = cls.CLIENT.get(
             f'/api/boardarticle/?format=json&board={job["board"]}'
         )
-        # pp(resp_job_display_boardarticles.json())
 
-    # Article.objects.create
-    # Carrier.objects.create
-    # Storage.objects.create
-    # StorageSlot.objects.create
-    # Board.objects.create
-    # Job.objects.create
+        # for board article that is not in job's carriers article search available carriers and assign to job
 
-    # create a csv file with bunch of article names and counts
-    # get_csv_headers(file) -> file_name
-    # create_board_from_file(file_name,headers) -> created X didnt create Y
-    # Jobs.objects.get(name) -> Job
-    # Job.board.articles
-    # assert equal
+        boardarticles = resp_job_display_boardarticles.json()["results"]
+        jobs_carriers = resp_job_display.json()["carriers"]
+        """
+        print(f"The job:\n")
+        pp(resp_job_display.json())
+
+        print(f"The boardarticles:\n")
+        pp(boardarticles)
+
+        print(f"Checking if all boardarticles have corresponding jobcarrier.\n")"""
+        for ba in boardarticles:
+            # print(f"Checking {ba['article']}\n")
+            for c in jobs_carriers:
+                # print(f"against {c.name}")
+                if ba["article"] == c["article"]:
+                    # print(f"they match")
+                    break
+            else:
+                # print(f"boardarticle {ba['article']} has no carrier\n")
+
+                potential_carriers = cls.CLIENT.get(
+                    f'/api/carrier/?article__name={ba["article"]}'
+                )
+                # print(f"potential carriers for article {ba['article']}:\n")
+                # pp(potential_carriers.json())
+                selected_carrier = potential_carriers.json()["results"][0]
+                # print(f"For {ba['article']} the carrier {selected_carrier['name']} is selected.")
+                assign_to_job_request = cls.CLIENT.post(
+                    f"/api/assign_carrier_to_job/{job['name']}/{selected_carrier['name']}/"
+                )
+
+        resp_job_prepared_display = cls.CLIENT.get(
+            f'/api/job/{job["name"]}/?format=json'
+        )
+        # print(f"job after assignment:\n")
+        # pp(resp_job_prepared_display.json())
+
+        articles_board = [ba["article"] for ba in boardarticles]
+        articles_jobcarrier = [
+            cls.CLIENT.get(f"/api/carrier/?name={c}").json()["results"][0]["article"]
+            for c in resp_job_prepared_display.json()["carriers"]
+        ]
+        cls.assertEqual(sorted(articles_board), sorted(articles_jobcarrier))
