@@ -25,7 +25,6 @@ class DymoHandler:
         try:
             selectPrinter = 'DYMO LabelWriter 450'
             self.labelCom.SelectPrinter(selectPrinter)
-            is_open = self.labelCom.Open(self.label)
             if not feeder:
                 self.labelText.SetField('BARCODE', message_a)
                 self.labelText.SetField('C_UID_VAL', message_a)

@@ -12,13 +12,14 @@ from django.views.decorators.csrf import requires_csrf_token, csrf_exempt
 
 from django_filters import rest_framework as rest_filter
 import django_filters
+from .serializers import ArticleNameSerializer, ArticleSerializer, BoardArticleSerializer, BoardSerializer, CarrierNameSerializer, CarrierSerializer, JobSerializer, MachineSerializer, MachineSlotSerializer, ManufacturerNameSerializer, ManufacturerSerializer, ProviderNameSerializer, ProviderSerializer, StorageSerializer, StorageSlotSerializer
 from rest_framework import viewsets, filters, generics
 
 from django.http import JsonResponse
 from django.core.files import File
 
 
-from .serializers import *
+# from .serializers import *
 
 from .models import (
     Manufacturer,
