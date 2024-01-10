@@ -179,3 +179,4 @@ urlpatterns.append(
         name="assign_carrier_to_job",
     )
 )
+
