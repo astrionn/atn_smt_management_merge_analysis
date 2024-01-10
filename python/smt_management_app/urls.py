@@ -61,6 +61,22 @@ urlpatterns.append(
         name="store_carrier_confirm",
     )
 )
+
+urlpatterns.append(
+    path(
+        "store_carrier_choose_slot/<carrier>/<storage>/",
+        views.store_carrier_choose_slot,
+        name="store_carrier_choose_slot",
+    )
+)
+urlpatterns.append(
+    path(
+        "store_carrier_choose_slot_confirm/<carrier>/<slot>/",
+        views.store_carrier_choose_slot_confirm,
+        name="store_carrier_choose_slot_confirm",
+    )
+)
+
 urlpatterns.append(
     path("articlelist/", views.ArticleNameViewSet.as_view(), name="articlelist")
 )
@@ -143,5 +159,23 @@ urlpatterns.append(
         "print_carrier/<carrier>/",
         views.print_carrier,
         name="print_carrier",
+    )
+)
+
+urlpatterns.append(
+    path("create_qr_code/<code>/", views.create_qr_code, name="create_qr_code")
+)
+
+urlpatterns.append(
+    path(
+        "deliver_all_carriers", views.deliver_all_carriers, name="deliver_all_carriers"
+    )
+)
+
+urlpatterns.append(
+    path(
+        "assign_carrier_to_job/<job>/<carrier>/",
+        views.assign_carrier_to_job,
+        name="assign_carrier_to_job",
     )
 )

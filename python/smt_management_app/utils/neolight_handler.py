@@ -34,7 +34,6 @@ class NeoLightAPI:
         return f"{str(side).zfill(3)}-{str(row).zfill(2)}-{str(lamp).zfill(3)}"
 
     def side_row_lamp_to_led_address(self, input_string):
-
         # print(input_string)
         side, row, lamp = input_string.split("-")
         if len(side) != 3 or len(row) != 2 or len(lamp) != 3:
@@ -60,7 +59,7 @@ class NeoLightAPI:
         lights_dict = {'status':{'A':'green'}}
         lights_dict = {'lamps'={1:'red',2:'yellow',3:'green',4:'blue'}}
         """
-        # print(f"LIGHTS DICT {lights_dict}")
+        print(f"LIGHTS DICT {lights_dict}")
         param_list = []
         for k in lights_dict.keys():
             if k == "status":
@@ -132,7 +131,7 @@ class NeoLightAPI:
 
     def led_on(self, lamp, color):
         # print(f"in led_on lamp={lamp},color={color}")
-        lamp = self.side_row_lamp_to_led_address(lamp)
+        # lamp = self.side_row_lamp_to_led_address(lamp)
         if color not in self.led_colors:
             raise ValueError(
                 f"Invalid color {color} for LED. Possible values are {self.led_colors}"
@@ -143,7 +142,7 @@ class NeoLightAPI:
         return self._LED_On_Control(lights_dict)
 
     def led_off(self, lamp):
-        lamp = self.side_row_lamp_to_led_address(lamp)
+        # lamp = self.side_row_lamp_to_led_address(lamp)
         return self._LED_Off_Control([str(lamp)])
 
     def reset_leds(self, working_light=False):

@@ -9,3 +9,4 @@
 .\#*.*
 **/pfile/**
 **/node_modules/**
+**/migrations/**

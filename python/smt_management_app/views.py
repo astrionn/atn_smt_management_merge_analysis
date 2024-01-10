@@ -1,7 +1,8 @@
 import json
 import csv
-from pprint import pprint as pp
-import re
+
+import io
+import qrcode
 
 
 from django_filters.rest_framework import DjangoFilterBackend
@@ -15,7 +16,7 @@ import django_filters
 from .serializers import ArticleNameSerializer, ArticleSerializer, BoardArticleSerializer, BoardSerializer, CarrierNameSerializer, CarrierSerializer, JobSerializer, MachineSerializer, MachineSlotSerializer, ManufacturerNameSerializer, ManufacturerSerializer, ProviderNameSerializer, ProviderSerializer, StorageSerializer, StorageSlotSerializer
 from rest_framework import viewsets, filters, generics
 
-from django.http import JsonResponse
+from django.http import FileResponse, JsonResponse
 from django.core.files import File
 
 
@@ -37,65 +38,100 @@ from .models import (
 )
 
 
-from .xgate_handler import XGateHandler
-from .dymoHandler import DymoHandler
 
 from threading import Thread
 
 # from python.smt_management_app import models
 
 try:
-    dymo = None
-    dymo = DymoHandler()
+    # initalize 3rd party handlers for connected devices like smart shelfs and label printers
 
-    # neo = NeoLightAPI("192.168.178.11")
-    # neo = PTL_API("COM16")
-    class Neo:
+    class NeoDummy:
+        # for developement without actually having to connect a shelf
         def __init__(self):
-            self.xgate = XGateHandler("192.168.0.10")
-
-        def slot_to_row_led(self, lamp):
-            row_part, led_part = lamp.split("-")
-            return int(re.sub("B", "1", re.sub("A", "", row_part))), int(led_part)
+            pass
 
         def led_on(self, lamp, color):
-            row, led = self.slot_to_row_led(lamp)
-            print(f"led switch: slot = {lamp} ; {row=} ; {led=}")
-            self.xgate.switch_lights(address=row, lamp=led, col=color, blink=False)
+            print(f"led on {lamp=} ; {color=}")
 
         def led_off(self, lamp):
-            self.led_on(lamp, "off")
+            print(f"led of {lamp=}")
 
         def reset_leds(self, working_light=False):
             print("reset leds")
-            self.xgate.clear_leds()
 
-    neo = Neo()
+    neo = NeoDummy()
+
+    # neo = NeoLightAPI("192.168.178.11")  # weytronik
+    # neo = PTL_API("COM16") # ATN inhouse
+    # neo = NeoWrapperXGate("192.168.0.10")
+
+    class DymoDummy:
+        # for developement without actually having to connect a printer
+        def print_label(self, text1, text2):
+            print(f"printing label {text1,text2}")
+
+    dymo = DymoDummy()
+    # dymo = DymoHandler()
+
 except Exception as e:
     print(666, e)
 
-# created by todo.org tangle
-# Create your views here.
+
+def assign_carrier_to_job(request, job, carrier):
+    job_object = Job.objects.filter(name=job).first()
+    carrier_object = Carrier.objects.filter(name=carrier).first()
+
+    if job_object and carrier_object:
+        job_object.carriers.add(carrier_object)
+        job_object.save()
+        return JsonResponse({"success": True})
+    else:
+        return JsonResponse({"success": False})
+
+
+def deliver_all_carriers(request):
+    i = Carrier.objects.all().update(delivered=True)
+    return JsonResponse({"success": True, "updated_amount": i})
 
 
 @csrf_exempt
 def print_carrier(request, carrier):
-    carrierF = Carrier.objects.filter(name=carrier)
-    if len(carrierF) > 0:
-        carrier = carrierF.first()
-        article = carrier.article
-        if not dymo:
-            return JsonResponse({"success": False})
-        Thread(
-            target=dymo.print_label, args=(carrier.name, article.name), daemon=True
-        ).start()
-        # dymo.print_label(carrier.name, article.name)
-        return JsonResponse({"success": True})
-    return JsonResponse({"success": False})
+    """
+    Print a label for the given carrier containing barcode information.
+
+    Args:
+    - request: HTTP request object
+    - carrier: Name of the carrier to print the label for
+
+    Returns:
+    - JsonResponse: Success or failure message
+    """
+
+    # Check if the carrier exists
+    try:
+        carrier_obj = Carrier.objects.get(name=carrier)
+    except Carrier.DoesNotExist:
+        return JsonResponse({"success": False, "message": "Carrier not found"})
+
+    article = carrier_obj.article
+
+    if not dymo:  # Assuming dymo is defined somewhere
+        return JsonResponse(
+            {"success": False, "message": "Dymo label printer not reachable"}
+        )
+
+    # Start a thread to print the label
+    Thread(
+        target=dymo.print_label, args=(carrier_obj.name, article.name), daemon=True
+    ).start()
+
+    return JsonResponse({"success": True})
 
 
 @csrf_exempt
 def test_leds(request):
+    # only used for messe demonstrations, hidden from the frontend
     Thread(
         target=neo.test_higher_layer(),
     ).start()
@@ -103,28 +139,55 @@ def test_leds(request):
 
 
 def dashboard_data(request):
-    total = Carrier.objects.filter(archived=False).count()
-    undelivered = Carrier.objects.filter(archived=False, delivered=False).count()
-    stored = Carrier.objects.filter(archived=False, storage_slot__isnull=False).count()
+    """
+    Fetches data for the dashboard including total carriers, undelivered carriers,
+    carriers in storage, available storage slots, and active storages.
+    """
+    total_carriers = Carrier.objects.filter(archived=False).count()
+    undelivered_carriers = Carrier.objects.filter(
+        archived=False, delivered=False
+    ).count()
+    carriers_in_storage = Carrier.objects.filter(
+        archived=False, storage_slot__isnull=False
+    ).count()
     free_slots = StorageSlot.objects.filter(carrier__isnull=True).count()
-    storages = Storage.objects.filter(archived=False).count()
+    active_storages = Storage.objects.filter(archived=False).count()
 
     return JsonResponse(
         {
-            "total_carriers": total,
-            "not_delivered": undelivered,
-            "in_storage": stored,
-            "storages": storages,
+            "total_carriers": total_carriers,
+            "not_delivered": undelivered_carriers,
+            "in_storage": carriers_in_storage,
             "free_slots": free_slots,
+            "storages": active_storages,
         }
     )
 
 
 def collect_carrier_by_article(request, storage, article):
+    """
+    Collects a carrier by article from a storage unit.
+    Lights up slots containing the specified article.
+
+    Args:
+    - request: HTTP request object
+    - storage: Storage object where the article is stored
+    - article: Article number to collect
+
+    Returns:
+    - JsonResponse indicating success or failure
+    """
     slots = StorageSlot.objects.filter(carrier__article__name=article, storage=storage)
-    print(slots)
-    if len(slots) == 0:
-        return JsonResponse({"success": False})
+
+    if not slots.exists():
+        return JsonResponse(
+            {
+                "success": False,
+                "message": f"Could not find a slot with article {article} in storage {storage}",
+            }
+        )
+
+    # Activate LEDs for slots containing the article
     for slot in slots:
         Thread(target=neo.led_on, kwargs={"lamp": slot.name, "color": "green"}).start()
 
@@ -132,34 +195,75 @@ def collect_carrier_by_article(request, storage, article):
 
 
 def confirm_carrier_by_article(request, storage, article, carrier):
+    """
+    Confirms carrier by article from a storage unit.
+    Empties the slot and resets LEDs upon carrier confirmation.
+
+    Args:
+    - request: HTTP request object
+    - storage: Storage object where the carrier is located
+    - article: Article number of the carrier
+    - carrier: Carrier name to confirm
+
+    Returns:
+    - JsonResponse indicating success or failure
+    """
     slot = StorageSlot.objects.filter(
         carrier__article__name=article, storage=storage, carrier__name=carrier
     )
-    print(slot)
-    if len(slot) == 0:
-        return JsonResponse({"success": False})
+
+    if not slot.exists():
+        return JsonResponse(
+            {
+                "success": False,
+                "message": f"Could not find a slot in storage {storage} that contains carrier {carrier} with article {article}",
+            }
+        )
+
     c = Carrier.objects.get(name=carrier)
     c.storage_slot = None
     c.storage = None
     c.save()
+
+    # Reset LEDs after carrier confirmation
     Thread(target=neo.reset_leds).start()
+    # Update LED state for all storage slots to 0
+    StorageSlot.objects.all().update(led_state=0)
+
     return JsonResponse({"success": True})
 
 
 @csrf_exempt
 def reset_leds(request, storage):
+    """
+    Resets LEDs and updates the LED state of storage slots.
+
+    Args:
+    - request: HTTP request object.
+    - storage: Storage information.
+
+    Returns:
+    - JsonResponse: JSON response indicating LED reset status.
+    """
+    # Start a new thread to reset LEDs with working_light set to True
     Thread(target=neo.reset_leds, kwargs={"working_light": True}).start()
+
+    # Update LED state for all storage slots to 0
     StorageSlot.objects.all().update(led_state=0)
+
+    # Return JSON response indicating LED reset for the given storage
     return JsonResponse({"reset_led": storage})
 
 
 def check_unique(request, field, value):
+    # for evaluating/indicating uniqueness while the user is typing in a field where unqiueness is required
     if field == "sapnumber":
         unique = not Article.objects.filter(sap_number=value).exists()
         return JsonResponse({"success": unique})
 
 
 def check_pk_unique(request, model_name, value):
+    # for evaluating/indicating uniqueness while the user is typing in a field where unqiueness is required ; pk abstraction
     if model_name.lower() == "carrier":
         model = Carrier
 
@@ -191,19 +295,14 @@ def get_csrf_token(request):
 
 
 @csrf_exempt
-def store_carrier(request, carrier, storage):
-    # is carrier storable ?
-    # print(carrier,storage)
-    carrier = carrier.strip()
+def store_carrier_choose_slot(request, carrier, storage):
+    # the user asks to store a carrier in a storage, if that is possible all possible slots LEDs for the storage get turned on, we send back the storage and slots for the user to confirm collection in the next step
+    carrier = carrier.strip()  # remove whitespace
     carriers = Carrier.objects.filter(name=carrier)
-    # print(carriers)
     if not carriers:
-        print("carrier not found")
         return JsonResponse({"success": False, "message": "Carrier not found."})
     c = carriers.first()
-    # print(c.__dict__)
     if c.collecting:
-        print("carrier is collecting")
         return JsonResponse({"success": False, "message": "Carrier is collecting."})
     if c.archived:
         return JsonResponse({"success": False, "message": "Carrier has been archived."})
@@ -216,43 +315,50 @@ def store_carrier(request, carrier, storage):
     if c.machine_slot:
         return JsonResponse({"success": False})
 
-    # free storage slot for storage ?
     storages = Storage.objects.filter(name=storage)
-    # print(storages)
     if not storages:
-        return JsonResponse({"success": False, "message": "No free storage slot."})
+        return JsonResponse({"success": False, "message": "No storage found."})
     storage = storages.first()
 
-    free_slots = StorageSlot.objects.filter(carrier__isnull=True, storage=storage)
-    # print(free_slots)
-    fs = free_slots.first()
-    fs.led_state = 2
-    fs.save()
-    Thread(
-        target=neo.led_on,
-        kwargs={"lamp": fs.name, "color": "blue"},
-    ).start()
+    free_slots = StorageSlot.objects.filter(
+        carrier__isnull=True, storage=storage
+    )  # later on take carrier size into consideration here
+    if len(free_slots) == 0:
+        return JsonResponse(
+            {
+                "success": False,
+                "message": f"No free storage slots found in {storage.name}.",
+            }
+        )
+    msg = {"storage": storage.name, "carrier": c.name, "slot": [], "success": True}
+    if not hasattr(
+        neo, "_LED_On_Control"
+    ):  # iterative enabling for PTL from ATN via USB, see neo definition at the top
+        for fs in free_slots:
+            fs.led_state = 2
+            fs.save()
+            Thread(
+                target=neo.led_on,
+                kwargs={"lamp": fs.name, "color": "blue"},
+            ).start()
+            msg["slot"].append(fs.name)
+    else:  # compound enabling for neotel rack
+        neo._LED_On_Control({"lamps": {neo.fs.name: "blue" for fs in free_slots}})
 
-    msg = {"storage": storage.name, "slot": fs.name, "carrier": c.name, "success": True}
     return JsonResponse(msg)
 
 
 @csrf_exempt
-def store_carrier_confirm(request, carrier, slot):
-    # pp(request.__dict__)
-    # print(carrier)
-    # print(slot)
-    carrier = carrier.strip()
-    slot = slot.strip()
-    # next 2 lines only for sophia at siemens wien
-    slot = slot[-5:]
-    slot = f"{slot[:2]}-{slot[2:]}"
+def store_carrier_choose_slot_confirm(request, carrier, slot):
+    # see store carrier choose slot
+
+    carrier = carrier.strip()  # remove whitespace
+    slot = slot.strip()  # remove whitespace
     queryset = Carrier.objects.filter(name=carrier)
     if not queryset:
         return JsonResponse({"success": False, "message": "Carrier not found."})
 
-    # print(slot)
-    queryset2 = StorageSlot.objects.filter(name=slot)
+    queryset2 = StorageSlot.objects.filter(qr_value=slot)
     if not queryset2:
         return JsonResponse({"success": False, "message": "no slot found"})
     c = queryset.first()
@@ -262,11 +368,89 @@ def store_carrier_confirm(request, carrier, slot):
     c.storage_slot = ss
     c.save()
     ss.led_state = 0
-    # thread to ledstate 0 in 15s
+    ss.save()
+    Thread(
+        target=neo.reset_leds,
+    ).start()
+
+    return JsonResponse(
+        {
+            "success": True,
+            "message": f"Carrier {c.name} stored in storage {ss.storage.name} slot {ss.qr_value}.",
+        }
+    )
+
+
+@csrf_exempt
+def store_carrier(request, carrier, storage):
+    # the user asks to store a carrier in a storage, if that is possible a slot is chosen and the corresponding LED turned on, we send back the storage and slot for the user to confirm collection in the next step
+    carrier = carrier.strip()  # remove whitespace
+    carriers = Carrier.objects.filter(name=carrier)
+    if not carriers:
+        return JsonResponse({"success": False, "message": "Carrier not found."})
+    c = carriers.first()
+    if c.collecting:
+        return JsonResponse({"success": False, "message": "Carrier is collecting."})
+    if c.archived:
+        return JsonResponse({"success": False, "message": "Carrier has been archived."})
+    if not c.delivered:
+        return JsonResponse(
+            {"success": False, "message": "Carrier has not been delivered."}
+        )
+    if c.storage_slot:
+        return JsonResponse({"success": False, "message": "Carrier is stored already."})
+    if c.machine_slot:
+        return JsonResponse({"success": False})
+
+    storages = Storage.objects.filter(name=storage)
+    if not storages:
+        return JsonResponse({"success": False, "message": "No free storage slot."})
+    storage = storages.first()
+
+    free_slots = StorageSlot.objects.filter(
+        carrier__isnull=True, storage=storage
+    )  # later on take carrier size into consideration here
+    fs = free_slots.first()
+    fs.led_state = 2
+    fs.save()
+    Thread(
+        target=neo.led_on,
+        kwargs={"lamp": fs.name, "color": "blue"},
+    ).start()
+
+    msg = {
+        "storage": storage.name,
+        "slot": fs.qr_value,
+        "carrier": c.name,
+        "success": True,
+    }
+    return JsonResponse(msg)
+
+
+@csrf_exempt
+def store_carrier_confirm(request, carrier, slot):
+    # see store carrier
+
+    carrier = carrier.strip()  # remove whitespace
+    slot = slot.strip()  # remove whitespace
+    queryset = Carrier.objects.filter(name=carrier)
+    if not queryset:
+        return JsonResponse({"success": False, "message": "Carrier not found."})
+
+    queryset2 = StorageSlot.objects.filter(qr_value=slot)
+    if not queryset2:
+        return JsonResponse({"success": False, "message": "no slot found"})
+    c = queryset.first()
+    ss = queryset2.first()
+    if ss.led_state == 0:
+        return JsonResponse({"success": False, "message": "led is off but shouldn't"})
+    c.storage_slot = ss
+    c.save()
+    ss.led_state = 0
     Thread(
         target=neo.led_off,
         kwargs={
-            "lamp": slot,
+            "lamp": ss.name,
         },
     ).start()
     ss.save()
@@ -274,30 +458,29 @@ def store_carrier_confirm(request, carrier, slot):
 
 
 def collect_carrier(request, carrier):
-    carrier = carrier.strip()
+    # the user asks to collect a carrier, if possible its added to the collect "queue"(its actually a set but queue sounds better) so the user can collect batchwise not one by one
+    # in the next step the user scans all the carriers to make sure he collected the correct ones
+    carrier = carrier.strip()  # remove whitespace
     c = Carrier.objects.filter(name=carrier).first()
 
-    # get queue and add
-    queryset = Carrier.objects.filter(collecting=True)
-    # print(queryset)
+    queryset = Carrier.objects.filter(collecting=True)  # collect queue
     if c in queryset:
         return JsonResponse({"success": False, "message": "Already in queue."})
-    c.collecting = True
+    c.collecting = True  # add to queue
     c.save()
     queryset = Carrier.objects.filter(collecting=True)
-    # print(queryset)
     queue = [
         {
             "carrier": cc.name,
             "storage": cc.storage_slot.storage.name,
-            "slot": cc.storage_slot.name,
+            "slot": cc.storage_slot.qr_value,
         }
         for cc in queryset
     ]
 
     msg = {
         "storage": c.storage_slot.storage.name,
-        "slot": c.storage_slot.name,
+        "slot": c.storage_slot.qr_value,
         "carrier": c.name,
         "queue": queue,
     }
@@ -309,20 +492,29 @@ def collect_carrier(request, carrier):
 
 
 def collect_carrier_confirm(request, carrier, slot):
-    carrier = carrier.strip()
-    slot = slot.strip()
-    # get queue
-    queryset = Carrier.objects.filter(collecting=True)
-    # check membership
-    queryset = queryset.filter(name=carrier)
+    # see collect carrier
+
+    carrier = carrier.strip()  # remove whitespace
+    slot = slot.strip()  # remove whitespace
+    queryset = Carrier.objects.filter(collecting=True)  # collect queue
+    queryset = queryset.filter(name=carrier)  # is carrier in the queue?
 
     if not queryset:
-        return
+        return JsonResponse(
+            {
+                "success": False,
+                "message": f"Carrier {carrier} is not in the collect queue.",
+            }
+        )
     c = queryset.first()
 
-    # check slot correct
-    if c.storage_slot.name != slot:
-        return
+    if c.storage_slot.qr_value != slot:
+        return JsonResponse(
+            {
+                "success": False,
+                "message": f"Carrier {carrier} is in slot {c.storage_slot.qr_value} not in slot {slot}",
+            }
+        )
     c.storage_slot.led_state = 0
     c.save()
     Thread(
@@ -330,60 +522,105 @@ def collect_carrier_confirm(request, carrier, slot):
         kwargs={"lamp": c.storage_slot.name},
     ).start()
 
-    # set slot to null
     c.storage_slot = None
-    # remove vom queue
     c.collecting = False
     c.save()
-    # return storage, slot, carrier queue
     queryset = Carrier.objects.filter(collecting=True)
     queue = [
         {
             "carrier": cc.name,
             "storage": cc.storage_slot.storage.name,
-            "slot": cc.storage_slot.name,
+            "slot": cc.storage_slot.qr_value,
         }
         for cc in queryset
     ]
 
-    msg = {"storage": None, "slot": None, "carrier": c.name, "queue": queue}
+    msg = {
+        "success": True,
+        "storage": None,
+        "slot": None,
+        "carrier": c.name,
+        "queue": queue,
+    }
     return JsonResponse(msg)
 
 
-class ListStoragesAPI(generics.ListAPIView):
-    model = Carrier
-    serializer_class = CarrierSerializer
-
-    def get_queryset(self):
-        storage = self.kwargs["storage"]
-        s = Storage.objects.get(name=storage)
-        slots_qs = StorageSlot.objects.filter(storage=s)
-        queryset = Carrier.objects.filter(storage_slot__in=slots_qs)
-        return queryset
+@csrf_exempt
+def save_file_and_get_headers(request):
+    # first step of a 2 step workflow to create articles/carriers from a csv file
+    # this step saves the file for future processing and returns the headers of said csv file
+    if request.FILES and request.POST:
+        lf = LocalFile.objects.create(
+            file_object=File(request.FILES["file"]),
+            upload_type=request.POST["upload_type"],
+        )
+        try:
+            with open(lf.file_object.path, newline="") as f:
+                csv_reader = csv.reader(f, delimiter=",")
+                lf.headers = list(csv_reader.__next__())
+                lf.save()
+                if lf.upload_type == "article":
+                    model_fields = [f.name for f in Article._meta.get_fields()]
+                elif lf.upload_type == "carrier":
+                    model_fields = [f.name for f in Carrier._meta.get_fields()]
+                elif lf.upload_type == "board":
+                    model_fields = ["article", "count"]
+                    if "board_name" in request.POST.keys():
+                        lf.board_name = request.POST["board_name"]
+                        lf.save()
+                return JsonResponse(
+                    {
+                        "object_fields": sorted(model_fields),
+                        "header_fields": sorted(lf.headers),
+                        "file_name": lf.name,
+                    }
+                )
+        except Exception as e:
+            print(e)
+            return JsonResponse({"success": False})
+    return JsonResponse({"success": False})
 
 
 @csrf_exempt
 def user_mapping_and_file_processing(request):
+    # first of all i am sorry for this monster, feel free to refactor when bored
+    # this function is the abstraction for the user uploading csv files to create model instances with them, but the csv headers names do not have to correspond with
+    # the models field names, because the user creates a mapping from the csv header names to the models field names in the frontend
+
     if request.POST:
         file_name = request.POST["file_name"]
+        lf = LocalFile.objects.get(name=file_name)
+
         map_ = request.POST["map"]
         map_ = json.loads(map_)
-        map_l = [(k, v) for k, v in map_.items() if v]
-        lf = LocalFile.objects.get(name=file_name)
+        map_l = [
+            (k, v) for k, v in map_.items() if v
+        ]  # remove fields that have empty values
+
         msg = {"created": [], "fail": []}
+
         with open(lf.file_object.name) as f:
             csv_reader = csv.reader(f, delimiter=",")
-            a_headers = csv_reader.__next__()
+
+            a_headers = csv_reader.__next__()  # 1st row contains the column headers
+
+            # the following comprehensions takes the text to text mapping from the user to a index based mapping i.e. nth csv header corresponds to the mth model field
             index_map = {value: index for index, value in enumerate(a_headers)}
             map_ordered_l = sorted(map_l, key=lambda x: index_map[x[1]])
+
             for l in csv_reader:
                 if lf.upload_type == "board":
-                    if not request.POST["board"] or not Board.objects.filter(
-                        name=request.POST["board"]
+                    # print(f"\n\n")
+                    # pp(request.POST)
+                    # print(f"\n\n")
+                    if not lf.board_name or not Board.objects.filter(
+                        name=lf.board_name
                     ):
-                        msg["fail"].append("Board does not exist.")
+                        msg["fail"].append(
+                            f"Board {request.POST['board']} does not exist."
+                        )
                         break
-                    board = Board.objects.get(name=request.POST["board"])
+                    board = Board.objects.get(name=lf.board_name)
 
                     board_article_dict = {
                         k[0]: l[a_headers.index(k[1])] for k in map_ordered_l
@@ -396,7 +633,6 @@ def user_mapping_and_file_processing(request):
                         msg["fail"].append(
                             f"{board_article_dict['article']} does not exist."
                         )
-                        # print(msg)
                         break
                     if (
                         not board_article_dict.get("count", None)
@@ -422,10 +658,25 @@ def user_mapping_and_file_processing(request):
                         carrier_dict["article"] = a
                     if not carrier_dict.get("storage_slot", None):
                         carrier_dict["storage_slot"] = None
+                    if not carrier_dict.get("storage", None):
+                        carrier_dict["storage"] = None
                     if not carrier_dict.get("machine_slot", None):
                         carrier_dict["machine_slot"] = None
-                    if not carrier_dict.get("boardarticle", None):
-                        carrier_dict["boardarticle"] = None
+                    if not carrier_dict.get("diameter", None):
+                        carrier_dict["diameter"] = 7
+                    if not carrier_dict.get("width", None):
+                        carrier_dict["width"] = 8
+                    if not carrier_dict.get("container_type", None):
+                        carrier_dict["container_type"] = 0
+                    elif carrier_dict.get("container_type").lower() == "reel":
+                        carrier_dict["container_type"] = 0
+                    elif carrier_dict.get("container_type").lower() == "tray":
+                        carrier_dict["container_type"] = 1
+                    elif carrier_dict.get("container_type").lower() == "bag":
+                        carrier_dict["container_type"] = 2
+                    elif carrier_dict.get("container_type").lower() == "single":
+                        carrier_dict["container_type"] = 3
+
                     if not Carrier.objects.filter(name=carrier_dict["name"]).exists():
                         c = Carrier.objects.create(**carrier_dict)
                         msg["created"].append(c.name)
@@ -436,7 +687,6 @@ def user_mapping_and_file_processing(request):
                     article_dict = {
                         k[0]: l[a_headers.index(k[1])] for k in map_ordered_l
                     }
-                    print(0, article_dict)
 
                     if (
                         "manufacturer" in article_dict.keys()
@@ -450,7 +700,6 @@ def user_mapping_and_file_processing(request):
                             msg["created"].append(o_m.name)
 
                     if "provider1" in article_dict.keys() and article_dict["provider1"]:
-                        print(f'creating provider1 :{article_dict["provider1"]}')
                         (
                             provider1_object,
                             provider1_created,
@@ -458,7 +707,6 @@ def user_mapping_and_file_processing(request):
                             name=article_dict["provider1"]
                         )
                         article_dict["provider1"] = provider1_object
-                        print(provider1_object)
                         if provider1_created:
                             msg["created"].append(provider1_object.name)
                     if "provider2" in article_dict.keys() and article_dict["provider2"]:
@@ -508,7 +756,6 @@ def user_mapping_and_file_processing(request):
                     ):
                         del article_dict["boardarticle"]
                     if not Article.objects.filter(name=article_dict["name"]).exists():
-                        pp(article_dict)
                         o_a = Article.objects.create(
                             **{k: v for k, v in article_dict.items() if k and v}
                         )
@@ -526,41 +773,35 @@ def user_mapping_and_file_processing(request):
     return JsonResponse({"success": "false"})
 
 
-@csrf_exempt
-def save_file_and_get_headers(request):
-    # print(request.FILES)
-    # print(request.POST)
+def create_qr_code(request, code):
+    img = qrcode.make(code)
+    buffer = io.BytesIO()
+    img.save(buffer)
+    buffer.seek(0)
+    return FileResponse(buffer, filename=f"{code}.png")
 
-    if request.FILES and request.POST:
-        lf = LocalFile.objects.create(
-            file_object=File(request.FILES["file"]),
-            upload_type=request.POST["upload_type"],
-        )
-        # open file
-        with open(lf.file_object.path, newline="") as f:
-            csv_reader = csv.reader(f, delimiter=",")
-            lf.headers = list(csv_reader.__next__())
-            lf.save()
-            if lf.upload_type == "article":
-                model_fields = [f.name for f in Article._meta.get_fields()]
-            elif lf.upload_type == "carrier":
-                model_fields = [f.name for f in Carrier._meta.get_fields()]
-            elif lf.upload_type == "board":
-                model_fields = ["article", "count"]
-            return JsonResponse(
-                {
-                    "object_fields": sorted(model_fields),
-                    "header_fields": sorted(lf.headers),
-                    "file_name": lf.name,
-                }
-            )
-    return JsonResponse({"success": False})
+
+class ListStoragesAPI(generics.ListAPIView):
+    """List Storages API"""
+
+    model = Carrier
+    serializer_class = CarrierSerializer
+
+    def get_queryset(self):
+        """Retrieve Carrier queryset based on storage slots"""
+        storage = self.kwargs["storage"]
+        slots_qs = StorageSlot.objects.filter(storage__name=storage)
+        queryset = Carrier.objects.filter(storage_slot__in=slots_qs)
+        return queryset
 
 
 class ArticleNameViewSet(generics.ListAPIView):
+    """Article Name ViewSet"""
+
     model = Article
 
     def get(self, request):
+        """Get all articles and serialize their names"""
         queryset = Article.objects.all()
         serializer = ArticleNameSerializer(queryset, many=True)
         data = [{k: v for k, v in a.items()} for a in serializer.data]
@@ -620,14 +861,38 @@ class ArticleViewSet(viewsets.ModelViewSet):
     ordering_fields = "__all__"
 
 
+class BoardFilter(rest_filter.FilterSet):
+    class Meta:
+        model = Board
+        fields = "__all__"
+
+
 class BoardViewSet(viewsets.ModelViewSet):
     queryset = Board.objects.all()
     serializer_class = BoardSerializer
+    filter_backends = (
+        rest_filter.DjangoFilterBackend,
+        filters.SearchFilter,
+        filters.OrderingFilter,
+    )
+    filterset_class = BoardFilter
+
+
+class BoardArticleFilter(rest_filter.FilterSet):
+    class Meta:
+        model = BoardArticle
+        fields = "__all__"
 
 
 class BoardArticleViewSet(viewsets.ModelViewSet):
     queryset = BoardArticle.objects.all()
     serializer_class = BoardArticleSerializer
+    filter_backends = (
+        rest_filter.DjangoFilterBackend,
+        filters.SearchFilter,
+        filters.OrderingFilter,
+    )
+    filterset_class = BoardArticleFilter
 
 
 class CarrierNameViewSet(generics.ListAPIView):
@@ -641,8 +906,6 @@ class CarrierNameViewSet(generics.ListAPIView):
 
 
 class CarrierFilter(django_filters.FilterSet):
-    # There is no default filtering system for selection fields,
-    # I implemented a custom option for gt and lt, if you don’t need them, you can simply delete them
     article__provider1__name = rest_filter.CharFilter(method="article_provider_filter")
     article__provider2__name = rest_filter.CharFilter(method="article_provider_filter")
     article__provider3__name = rest_filter.CharFilter(method="article_provider_filter")

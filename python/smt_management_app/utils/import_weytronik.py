@@ -5,40 +5,6 @@ import random
 from pprint import pprint as pp
 import time
 
-
-def led_address_to_side_row_lamp(led_address):
-    if led_address < 1 or led_address > 1400:
-        raise ValueError("LED address should be between 1 and 1400.")
-
-    side = "001" if led_address < 701 else "002"
-    if led_address > 700:
-        led_address -= 700
-    row = (led_address - 1) // 100 + 1
-    lamp = (led_address - 1) % 100 + 1
-
-    return f"{str(side).zfill(3)}-{str(row).zfill(2)}-{str(lamp).zfill(3)}"
-
-
-def side_row_lamp_to_led_address(input_string):
-    side, row, lamp = input_string.split("-")
-    if len(side) != 3 or len(row) != 2 or len(lamp) != 3:
-        raise ValueError("Invalid input format.")
-
-    side = int(side)
-    row = int(row)
-    lamp = int(lamp)
-
-    if side not in [1, 2] or row < 1 or row > 14 or lamp < 1 or lamp > 100:
-        raise ValueError("Invalid input values.")
-
-    if side == 1:
-        led_address = (row - 1) * 100 + lamp
-    else:
-        led_address = 700 + (row - 1) * 100 + lamp
-
-    return led_address
-
-
 client = requests.session()
 
 base_url = "localhost"
@@ -53,16 +19,17 @@ url5 = f"http://{base_url}:8000/api/manufacturer/"
 resp_storage = client.get(url4)
 storage = resp_storage.json()
 if not storage["results"]:
-    resp_create_storage = client.post(url4, {"name": "storage1", "capacity": 1000})
+    resp_create_storage = client.post(url4, {"name": "storage1", "capacity": 1400})
     pp(resp_create_storage.json())
     for i in range(1, 1401):
         data3 = {
-            "name": led_address_to_side_row_lamp(i),
+            "name": i,
             "storage": "storage1",
         }
         print(i, data3)
         resp3 = client.post(url3, json=data3)
 
+input("more than storage creation ?")
 
 with open(path, encoding="latin_1") as f:
     data = list(csv.reader(f, delimiter=","))
