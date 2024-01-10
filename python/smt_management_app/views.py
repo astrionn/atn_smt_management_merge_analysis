@@ -3,13 +3,8 @@ import csv
 from pprint import pprint as pp
 import re
 
-import operator
-from functools import reduce
-from django.forms import JSONField
 
 from django_filters.rest_framework import DjangoFilterBackend
-import operator
-from functools import reduce
 
 from django.middleware.csrf import get_token
 from django.views.decorators.csrf import requires_csrf_token, csrf_exempt
@@ -18,17 +13,14 @@ from django.views.decorators.csrf import requires_csrf_token, csrf_exempt
 from django_filters import rest_framework as rest_filter
 import django_filters
 from rest_framework import viewsets, filters, generics
-from rest_framework.authtoken.models import Token
 
 from django.http import JsonResponse
 from django.core.files import File
-from django.apps import AppConfig
 
 
 from .serializers import *
 
 from .models import (
-    AbstractBaseModel,
     Manufacturer,
     Provider,
     Article,
@@ -43,8 +35,7 @@ from .models import (
     LocalFile,
 )
 
-from .neolight_handler import NeoLightAPI
-from .PTL_handler import PTL_API
+
 from .xgate_handler import XGateHandler
 from .dymoHandler import DymoHandler
 

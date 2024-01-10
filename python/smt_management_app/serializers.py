@@ -1,17 +1,7 @@
 
 
-from pkg_resources import require
 from .models import *
 from rest_framework import serializers
-
-# created by todo.org tangle
-# Create your serializers here.
-
-from os import read
-from pprint import pprint as pp
-from .models import *
-from rest_framework import serializers
-
 
 # created by todo.org tangle
 # Create your serializers here.

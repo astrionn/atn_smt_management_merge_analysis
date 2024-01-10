@@ -1,5 +1,3 @@
-import random
-# from pprint import pprint as pp
 import serial
 
 

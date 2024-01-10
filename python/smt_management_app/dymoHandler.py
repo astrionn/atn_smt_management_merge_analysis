@@ -21,7 +21,7 @@ class DymoHandler:
             print(f"Label printed: {message_a}, {message_b}")
             return True
         except subprocess.CalledProcessError as e:
-            print(f"Error printing label: {e}")
+            print(f"Error printing label 12: {e}")
             return False
 
 # Example usage

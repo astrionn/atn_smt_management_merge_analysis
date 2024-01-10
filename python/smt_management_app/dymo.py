@@ -1,16 +1,16 @@
 from os import path
-from tkinter.constants import E
 from win32com.client import Dispatch
 
+
 class DymoHandler:
-    def __init__(self,label_name='Siemens.label') -> None:
+    def __init__(self, label_name='Siemens.label') -> None:
         import pythoncom
 
         pythoncom.CoInitialize()
 
-        self.label = path.join('matmanagment', 'media',label_name)
+        self.label = path.join('matmanagment', 'media', label_name)
         if not path.isfile(self.label):
-            print('PyDymoLabel','Template file siemens.label does not exist')
+            print('PyDymoLabel', 'Template file siemens.label does not exist')
             return
 
         else:
@@ -18,10 +18,10 @@ class DymoHandler:
                 self.labelCom = Dispatch('Dymo.DymoAddIn')
                 self.labelText = Dispatch('Dymo.DymoLabels')
             except Exception as e:
-                print('PyDymoLabel','Dymo Add-in not installed', e)
+                print('PyDymoLabel', 'Dymo Add-in not installed', e)
                 return
 
-    def print_label(self,message_a='', message_b='',message_c='',message_d='',message_e='', feeder = False):
+    def print_label(self, message_a='', message_b='', message_c='', message_d='', message_e='', feeder=False):
         try:
             selectPrinter = 'DYMO LabelWriter 450'
             self.labelCom.SelectPrinter(selectPrinter)
@@ -46,5 +46,5 @@ class DymoHandler:
             self.labelCom.EndPrintJob()
             return True
         except Exception as e:
-            print('PyDymoLabel','Error printing label', e)
+            print('PyDymoLabel', 'Error printing label', e)
             return False
