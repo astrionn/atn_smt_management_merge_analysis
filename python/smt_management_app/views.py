@@ -42,6 +42,8 @@ from .dymoHandler import DymoHandler
 
 from threading import Thread
 
+# from python.smt_management_app import models
+
 try:
     dymo = None
     dymo = DymoHandler()
@@ -379,7 +381,7 @@ def user_mapping_and_file_processing(request):
                     if not request.POST["board"] or not Board.objects.filter(
                         name=request.POST["board"]
                     ):
-                        msg["fail"].append(f"Board does not exist.")
+                        msg["fail"].append("Board does not exist.")
                         break
                     board = Board.objects.get(name=request.POST["board"])
 
@@ -407,7 +409,7 @@ def user_mapping_and_file_processing(request):
                     board_article_dict[
                         "name"
                     ] = f"{board.name}_{board_article_dict['article'].name}"
-                    b_article = BoardArticle.objects.create(**board_article_dict)
+                    BoardArticle.objects.create(**board_article_dict)
                     msg["created"].append(f"{board_article_dict['name']}")
 
                 if lf.upload_type == "carrier":
@@ -519,7 +521,7 @@ def user_mapping_and_file_processing(request):
                     else:
                         msg["fail"].append(article_dict["name"])
 
-        msg_j = json.dumps(msg)
+        # msg_j = json.dumps(msg)
         return JsonResponse(msg, safe=False)
     return JsonResponse({"success": "false"})
 

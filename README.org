@@ -53,17 +53,7 @@ How to install the backend
   py -3.11 -m venv venv
   .\venv\Scrips\activate
 #+end_src
-- install django and drf
-  #+begin_src
-    .\venv\Scripts\python.exe -m pip install --upgrade pip
-    .\venv\Scripts\python.exe -m pip install django
-    .\venv\Scripts\python.exe -m pip install djangorestframework
-    .\venv\Scripts\python.exe -m pip install django-filter
-    .\venv\Scripts\python.exe -m pip install django-cors-headers
-    .\venv\Scripts\python.exe -m pip install requests
-    .\venv\Scripts\python.exe -m pip install tk
-    .\venv\Scripts\python.exe -m pip install pywin32
-  #+end_src
+
 - start django project and create app
   #+begin_src
     .\venv\Scripts\python.exe -m django startproject atn_smt_management
