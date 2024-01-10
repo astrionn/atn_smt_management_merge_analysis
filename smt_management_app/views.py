@@ -38,7 +38,6 @@ from .models import (
 )
 
 
-
 from threading import Thread
 
 # from python.smt_management_app import models

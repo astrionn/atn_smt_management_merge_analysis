@@ -1,7 +1,9 @@
 
 
 # from .models import *
-from .models import Article, Board, BoardArticle, Carrier, Job, Machine, MachineSlot, Manufacturer, Provider, Storage, StorageSlot
+from .models import (
+    Article, Board, BoardArticle, Carrier, Job, Machine, MachineSlot, Manufacturer, Provider, Storage, StorageSlot
+)
 from rest_framework import serializers
 
 # created by todo.org tangle
