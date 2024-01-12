@@ -95,6 +95,7 @@ def assign_carrier_to_job(request, job, carrier):
     else:
         return JsonResponse({"success": False})
 
+
 def deliver_all_carriers(request):
     i = Carrier.objects.all().update(delivered=True)
     return JsonResponse({"success": True, "updated_amount": i})
@@ -348,7 +349,8 @@ def store_carrier_choose_slot(request, carrier, storage):
             ).start()
             msg["slot"].append(fs.name)
     else:  # compound enabling for neotel rack
-        neo._LED_On_Control({"lamps": {neo.fs.name: "blue" for fs in free_slots}})
+        neo._LED_On_Control({"lamps": {fs.name: "blue" for fs in free_slots}})
+        free_slots.update(led_state=0)
 
     return JsonResponse(msg)
 
