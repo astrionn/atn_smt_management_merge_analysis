@@ -1,21 +1,13 @@
-from pprint import pprint as pp
-from typing import Required
 
-from pkg_resources import require
-from .models import *
+
+# from .models import *
+from .models import Article, Board, BoardArticle, Carrier, Job, Machine, MachineSlot, Manufacturer, Provider, Storage, StorageSlot
 from rest_framework import serializers
 
 # created by todo.org tangle
 # Create your serializers here.
 
-from os import read
-from pprint import pprint as pp
-from .models import *
-from rest_framework import serializers
 
-
-# created by todo.org tangle
-# Create your serializers here.
 class StorageSerializer(serializers.ModelSerializer):
     class Meta:
         model = Storage

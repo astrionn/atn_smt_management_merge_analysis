@@ -1,7 +1,4 @@
-import random
-from pprint import pprint as pp
 import serial
-import serial.tools.list_ports as list_ports_
 
 
 class PTL_API:
