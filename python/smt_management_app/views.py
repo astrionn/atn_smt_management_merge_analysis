@@ -1,12 +1,9 @@
 import json
 import csv
-from pprint import pprint as pp
 
 import io
 import qrcode
-from PIL import Image
 
-from functools import reduce
 
 from django_filters.rest_framework import DjangoFilterBackend
 
@@ -16,13 +13,14 @@ from django.views.decorators.csrf import requires_csrf_token, csrf_exempt
 
 from django_filters import rest_framework as rest_filter
 import django_filters
+from .serializers import ArticleNameSerializer, ArticleSerializer, BoardArticleSerializer, BoardSerializer, CarrierNameSerializer, CarrierSerializer, JobSerializer, MachineSerializer, MachineSlotSerializer, ManufacturerNameSerializer, ManufacturerSerializer, ProviderNameSerializer, ProviderSerializer, StorageSerializer, StorageSlotSerializer
 from rest_framework import viewsets, filters, generics
 
 from django.http import FileResponse, JsonResponse
 from django.core.files import File
 
 
-from .serializers import *
+# from .serializers import *
 
 from .models import (
     Manufacturer,
@@ -40,14 +38,10 @@ from .models import (
 )
 
 
-from .utils.neolight_handler import NeoLightAPI
-
-# from .utils.PTL_handler import PTL_API
-# from .utils.xgate_handler import NeoWrapperXGate
-
-# from .utils.dymoHandler import DymoHandler
 
 from threading import Thread
+
+# from python.smt_management_app import models
 
 try:
     # initalize 3rd party handlers for connected devices like smart shelfs and label printers
@@ -652,7 +646,7 @@ def user_mapping_and_file_processing(request):
                     board_article_dict[
                         "name"
                     ] = f"{board.name}_{board_article_dict['article'].name}"
-                    b_article = BoardArticle.objects.create(**board_article_dict)
+                    BoardArticle.objects.create(**board_article_dict)
                     msg["created"].append(f"{board_article_dict['name']}")
 
                 if lf.upload_type == "carrier":
@@ -775,7 +769,7 @@ def user_mapping_and_file_processing(request):
                     else:
                         msg["fail"].append(article_dict["name"])
 
-        msg_j = json.dumps(msg)
+        # msg_j = json.dumps(msg)
         return JsonResponse(msg, safe=False)
     return JsonResponse({"success": "false"})
 
