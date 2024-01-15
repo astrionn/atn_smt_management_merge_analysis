@@ -2,38 +2,30 @@ import json
 import csv
 import io
 import qrcode
+from threading import Thread
 
 
 from django_filters.rest_framework import DjangoFilterBackend
-
 from django.middleware.csrf import get_token
 from django.views.decorators.csrf import requires_csrf_token, csrf_exempt
-
-
 from django_filters import rest_framework as rest_filter
 import django_filters
+from django.http import FileResponse, JsonResponse
+from django.core.files import File
+from rest_framework import viewsets, filters, generics
+
 from .serializers import (
     ArticleNameSerializer, ArticleSerializer, BoardArticleSerializer, BoardSerializer,
     CarrierNameSerializer, CarrierSerializer, JobSerializer, MachineSerializer,
     MachineSlotSerializer, ManufacturerNameSerializer, ManufacturerSerializer,
     ProviderNameSerializer, ProviderSerializer, StorageSerializer, StorageSlotSerializer
 )
-from rest_framework import viewsets, filters, generics
-
-from django.http import FileResponse, JsonResponse
-from django.core.files import File
-
-
 from .models import (
     Manufacturer, Provider, Article, Carrier, Machine, MachineSlot,
     Storage, StorageSlot, Job, Board, BoardArticle, LocalFile,
 )
-
-from threading import Thread
-
 from smt_management_app import models
 
-# from python.smt_management_app import models
 
 try:
     # initalize 3rd party handlers for connected devices like smart shelfs and label printers
