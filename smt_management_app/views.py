@@ -13,7 +13,12 @@ from django.views.decorators.csrf import requires_csrf_token, csrf_exempt
 
 from django_filters import rest_framework as rest_filter
 import django_filters
-from .serializers import ArticleNameSerializer, ArticleSerializer, BoardArticleSerializer, BoardSerializer, CarrierNameSerializer, CarrierSerializer, JobSerializer, MachineSerializer, MachineSlotSerializer, ManufacturerNameSerializer, ManufacturerSerializer, ProviderNameSerializer, ProviderSerializer, StorageSerializer, StorageSlotSerializer
+from .serializers import (
+    ArticleNameSerializer, ArticleSerializer, BoardArticleSerializer, BoardSerializer,
+    CarrierNameSerializer, CarrierSerializer, JobSerializer, MachineSerializer,
+    MachineSlotSerializer, ManufacturerNameSerializer, ManufacturerSerializer,
+    ProviderNameSerializer, ProviderSerializer, StorageSerializer, StorageSlotSerializer
+)
 from rest_framework import viewsets, filters, generics
 
 from django.http import FileResponse, JsonResponse
@@ -39,6 +44,8 @@ from .models import (
 
 
 from threading import Thread
+
+from smt_management_app import models
 
 # from python.smt_management_app import models
 
@@ -295,7 +302,6 @@ def get_csrf_token(request):
 
 @csrf_exempt
 def store_carrier_choose_slot(request, carrier, storage):
-    # the user asks to store a carrier in a storage, if that is possible all possible slots LEDs for the storage get turned on, we send back the storage and slots for the user to confirm collection in the next step
     carrier = carrier.strip()  # remove whitespace
     carriers = Carrier.objects.filter(name=carrier)
     if not carriers:
@@ -382,7 +388,6 @@ def store_carrier_choose_slot_confirm(request, carrier, slot):
 
 @csrf_exempt
 def store_carrier(request, carrier, storage):
-    # the user asks to store a carrier in a storage, if that is possible a slot is chosen and the corresponding LED turned on, we send back the storage and slot for the user to confirm collection in the next step
     carrier = carrier.strip()  # remove whitespace
     carriers = Carrier.objects.filter(name=carrier)
     if not carriers:
@@ -457,7 +462,8 @@ def store_carrier_confirm(request, carrier, slot):
 
 
 def collect_carrier(request, carrier):
-    # the user asks to collect a carrier, if possible its added to the collect "queue"(its actually a set but queue sounds better) so the user can collect batchwise not one by one
+    # the user asks to collect a carrier, if possible its added to the collect "queue"(its actually
+    # a set but queue sounds better) so the user can collect batchwise not one by one
     # in the next step the user scans all the carriers to make sure he collected the correct ones
     carrier = carrier.strip()  # remove whitespace
     c = Carrier.objects.filter(name=carrier).first()
@@ -583,35 +589,32 @@ def save_file_and_get_headers(request):
 @csrf_exempt
 def user_mapping_and_file_processing(request):
     # first of all i am sorry for this monster, feel free to refactor when bored
-    # this function is the abstraction for the user uploading csv files to create model instances with them, but the csv headers names do not have to correspond with
+    # this function is the abstraction for the user uploading csv files to create model instances with them,
+    # but the csv headers names do not have to correspond with
     # the models field names, because the user creates a mapping from the csv header names to the models field names in the frontend
 
-    if request.POST:
-        file_name = request.POST["file_name"]
+    if request.method == "POST":
+        file_name = request.POST.get("file_name")
+
         lf = LocalFile.objects.get(name=file_name)
 
-        map_ = request.POST["map"]
-        map_ = json.loads(map_)
+        map_json = json.loads(request.POST["map"])
+
         map_l = [
-            (k, v) for k, v in map_.items() if v
+            (k, v) for k, v in map_json.items() if v
         ]  # remove fields that have empty values
 
         msg = {"created": [], "fail": []}
+        with open(lf.file_object.name, 'r', encoding='ISO-8859-1') as f:
 
-        with open(lf.file_object.name) as f:
             csv_reader = csv.reader(f, delimiter=",")
+            a_headers = next(csv_reader)
 
-            a_headers = csv_reader.__next__()  # 1st row contains the column headers
-
-            # the following comprehensions takes the text to text mapping from the user to a index based mapping i.e. nth csv header corresponds to the mth model field
             index_map = {value: index for index, value in enumerate(a_headers)}
             map_ordered_l = sorted(map_l, key=lambda x: index_map[x[1]])
 
-            for l in csv_reader:
+            for item in csv_reader:
                 if lf.upload_type == "board":
-                    # print(f"\n\n")
-                    # pp(request.POST)
-                    # print(f"\n\n")
                     if not lf.board_name or not Board.objects.filter(
                         name=lf.board_name
                     ):
@@ -622,7 +625,7 @@ def user_mapping_and_file_processing(request):
                     board = Board.objects.get(name=lf.board_name)
 
                     board_article_dict = {
-                        k[0]: l[a_headers.index(k[1])] for k in map_ordered_l
+                        k[0]: item[a_headers.index(k[1])] for k in map_ordered_l
                     }
                     board_article_dict["board"] = board
                     a = Article.objects.filter(name=board_article_dict["article"])
@@ -649,7 +652,7 @@ def user_mapping_and_file_processing(request):
 
                 if lf.upload_type == "carrier":
                     carrier_dict = {
-                        k[0]: l[a_headers.index(k[1])] for k in map_ordered_l
+                        k[0]: item[a_headers.index(k[1])] for k in map_ordered_l
                     }
 
                     if carrier_dict.get("article", None):
@@ -684,7 +687,7 @@ def user_mapping_and_file_processing(request):
 
                 if lf.upload_type == "article":
                     article_dict = {
-                        k[0]: l[a_headers.index(k[1])] for k in map_ordered_l
+                        k[0]: item[a_headers.index(k[1])] for k in map_ordered_l
                     }
 
                     if (
