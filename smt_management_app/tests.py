@@ -1,8 +1,6 @@
-from pprint import pprint as pp
-import os
+
 import json
-import datetime
-import pytz
+
 from logging import getLogger, DEBUG
 from random import randint
 import random
@@ -17,17 +15,11 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 
 from .models import (
     AbstractBaseModel,
-    Manufacturer,
-    Provider,
     Article,
     Carrier,
-    Machine,
-    MachineSlot,
     Storage,
     StorageSlot,
-    Job,
     Board,
-    BoardArticle,
 )
 
 # Create your tests here.
@@ -610,15 +602,6 @@ class CommonSetUpTestCase(TestCase):
         )
         # pp(resp_job_display_boardarticles.json())
 
-    # Article.objects.create
-    # Carrier.objects.create
-    # Storage.objects.create
-    # StorageSlot.objects.create
-    # Board.objects.create
-    # Job.objects.create
-    # collect_carriers_job(job) -> queue
-    # collect_carrier_confirm_slot(slot, carrier) -> storage, slot, carrier, queue
-
     def test_view_storing_carrier(cls):
         art_randname = cls.get_random_name("article")
         a = Article.objects.create(name=art_randname)
@@ -738,7 +721,7 @@ class CommonSetUpTestCase(TestCase):
         a = Article.objects.create(name=art_randname)
 
         art_randname2 = cls.get_random_name("article")
-        a2 = Article.objects.create(name=art_randname2)
+        Article.objects.create(name=art_randname2)
 
         car_randname = cls.get_random_name("carrier")
         c = Carrier.objects.create(name=car_randname, article=a, quantity_current=1000)
@@ -861,7 +844,8 @@ class CommonSetUpTestCase(TestCase):
            
            If an existing board is selected, fetch all boardarticles and display them in a non editable fashion.
            
-           If a new board is created the user can optionally load the board via a file(2 columns of a csv file with header matching akin to article/carrier file upload)
+           If a new board is created the user can optionally load the board via a file(2
+           columns of a csv file with header matching akin to article/carrier file upload)
            The displayed board is then uneditable aswell, since its been created and saved.
            
            If a new board is created without fileupload the user can manually choose article-count pairs.
