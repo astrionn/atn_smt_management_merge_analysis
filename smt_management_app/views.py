@@ -1,47 +1,31 @@
 import json
 import csv
-
 import io
 import qrcode
+from threading import Thread
 
 
 from django_filters.rest_framework import DjangoFilterBackend
-
 from django.middleware.csrf import get_token
 from django.views.decorators.csrf import requires_csrf_token, csrf_exempt
-
-
 from django_filters import rest_framework as rest_filter
 import django_filters
-from .serializers import ArticleNameSerializer, ArticleSerializer, BoardArticleSerializer, BoardSerializer, CarrierNameSerializer, CarrierSerializer, JobSerializer, MachineSerializer, MachineSlotSerializer, ManufacturerNameSerializer, ManufacturerSerializer, ProviderNameSerializer, ProviderSerializer, StorageSerializer, StorageSlotSerializer
-from rest_framework import viewsets, filters, generics
-
 from django.http import FileResponse, JsonResponse
 from django.core.files import File
+from rest_framework import viewsets, filters, generics
 
-
-# from .serializers import *
-
-from .models import (
-    Manufacturer,
-    Provider,
-    Article,
-    Carrier,
-    Machine,
-    MachineSlot,
-    Storage,
-    StorageSlot,
-    Job,
-    Board,
-    BoardArticle,
-    LocalFile,
+from .serializers import (
+    ArticleNameSerializer, ArticleSerializer, BoardArticleSerializer, BoardSerializer,
+    CarrierNameSerializer, CarrierSerializer, JobSerializer, MachineSerializer,
+    MachineSlotSerializer, ManufacturerNameSerializer, ManufacturerSerializer,
+    ProviderNameSerializer, ProviderSerializer, StorageSerializer, StorageSlotSerializer
 )
+from .models import (
+    Manufacturer, Provider, Article, Carrier, Machine, MachineSlot,
+    Storage, StorageSlot, Job, Board, BoardArticle, LocalFile,
+)
+from smt_management_app import models
 
-
-
-from threading import Thread
-
-# from python.smt_management_app import models
 
 try:
     # initalize 3rd party handlers for connected devices like smart shelfs and label printers
@@ -296,8 +280,7 @@ def get_csrf_token(request):
 
 @csrf_exempt
 def store_carrier_choose_slot(request, carrier, storage):
-    # the user asks to store a carrier in a storage, if that is possible all possible slots LEDs for the storage get turned on, we send back the storage and slots for the user to confirm collection in the next step
-    carrier = carrier.strip()  # remove whitespace
+    carrier = carrier.strip()
     carriers = Carrier.objects.filter(name=carrier)
     if not carriers:
         return JsonResponse({"success": False, "message": "Carrier not found."})
@@ -384,7 +367,6 @@ def store_carrier_choose_slot_confirm(request, carrier, slot):
 
 @csrf_exempt
 def store_carrier(request, carrier, storage):
-    # the user asks to store a carrier in a storage, if that is possible a slot is chosen and the corresponding LED turned on, we send back the storage and slot for the user to confirm collection in the next step
     carrier = carrier.strip()  # remove whitespace
     carriers = Carrier.objects.filter(name=carrier)
     if not carriers:
@@ -458,98 +440,97 @@ def store_carrier_confirm(request, carrier, slot):
     return JsonResponse({"success": True})
 
 
-def collect_carrier(request, carrier):
-    # the user asks to collect a carrier, if possible its added to the collect "queue"(its actually a set but queue sounds better) so the user can collect batchwise not one by one
-    # in the next step the user scans all the carriers to make sure he collected the correct ones
-    carrier = carrier.strip()  # remove whitespace
-    c = Carrier.objects.filter(name=carrier).first()
+def collect_carrier(request, carrier_name):
+    """
+    The user requests to collect a carrier. If possible, it's added to the collection "queue" (actually a set but queue sounds better),
+    so the user can collect batchwise, not one by one. In the next step, the user scans all the carriers to ensure they collected the correct ones.
+    """
+    carrier_name = carrier_name.strip()
+    requested_carrier = Carrier.objects.filter(name=carrier_name).first()
 
-    queryset = Carrier.objects.filter(collecting=True)  # collect queue
-    if c in queryset:
+    queued_carriers = Carrier.objects.filter(collecting=True)  # collect queue
+
+    if requested_carrier in queued_carriers:
         return JsonResponse({"success": False, "message": "Already in queue."})
-    c.collecting = True  # add to queue
-    c.save()
-    queryset = Carrier.objects.filter(collecting=True)
-    queue = [
+
+    requested_carrier.collecting = True  # add to queue
+    requested_carrier.save()
+
+    queued_carriers = Carrier.objects.filter(collecting=True)
+    collection_queue = [
         {
-            "carrier": cc.name,
-            "storage": cc.storage_slot.storage.name,
-            "slot": cc.storage_slot.qr_value,
+            "carrier": queued_carrier.name,
+            "storage": queued_carrier.storage_slot.storage.name,
+            "slot": queued_carrier.storage_slot.qr_value,
         }
-        for cc in queryset
+        for queued_carrier in queued_carriers
     ]
 
-    msg = {
-        "storage": c.storage_slot.storage.name,
-        "slot": c.storage_slot.qr_value,
-        "carrier": c.name,
-        "queue": queue,
+    response_message = {
+        "storage": requested_carrier.storage_slot.storage.name,
+        "slot": requested_carrier.storage_slot.qr_value,
+        "carrier": requested_carrier.name,
+        "queue": collection_queue,
     }
-    c.storage_slot.led_state = 2
+
+    requested_carrier.storage_slot.led_state = 2
     Thread(
-        target=neo.led_on, kwargs={"lamp": c.storage_slot.name, "color": "green"}
+        target=neo.led_on, kwargs={"lamp": requested_carrier.storage_slot.name, "color": "green"}
     ).start()
-    return JsonResponse(msg)
+
+    return JsonResponse(response_message)
 
 
 def collect_carrier_confirm(request, carrier, slot):
-    # see collect carrier
+    carrier = carrier.strip()
+    slot = slot.strip()
 
-    carrier = carrier.strip()  # remove whitespace
-    slot = slot.strip()  # remove whitespace
-    queryset = Carrier.objects.filter(collecting=True)  # collect queue
-    queryset = queryset.filter(name=carrier)  # is carrier in the queue?
+    queued_carrier = Carrier.objects.filter(collecting=True, name=carrier).first()
 
-    if not queryset:
+    if not queued_carrier:
+        return JsonResponse({"success": False, "message": f"Carrier {carrier} is not in the collect queue."})
+
+    if queued_carrier.storage_slot.qr_value != slot:
         return JsonResponse(
-            {
-                "success": False,
-                "message": f"Carrier {carrier} is not in the collect queue.",
-            }
+            {"success": False,
+             "message": f"Carrier {carrier} is in slot {queued_carrier.storage_slot.qr_value} not in slot {slot}"}
         )
-    c = queryset.first()
 
-    if c.storage_slot.qr_value != slot:
-        return JsonResponse(
-            {
-                "success": False,
-                "message": f"Carrier {carrier} is in slot {c.storage_slot.qr_value} not in slot {slot}",
-            }
-        )
-    c.storage_slot.led_state = 0
-    c.save()
-    Thread(
-        target=neo.led_off,
-        kwargs={"lamp": c.storage_slot.name},
-    ).start()
+    queued_carrier.storage_slot.led_state = 0
+    queued_carrier.storage_slot.save()
 
-    c.storage_slot = None
-    c.collecting = False
-    c.save()
-    queryset = Carrier.objects.filter(collecting=True)
-    queue = [
+    Thread(target=neo.led_off, kwargs={"lamp": queued_carrier.storage_slot.name}).start()
+
+    queued_carrier.storage_slot = None
+    queued_carrier.collecting = False
+    queued_carrier.save()
+
+    collection_queue = [
         {
-            "carrier": cc.name,
-            "storage": cc.storage_slot.storage.name,
-            "slot": cc.storage_slot.qr_value,
+            "carrier": qc.name,
+            "storage": qc.storage_slot.storage.name,
+            "slot": qc.storage_slot.qr_value,
         }
-        for cc in queryset
+        for qc in Carrier.objects.filter(collecting=True)
     ]
 
-    msg = {
+    response_message = {
         "success": True,
         "storage": None,
         "slot": None,
-        "carrier": c.name,
-        "queue": queue,
+        "carrier": queued_carrier.name,
+        "queue": collection_queue,
     }
-    return JsonResponse(msg)
+
+    return JsonResponse(response_message)
 
 
 @csrf_exempt
 def save_file_and_get_headers(request):
-    # first step of a 2 step workflow to create articles/carriers from a csv file
-    # this step saves the file for future processing and returns the headers of said csv file
+    """
+    first step of a 2 step workflow to create articles/carriers from a csv file
+    this step saves the file for future processing and returns the headers of said csv file
+    """
     if request.FILES and request.POST:
         lf = LocalFile.objects.create(
             file_object=File(request.FILES["file"]),
@@ -584,192 +565,126 @@ def save_file_and_get_headers(request):
 
 @csrf_exempt
 def user_mapping_and_file_processing(request):
-    # first of all i am sorry for this monster, feel free to refactor when bored
-    # this function is the abstraction for the user uploading csv files to create model instances with them, but the csv headers names do not have to correspond with
+    """
+    first of all i am sorry for this monster, feel free to refactor when bored
+    this function is the abstraction for the user uploading csv files to create model instances with them,
+    but the csv headers names do not have to correspond with
+    """
     # the models field names, because the user creates a mapping from the csv header names to the models field names in the frontend
 
-    if request.POST:
-        file_name = request.POST["file_name"]
+    if request.method == "POST":
+        file_name = request.POST.get("file_name")
+
         lf = LocalFile.objects.get(name=file_name)
 
-        map_ = request.POST["map"]
-        map_ = json.loads(map_)
+        map_json = json.loads(request.POST["map"])
+
         map_l = [
-            (k, v) for k, v in map_.items() if v
+            (k, v) for k, v in map_json.items() if v
         ]  # remove fields that have empty values
 
         msg = {"created": [], "fail": []}
+        with open(lf.file_object.path, 'r', encoding='ISO-8859-1') as f:
 
-        with open(lf.file_object.name) as f:
             csv_reader = csv.reader(f, delimiter=",")
+            a_headers = next(csv_reader)
 
-            a_headers = csv_reader.__next__()  # 1st row contains the column headers
-
-            # the following comprehensions takes the text to text mapping from the user to a index based mapping i.e. nth csv header corresponds to the mth model field
             index_map = {value: index for index, value in enumerate(a_headers)}
             map_ordered_l = sorted(map_l, key=lambda x: index_map[x[1]])
 
-            for l in csv_reader:
+            for item in csv_reader:
                 if lf.upload_type == "board":
-                    # print(f"\n\n")
-                    # pp(request.POST)
-                    # print(f"\n\n")
-                    if not lf.board_name or not Board.objects.filter(
-                        name=lf.board_name
-                    ):
-                        msg["fail"].append(
-                            f"Board {request.POST['board']} does not exist."
-                        )
+                    if not lf.board_name or not Board.objects.filter(name=lf.board_name):
+                        msg["fail"].append(f"Board {lf.board_name} does not exist.")
                         break
                     board = Board.objects.get(name=lf.board_name)
 
                     board_article_dict = {
-                        k[0]: l[a_headers.index(k[1])] for k in map_ordered_l
+                        key[0]: item[a_headers.index(key[1])] for key in map_ordered_l
                     }
                     board_article_dict["board"] = board
-                    a = Article.objects.filter(name=board_article_dict["article"])
-                    if a:
-                        board_article_dict["article"] = a[0]
-                    else:
-                        msg["fail"].append(
-                            f"{board_article_dict['article']} does not exist."
-                        )
-                        break
-                    if (
-                        not board_article_dict.get("count", None)
-                        or not board_article_dict["count"].isnumeric()
-                    ):
-                        msg["fail"].append(
-                            f"{board_article_dict['article']} does have invalid count."
-                        )
-                        break
-                    board_article_dict[
-                        "name"
-                    ] = f"{board.name}_{board_article_dict['article'].name}"
-                    BoardArticle.objects.create(**board_article_dict)
-                    msg["created"].append(f"{board_article_dict['name']}")
 
-                if lf.upload_type == "carrier":
+                    article_name = board_article_dict["article"]
+                    article_exists = Article.objects.filter(name=article_name).exists()
+
+                    if not article_exists:
+                        article_count = board_article_dict.get("count")
+                        if not article_count or not article_count.isnumeric():
+                            msg["fail"].append(f"{article_name} has an invalid count.")
+                            break
+
+                        board_article_dict["name"] = f"{board.name}_{article_name}"
+                        BoardArticle.objects.create(**board_article_dict)
+                        msg["created"].append(board_article_dict["name"])
+
+                elif lf.upload_type == "carrier":
                     carrier_dict = {
-                        k[0]: l[a_headers.index(k[1])] for k in map_ordered_l
+                        key[0]: item[a_headers.index(key[1])] for key in map_ordered_l
                     }
 
-                    if carrier_dict.get("article", None):
-                        a = Article.objects.get(name=carrier_dict["article"])
-                        carrier_dict["article"] = a
-                    if not carrier_dict.get("storage_slot", None):
-                        carrier_dict["storage_slot"] = None
-                    if not carrier_dict.get("storage", None):
-                        carrier_dict["storage"] = None
-                    if not carrier_dict.get("machine_slot", None):
-                        carrier_dict["machine_slot"] = None
-                    if not carrier_dict.get("diameter", None):
-                        carrier_dict["diameter"] = 7
-                    if not carrier_dict.get("width", None):
-                        carrier_dict["width"] = 8
-                    if not carrier_dict.get("container_type", None):
-                        carrier_dict["container_type"] = 0
-                    elif carrier_dict.get("container_type").lower() == "reel":
-                        carrier_dict["container_type"] = 0
-                    elif carrier_dict.get("container_type").lower() == "tray":
-                        carrier_dict["container_type"] = 1
-                    elif carrier_dict.get("container_type").lower() == "bag":
-                        carrier_dict["container_type"] = 2
-                    elif carrier_dict.get("container_type").lower() == "single":
-                        carrier_dict["container_type"] = 3
+                    article_name = carrier_dict.get("article")
+                    if article_name:
+                        article = Article.objects.get(name=article_name)
+                        carrier_dict["article"] = article
 
-                    if not Carrier.objects.filter(name=carrier_dict["name"]).exists():
-                        c = Carrier.objects.create(**carrier_dict)
-                        msg["created"].append(c.name)
+                    # Set default values if not provided
+                    carrier_dict.setdefault("storage_slot", None)
+                    carrier_dict.setdefault("storage", None)
+                    carrier_dict.setdefault("machine_slot", None)
+                    carrier_dict.setdefault("diameter", 7)
+                    carrier_dict.setdefault("width", 8)
+
+                    container_type = carrier_dict.get("container_type", "").lower()
+                    carrier_dict["container_type"] = {
+                        "reel": 0,
+                        "tray": 1,
+                        "bag": 2,
+                        "single": 3
+                    }.get(container_type, 0)
+
+                    carrier_name = carrier_dict["name"]
+                    if not Carrier.objects.filter(name=carrier_name).exists():
+                        new_carrier = Carrier.objects.create(**carrier_dict)
+                        msg["created"].append(new_carrier.name)
                     else:
-                        msg["fail"].append(carrier_dict["name"])
+                        msg["fail"].append(carrier_name)
 
-                if lf.upload_type == "article":
+                elif lf.upload_type == "article":
                     article_dict = {
-                        k[0]: l[a_headers.index(k[1])] for k in map_ordered_l
+                        key[0]: item[a_headers.index(key[1])] for key in map_ordered_l
                     }
 
-                    if (
-                        "manufacturer" in article_dict.keys()
-                        and article_dict["manufacturer"]
-                    ):
-                        o_m, c_m = Manufacturer.objects.get_or_create(
-                            name=article_dict["manufacturer"]
-                        )
-                        article_dict["manufacturer"] = o_m
-                        if c_m:
-                            msg["created"].append(o_m.name)
+                    manufacturer_name = article_dict.get("manufacturer")
+                    if manufacturer_name:
+                        manufacturer, manufacturer_created = Manufacturer.objects.get_or_create(name=manufacturer_name)
+                        article_dict["manufacturer"] = manufacturer
+                        if manufacturer_created:
+                            msg["created"].append(manufacturer.name)
 
-                    if "provider1" in article_dict.keys() and article_dict["provider1"]:
-                        (
-                            provider1_object,
-                            provider1_created,
-                        ) = Provider.objects.get_or_create(
-                            name=article_dict["provider1"]
-                        )
-                        article_dict["provider1"] = provider1_object
-                        if provider1_created:
-                            msg["created"].append(provider1_object.name)
-                    if "provider2" in article_dict.keys() and article_dict["provider2"]:
-                        (
-                            provider2_object,
-                            provider2_created,
-                        ) = Provider.objects.get_or_create(
-                            name=article_dict["provider2"]
-                        )
-                        article_dict["provider2"] = provider2_object
-                        if provider2_created:
-                            msg["created"].append(provider2_object.name)
-                    if "provider3" in article_dict.keys() and article_dict["provider3"]:
-                        (
-                            provider3_object,
-                            provider3_created,
-                        ) = Provider.objects.get_or_create(
-                            name=article_dict["provider3"]
-                        )
-                        article_dict["provider3"] = provider3_object
-                        if provider3_created:
-                            msg["created"].append(provider3_object.name)
-                    if "provider4" in article_dict.keys() and article_dict["provider4"]:
-                        (
-                            provider4_object,
-                            provider4_created,
-                        ) = Provider.objects.get_or_create(
-                            name=article_dict["provider4"]
-                        )
-                        article_dict["provider4"] = provider4_object
-                        if provider4_created:
-                            msg["created"].append(provider4_object.name)
-                    if "provider5" in article_dict.keys() and article_dict["provider5"]:
-                        (
-                            provider5_object,
-                            provider5_created,
-                        ) = Provider.objects.get_or_create(
-                            name=article_dict["provider5"]
-                        )
-                        article_dict["provider5"] = provider5_object
-                        if provider5_created:
-                            msg["created"].append(provider5_object.name)
+                    provider_keys = ["provider1", "provider2", "provider3", "provider4", "provider5"]
+                    for provider_key in provider_keys:
+                        if provider_key in article_dict and article_dict[provider_key]:
+                            provider, provider_created = Provider.objects.get_or_create(name=article_dict[provider_key])
+                            article_dict[provider_key] = provider
+                            if provider_created:
+                                msg["created"].append(provider.name)
 
-                    if (
-                        "boardarticle" in article_dict.keys()
-                        and article_dict["boardarticle"]
-                    ):
+                    if "boardarticle" in article_dict and article_dict["boardarticle"]:
                         del article_dict["boardarticle"]
-                    if not Article.objects.filter(name=article_dict["name"]).exists():
-                        o_a = Article.objects.create(
-                            **{k: v for k, v in article_dict.items() if k and v}
+
+                    article_name = article_dict["name"]
+                    article_exists = Article.objects.filter(name=article_name).exists()
+
+                    if not article_exists:
+                        new_article = Article.objects.create(
+                            **{key: value for key, value in article_dict.items() if key and value}
                         )
-                        c_a = True
-                    else:
-                        c_a = False
 
-                    if c_a:
-                        msg["created"].append(o_a.name)
+                        if new_article:
+                            msg["created"].append(new_article.name)
                     else:
-                        msg["fail"].append(article_dict["name"])
+                        msg["fail"].append(article_name)
 
-        # msg_j = json.dumps(msg)
         return JsonResponse(msg, safe=False)
     return JsonResponse({"success": "false"})
 

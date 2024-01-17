@@ -32,15 +32,17 @@ A *storage* is a shelf with *storage* *slots*, each slot has an LED that can be 
 
 #### Requirements
 
-Go to python direcotory
+Open terminal in specific direcotry
 
 To make virtual environment using
 ```
 python -m venv venv
 
 Activate environment
+
 For Windows:
 ./venv/Script/activate
+
 For MACOS:
 source ./venv/bin/activate
 ```
@@ -203,12 +205,13 @@ no screenshot : snackbar notification in green with success message
 ****fail - form****
 ![5a](https://github.com/astrionn/atn_smt_management/assets/65600488/4a3ce0e2-566a-4fc9-97ac-19e785d68375)
 
-********* fail - server
+****fail - server****
 no screenshot : snackbar notification in red with error message
 
-******** add csv articles
+****add csv articles****
 The first click opens a file upload window, afterewards the column selector.
-[[./8.PNG]]
+![8](https://github.com/astrionn/atn_smt_management/assets/65600488/927fda73-1c37-4597-ba07-3cd2ca9af87f)
+
 ****success****
 im open for a better way to design the notification
 ![8a](https://github.com/astrionn/atn_smt_management/assets/65600488/6f65b17c-582b-4e59-adb9-bf02462b442a)
@@ -414,9 +417,9 @@ t****ime and date picker****
 
 no screenshot, but same as on material entry: first the user uploads a file and then a component is mounted so the user can map column headers to field names
 with according snackbar notifications
-******** fail
+****fail****
 
-********* input error
+****input error****
 
 ![24](https://github.com/astrionn/atn_smt_management/assets/65600488/d509f3b3-81f4-414c-b335-0dcd9bc3d732)
 

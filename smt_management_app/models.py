@@ -32,9 +32,9 @@ class AbstractBaseModel(models.Model):
 
 class LocalFile(models.Model):
     def get_upload_path(self, filename):
-        return os.path.join("./pfile", self.upload_type, filename)
+        return os.path.join("pfile", self.upload_type, filename)
 
-    UPLOAD_TYPE_CHOICES = [(1, "article"), (2, "carrier"), (3, "board")]
+    UPLOAD_TYPE_CHOICES = [("article", "Article"), ("carrier", "Carrier"), ("board", "Board")]
     name = models.BigAutoField(primary_key=True, unique=True, null=False, blank=False)
     upload_type = models.CharField(
         max_length=50, choices=UPLOAD_TYPE_CHOICES, null=False, blank=False
