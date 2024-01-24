@@ -46,7 +46,7 @@ try:
 
     neo = NeoDummy()
 
-    neo = NeoLightAPI("192.168.178.11")  # weytronik
+    # neo = NeoLightAPI("192.168.178.11")  # weytronik
     # neo = PTL_API("COM16") # ATN inhouse
     # neo = NeoWrapperXGate("192.168.0.10")
 
@@ -584,6 +584,7 @@ def user_mapping_and_file_processing(request):
         ]  # remove fields that have empty values
 
         msg = {"created": [], "fail": []}
+        print('file path: ',lf.file_object.path)
         with open(lf.file_object.path, 'r', encoding='ISO-8859-1') as f:
 
             csv_reader = csv.reader(f, delimiter=",")

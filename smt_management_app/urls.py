@@ -40,7 +40,7 @@ urlpatterns.append(
     )
 )
 urlpatterns.append(
-    path("collect_carrier/<carrier>/", views.collect_carrier, name="collect_carrier")
+    path("collect_carrier/<carrier_name>/", views.collect_carrier, name="collect_carrier")
 )
 urlpatterns.append(
     path(
