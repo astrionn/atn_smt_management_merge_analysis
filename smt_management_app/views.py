@@ -128,46 +128,51 @@ def dashboard_data(request):
     carriers in storage, available storage slots, and active storages.
     """
     total_carriers = Carrier.objects.filter(archived=False).count()
-    undelivered_carriers = Carrier.objects.filter(
-        archived=False, delivered=False
-    ).count()
-    carriers_in_storage = Carrier.objects.filter(
-        archived=False, storage_slot__isnull=False
-    ).count()
+    undelivered_carriers = Carrier.objects.filter(archived=False, delivered=False).count()
+    carriers_in_storage = Carrier.objects.filter(archived=False, storage_slot__isnull=False).count()
+    carriers_in_production = Carrier.objects.filter(archived=False, storage_slot__isnull=True, delivered=True).count()
     free_slots = StorageSlot.objects.filter(carrier__isnull=True).count()
     active_storages = Storage.objects.filter(archived=False).count()
+    total_finished_jobs = Job.objects.filter(status=2).count()
+    open_jobs_created = Job.objects.filter(archived=False,status=0).count()
+    open_jobs_finished = Job.objects.filter(archived=False,status=2).count()
 
     return JsonResponse(
         {
             "total_carriers": total_carriers,
             "not_delivered": undelivered_carriers,
             "in_storage": carriers_in_storage,
+            "in_production":carriers_in_production,
             "free_slots": free_slots,
             "storages": active_storages,
+            "total_finished_jobs":total_finished_jobs,
+            "open_jobs_created":open_jobs_created,
+            "open_jobs_prepared":open_jobs_created,
+            "open_jobs_finished":open_jobs_finished
         }
     )
 
 
-def collect_carrier_by_article(request, storage, article):
+def collect_carrier_by_article(request, article):
     """
     Collects a carrier by article from a storage unit.
     Lights up slots containing the specified article.
 
     Args:
     - request: HTTP request object
-    - storage: Storage object where the article is stored
     - article: Article number to collect
 
     Returns:
     - JsonResponse indicating success or failure
     """
-    slots = StorageSlot.objects.filter(carrier__article__name=article, storage=storage)
+    article = article.strip()
+    slots = StorageSlot.objects.filter(carrier__article__name=article,carrier_archived=False)
 
     if not slots.exists():
         return JsonResponse(
             {
                 "success": False,
-                "message": f"Could not find a slot with article {article} in storage {storage}",
+                "message": f"Could not find a carrier with article {article} in any storage",
             }
         )
 
@@ -177,30 +182,30 @@ def collect_carrier_by_article(request, storage, article):
 
     return JsonResponse({"success": True})
 
-
-def confirm_carrier_by_article(request, storage, article, carrier):
+def confirm_carrier_by_article(request, article, carrier):
     """
     Confirms carrier by article from a storage unit.
     Empties the slot and resets LEDs upon carrier confirmation.
 
     Args:
     - request: HTTP request object
-    - storage: Storage object where the carrier is located
+    
     - article: Article number of the carrier
     - carrier: Carrier name to confirm
 
     Returns:
     - JsonResponse indicating success or failure
     """
+    article,carrier = article.strip(),carrier.strip()
     slot = StorageSlot.objects.filter(
-        carrier__article__name=article, storage=storage, carrier__name=carrier
+        carrier__article__name=article, carrier__name=carrier
     )
 
     if not slot.exists():
         return JsonResponse(
             {
                 "success": False,
-                "message": f"Could not find a slot in storage {storage} that contains carrier {carrier} with article {article}",
+                "message": f"Could not find a slot in that contains carrier {carrier} with article {article}",
             }
         )
 
@@ -254,6 +259,14 @@ def check_pk_unique(request, model_name, value):
     if model_name.lower() == "article":
         model = Article
 
+    if model_name.lower() == "job":
+        model = Job
+    
+    if model_name.lower() == "board":
+        model = Board
+    
+
+
     try:
         model.objects.get(pk=value)
         is_unique = False
@@ -281,7 +294,7 @@ def get_csrf_token(request):
 @csrf_exempt
 def store_carrier_choose_slot(request, carrier, storage):
     carrier = carrier.strip()
-    carriers = Carrier.objects.filter(name=carrier)
+    carriers = Carrier.objects.filter(name=carrier,archived=False)
     if not carriers:
         return JsonResponse({"success": False, "message": "Carrier not found."})
     c = carriers.first()
@@ -367,7 +380,7 @@ def store_carrier_choose_slot_confirm(request, carrier, slot):
 
 @csrf_exempt
 def store_carrier(request, carrier, storage):
-    carrier = carrier.strip()  # remove whitespace
+    carrier = carrier.strip()  
     carriers = Carrier.objects.filter(name=carrier)
     if not carriers:
         return JsonResponse({"success": False, "message": "Carrier not found."})
@@ -535,10 +548,11 @@ def save_file_and_get_headers(request):
         lf = LocalFile.objects.create(
             file_object=File(request.FILES["file"]),
             upload_type=request.POST["upload_type"],
+            delimiter=request.POST["delimiter"]
         )
         try:
             with open(lf.file_object.path, newline="") as f:
-                csv_reader = csv.reader(f, delimiter=",")
+                csv_reader = csv.reader(f, delimiter=lf.delimiter)
                 lf.headers = list(csv_reader.__next__())
                 lf.save()
                 if lf.upload_type == "article":
@@ -584,10 +598,10 @@ def user_mapping_and_file_processing(request):
         ]  # remove fields that have empty values
 
         msg = {"created": [], "fail": []}
-        print('file path: ',lf.file_object.path)
+
         with open(lf.file_object.path, 'r', encoding='ISO-8859-1') as f:
 
-            csv_reader = csv.reader(f, delimiter=",")
+            csv_reader = csv.reader(f, delimiter=lf.delimiter)
             a_headers = next(csv_reader)
 
             index_map = {value: index for index, value in enumerate(a_headers)}

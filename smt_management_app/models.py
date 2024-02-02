@@ -32,9 +32,10 @@ class AbstractBaseModel(models.Model):
 
 class LocalFile(models.Model):
     def get_upload_path(self, filename):
-        return os.path.join("media","pfile", self.upload_type, filename)
+        return os.path.join(self.upload_type, filename)
 
     UPLOAD_TYPE_CHOICES = [("article", "Article"), ("carrier", "Carrier"), ("board", "Board")]
+    DELIMITER_CHOICES = [(0,","),(1,";"),(2,"\t")]
     name = models.BigAutoField(primary_key=True, unique=True, null=False, blank=False)
     upload_type = models.CharField(
         max_length=50, choices=UPLOAD_TYPE_CHOICES, null=False, blank=False
@@ -42,6 +43,7 @@ class LocalFile(models.Model):
     file_object = models.FileField(upload_to=get_upload_path)
     headers = models.CharField(max_length=5000, null=True, blank=True)
     board_name = models.CharField(max_length=5000, null=True, blank=True)
+    delimiter = models.CharField(max_length=1,choices=DELIMITER_CHOICES)
 
 
 class Storage(AbstractBaseModel):
