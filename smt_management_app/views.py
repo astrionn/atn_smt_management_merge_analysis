@@ -64,7 +64,7 @@ except Exception as e:
 
 def assign_carrier_to_job(request, job, carrier):
     job_object = Job.objects.filter(name=job).first()
-    carrier_object = Carrier.objects.filter(name=carrier).first()
+    carrier_object = Carrier.objects.filter(name=carrier,archived=False).first()
 
     if job_object and carrier_object:
         job_object.carriers.add(carrier_object)
@@ -75,7 +75,7 @@ def assign_carrier_to_job(request, job, carrier):
 
 
 def deliver_all_carriers(request):
-    i = Carrier.objects.all().update(delivered=True)
+    i = Carrier.objects.filter(archived=False).update(delivered=True)
     return JsonResponse({"success": True, "updated_amount": i})
 
 
@@ -94,7 +94,7 @@ def print_carrier(request, carrier):
 
     # Check if the carrier exists
     try:
-        carrier_obj = Carrier.objects.get(name=carrier)
+        carrier_obj = Carrier.objects.get(name=carrier,archived=False)
     except Carrier.DoesNotExist:
         return JsonResponse({"success": False, "message": "Carrier not found"})
 
@@ -209,7 +209,7 @@ def confirm_carrier_by_article(request, article, carrier):
             }
         )
 
-    c = Carrier.objects.get(name=carrier)
+    c = Carrier.objects.get(name=carrier,archived=False)
     c.storage_slot = None
     c.storage = None
     c.save()
@@ -351,7 +351,7 @@ def store_carrier_choose_slot_confirm(request, carrier, slot):
 
     carrier = carrier.strip()  # remove whitespace
     slot = slot.strip()  # remove whitespace
-    queryset = Carrier.objects.filter(name=carrier)
+    queryset = Carrier.objects.filter(name=carrier,archived=False)
     if not queryset:
         return JsonResponse({"success": False, "message": "Carrier not found."})
 
@@ -381,7 +381,7 @@ def store_carrier_choose_slot_confirm(request, carrier, slot):
 @csrf_exempt
 def store_carrier(request, carrier, storage):
     carrier = carrier.strip()  
-    carriers = Carrier.objects.filter(name=carrier)
+    carriers = Carrier.objects.filter(name=carrier,archived=False)
     if not carriers:
         return JsonResponse({"success": False, "message": "Carrier not found."})
     c = carriers.first()
@@ -429,7 +429,7 @@ def store_carrier_confirm(request, carrier, slot):
 
     carrier = carrier.strip()  # remove whitespace
     slot = slot.strip()  # remove whitespace
-    queryset = Carrier.objects.filter(name=carrier)
+    queryset = Carrier.objects.filter(name=carrier,archived=False)
     if not queryset:
         return JsonResponse({"success": False, "message": "Carrier not found."})
 
@@ -459,9 +459,9 @@ def collect_carrier(request, carrier_name):
     so the user can collect batchwise, not one by one. In the next step, the user scans all the carriers to ensure they collected the correct ones.
     """
     carrier_name = carrier_name.strip()
-    requested_carrier = Carrier.objects.filter(name=carrier_name).first()
+    requested_carrier = Carrier.objects.filter(name=carrier_name,archived=False).first()
 
-    queued_carriers = Carrier.objects.filter(collecting=True)  # collect queue
+    queued_carriers = Carrier.objects.filter(collecting=True,archived=False)  # collect queue
 
     if requested_carrier in queued_carriers:
         return JsonResponse({"success": False, "message": "Already in queue."})
@@ -469,7 +469,7 @@ def collect_carrier(request, carrier_name):
     requested_carrier.collecting = True  # add to queue
     requested_carrier.save()
 
-    queued_carriers = Carrier.objects.filter(collecting=True)
+    queued_carriers = Carrier.objects.filter(collecting=True,archived=False)
     collection_queue = [
         {
             "carrier": queued_carrier.name,
@@ -498,7 +498,7 @@ def collect_carrier_confirm(request, carrier, slot):
     carrier = carrier.strip()
     slot = slot.strip()
 
-    queued_carrier = Carrier.objects.filter(collecting=True, name=carrier).first()
+    queued_carrier = Carrier.objects.filter(collecting=True, name=carrier,archived=False).first()
 
     if not queued_carrier:
         return JsonResponse({"success": False, "message": f"Carrier {carrier} is not in the collect queue."})
@@ -524,7 +524,7 @@ def collect_carrier_confirm(request, carrier, slot):
             "storage": qc.storage_slot.storage.name,
             "slot": qc.storage_slot.qr_value,
         }
-        for qc in Carrier.objects.filter(collecting=True)
+        for qc in Carrier.objects.filter(collecting=True,archived=False)
     ]
 
     response_message = {
