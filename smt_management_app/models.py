@@ -47,8 +47,10 @@ class LocalFile(models.Model):
 
 
 class Storage(AbstractBaseModel):
+    DEVICE_CHOICES = [(0,"NeoLight"),(1,"Sophia"),(2,"ATNPTL")]
     capacity = models.IntegerField()
     location = models.CharField(max_length=50, null=True, blank=True)
+    device = models.CharField(max_length=5000,choices=DEVICE_CHOICES)
 
     def get_absolute_url(self):
         return reverse("smt_management_app:storage-detail", kwargs={"name": self.name})

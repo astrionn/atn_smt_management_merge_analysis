@@ -14,6 +14,8 @@ from django.http import FileResponse, JsonResponse
 from django.core.files import File
 from rest_framework import viewsets, filters, generics
 
+from django.conf import settings
+
 from .serializers import (
     ArticleNameSerializer, ArticleSerializer, BoardArticleSerializer, BoardSerializer,
     CarrierNameSerializer, CarrierSerializer, JobSerializer, MachineSerializer,

@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from .config import *
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -8,11 +9,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-q9en4*fnp&ive2rgl8d31f$cl5ho2+5r60+@$i#@4660w827d5"
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+
+
 # CORS_ALLOWED_ORIGINS = ['http://localhost:3000','http://localhost:8000']
 
 ALLOWED_HOSTS = ["*"]
