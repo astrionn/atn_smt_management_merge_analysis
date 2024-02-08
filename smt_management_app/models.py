@@ -43,7 +43,7 @@ class LocalFile(models.Model):
     file_object = models.FileField(upload_to=get_upload_path)
     headers = models.CharField(max_length=5000, null=True, blank=True)
     board_name = models.CharField(max_length=5000, null=True, blank=True)
-    delimiter = models.CharField(max_length=1,choices=DELIMITER_CHOICES)
+    delimiter = models.CharField(max_length=2,choices=DELIMITER_CHOICES)
 
 
 class Storage(AbstractBaseModel):
@@ -197,7 +197,8 @@ class MachineSlot(AbstractBaseModel):
         )
 
 
-class StorageSlot(AbstractBaseModel):
+class StorageSlot(models.Model):
+    name = models.CharField(max_length=5000)
     STATE_CHOICES = [(0, "off"), (1, "green"), (2, "yellow"), (3, "blue"), (4, "red")]
     storage = models.ForeignKey(Storage, on_delete=models.CASCADE)
     led_state = models.IntegerField(default=0, choices=STATE_CHOICES)

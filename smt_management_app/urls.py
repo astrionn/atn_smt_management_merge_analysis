@@ -180,3 +180,5 @@ urlpatterns.append(
     )
 )
 
+urlpatterns.append(path("collect_single_carrier/<carrier_name>/",views.collect_single_carrier,name="collect_single_carrier"))
+urlpatterns.append(path("collect_single_carrier_confirm/<carrier_name>/<storage_name>/<slot_name>/",views.collect_single_carrier_confirm,name="collect_single_carrier_confirm"))
