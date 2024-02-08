@@ -14,6 +14,8 @@ from django.http import FileResponse, JsonResponse
 from django.core.files import File
 from rest_framework import viewsets, filters, generics
 
+from django.conf import settings
+
 from .serializers import (
     ArticleNameSerializer, ArticleSerializer, BoardArticleSerializer, BoardSerializer,
     CarrierNameSerializer, CarrierSerializer, JobSerializer, MachineSerializer,
@@ -73,7 +75,7 @@ def assign_carrier_to_job(request, job, carrier):
     else:
         return JsonResponse({"success": False})
 
-
+@csrf_exempt
 def deliver_all_carriers(request):
     i = Carrier.objects.filter(archived=False).update(delivered=True)
     return JsonResponse({"success": True, "updated_amount": i})
@@ -424,11 +426,12 @@ def store_carrier(request, carrier, storage):
 
 
 @csrf_exempt
-def store_carrier_confirm(request, carrier, slot):
+def store_carrier_confirm(request, carrier,  slot):
     # see store carrier
 
     carrier = carrier.strip()  # remove whitespace
     slot = slot.strip()  # remove whitespace
+    
     queryset = Carrier.objects.filter(name=carrier,archived=False)
     if not queryset:
         return JsonResponse({"success": False, "message": "Carrier not found."})
@@ -451,6 +454,44 @@ def store_carrier_confirm(request, carrier, slot):
     ).start()
     ss.save()
     return JsonResponse({"success": True})
+
+
+def collect_single_carrier(request,carrier_name):
+
+    carrier_name = carrier_name.strip()
+    requested_carrier = Carrier.objects.filter(name=carrier_name,archived=False).first()
+    if not requested_carrier.storage_slot:
+        return JsonResponse({"success":False,"message":"Carrier is not stored."})
+    requested_carrier.storage_slot.led_state = 2
+    Thread(
+        target=neo.led_on, kwargs={"lamp": requested_carrier.storage_slot.name, "color": "green"}
+    ).start()
+    return JsonResponse({"success":True,"carrier":requested_carrier.name,"slot":requested_carrier.storage_slot.qr_value,"storage":requested_carrier.storage_slot.storage.name})
+
+def collect_single_carrier_confirm(request,carrier_name,storage_name,slot_name):
+    
+    carrier_name = carrier_name.strip()
+    slot_name = slot_name.strip()
+    storage_name = storage_name.strip()
+
+    carrier = Carrier.objects.filter(name=carrier_name,archived=False).first()
+    slot = StorageSlot.objects.filter(qr_value=slot_name,storage__name=storage_name).first()
+
+    if not carrier:
+        return JsonResponse({"success":False,"message":f"{carrier_name} does not exist."})
+    if not slot.carrier == carrier:
+        return JsonResponse({"success":False,"message":f"Carrier {carrier.name} is not in storage {slot.storage.name} slot {slot.name}."})
+    
+    slot.carrier = None
+    slot.led_state = 0
+    slot.save()
+    Thread(
+        target=neo.led_off, kwargs={"lamp": slot.name}
+    ).start()
+
+    return JsonResponse({"success":True})
+    
+
 
 
 def collect_carrier(request, carrier_name):
@@ -639,8 +680,13 @@ def user_mapping_and_file_processing(request):
 
                     article_name = carrier_dict.get("article")
                     if article_name:
-                        article = Article.objects.get(name=article_name)
-                        carrier_dict["article"] = article
+
+                        article = Article.objects.filter(name=article_name).first()
+                        if article:
+                            carrier_dict["article"] = article
+                        else:
+                            msg["fail"].append(article_name)
+                            continue
 
                     # Set default values if not provided
                     carrier_dict.setdefault("storage_slot", None)
