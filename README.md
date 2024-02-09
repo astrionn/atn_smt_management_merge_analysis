@@ -69,6 +69,21 @@ python manage.py runserver
 ```
 
 
+Also, a Makefile is available to use with *nix-like environments. Use
+
+```
+make venv
+```
+to setup the virtual environment and install or update dependencies. You can then use
+```
+make run
+```
+and
+```
+make clean_migrations
+```
+in order to run the test server and rollback migrations.
+
 Server will be available at `http://127.0.0.1:8000` in your browser
 
 
