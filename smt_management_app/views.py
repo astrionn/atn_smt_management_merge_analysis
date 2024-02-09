@@ -78,6 +78,8 @@ def assign_carrier_to_job(request, job, carrier):
 
     if job_object and carrier_object:
         job_object.carriers.add(carrier_object)
+        if len(job_object.carriers) == len(job_object.board.articles):
+            job_object.status = 1
         job_object.save()
         return JsonResponse({"success": True})
     else:
@@ -487,10 +489,11 @@ def store_carrier(request, carrier_name, storage_name):
 
 
 @csrf_exempt
-def store_carrier_confirm(request, carrier_name,  slot_name):
+def store_carrier_confirm(request, carrier_name, storage_name, slot_name):
     # see store carrier
 
     carrier_name = carrier_name.strip()
+    storage_name = storage_name.strip()
     slot_name = slot_name.strip()
     
     carrier_queryset = Carrier.objects.filter(name=carrier_name,archived=False)
@@ -498,7 +501,7 @@ def store_carrier_confirm(request, carrier_name,  slot_name):
         return JsonResponse({"success": False, "message": "Carrier not found."})
     carrier = carrier_queryset.first()
 
-    slot_queryset = StorageSlot.objects.filter(qr_value=slot_name)
+    slot_queryset = StorageSlot.objects.filter(qr_value=slot_name, storage=storage_name)
     if not slot_queryset:
         return JsonResponse({"success": False, "message": "Slot not found."})
     slot = slot_queryset.first()
@@ -544,6 +547,27 @@ def store_carrier_confirm(request, carrier_name,  slot_name):
         kwargs={'lights_dict':{"status": {'B':'green'}}}
     ).start()
     return JsonResponse({"success": True})
+
+
+def collect_job(request,job_name):
+    job_name = job_name.strip()
+
+    job_queryset = Job.objects.filter(name=job_name,archived=False)
+    if not job_queryset:
+        return JsonResponse({"success":False,"message":"Job does not exist"})
+    
+    job = job_queryset.first()
+    if job.status == 0:
+        return JsonResponse({"success":False,"message":"Job is not fully prepared."})
+    if job.status == 2:
+        return JsonResponse({"success":False,"message":"Job is already complete."})
+    carriers_of_job = job.carriers
+    for carrier in carriers_of_job:
+        carrier.storage_slot.led_state = 2
+        carrier.collecting = True
+        Thread(target=neo.led_on,kwargs={"lamp":carrier.storage_slot.name,"color":"green"})
+        working_light_side = 'A' if int(carrier.storage_slot.name) <= 700 else 'B'
+        Thread(target=neo._LED_On_Control,kwargs={'lights_dict':{"status": {working_light_side:'yellow'}}}).start()
 
 
 def collect_single_carrier(request,carrier_name):
