@@ -144,9 +144,12 @@ class Carrier(AbstractBaseModel):
 
     reserved = models.BooleanField(default=False)
     delivered = models.BooleanField(default=False)
-    collecting = models.BooleanField(default=False)  #
+    collecting = models.BooleanField(default=False)
+
+    nominated_for_slot = models.OneToOneField("StorageSlot",on_delete=models.SET_NULL,null=True,blank=True,related_name='nominated_carrier')
+
     storage_slot = models.OneToOneField(
-        "StorageSlot", on_delete=models.CASCADE, null=True, blank=True
+        "StorageSlot", on_delete=models.CASCADE, null=True, blank=True, related_name='carrier'
     )
     machine_slot = models.OneToOneField(
         "MachineSlot", on_delete=models.CASCADE, null=True, blank=True
@@ -157,6 +160,7 @@ class Carrier(AbstractBaseModel):
     )
 
     def save(self, *args, **kwargs):
+        # disallow archiving if in a storage-slot
         if self.storage_slot:
             slot_storage = self.storage_slot.storage
             # print(slot_storage)
@@ -198,7 +202,7 @@ class MachineSlot(AbstractBaseModel):
 
 
 class StorageSlot(models.Model):
-    name = models.CharField(max_length=5000)
+    name = models.PositiveIntegerField()
     STATE_CHOICES = [(0, "off"), (1, "green"), (2, "yellow"), (3, "blue"), (4, "red")]
     storage = models.ForeignKey(Storage, on_delete=models.CASCADE)
     led_state = models.IntegerField(default=0, choices=STATE_CHOICES)
@@ -208,6 +212,9 @@ class StorageSlot(models.Model):
         return reverse(
             "smt_management_app:storageslot-detail", kwargs={"name": self.name}
         )
+    
+    def __str__(self):
+        return str(self.name)
 
 
 class Job(AbstractBaseModel):

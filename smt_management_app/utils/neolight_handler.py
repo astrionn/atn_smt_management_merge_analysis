@@ -20,6 +20,7 @@ class NeoLightAPI:
         self.led_colors = led_colors
         self.tower_colors = tower_colors
         self.all_leds = list(range(1, max_led_address + 1))
+        self._LED_On_Control({'status':{'A':'green','B':'green'}})
 
     def led_address_to_side_row_lamp(self, led_address):
         if led_address < 1 or led_address > 1400:

@@ -44,19 +44,19 @@ urlpatterns.append(
 )
 urlpatterns.append(
     path(
-        "collect_carrier_confirm/<carrier>/<slot>/",
+        "collect_carrier_confirm/<carrier_name>/<storage_name>/<slot_name>/",
         views.collect_carrier_confirm,
         name="collect_carrier_confirm",
     )
 )
 urlpatterns.append(
     path(
-        "store_carrier/<carrier>/<storage>/", views.store_carrier, name="store_carrier"
+        "store_carrier/<carrier_name>/<storage_name>/", views.store_carrier, name="store_carrier"
     )
 )
 urlpatterns.append(
     path(
-        "store_carrier_confirm/<carrier>/<slot>/",
+        "store_carrier_confirm/<carrier_name>/<slot_name>/",
         views.store_carrier_confirm,
         name="store_carrier_confirm",
     )
@@ -64,14 +64,14 @@ urlpatterns.append(
 
 urlpatterns.append(
     path(
-        "store_carrier_choose_slot/<carrier>/<storage>/",
+        "store_carrier_choose_slot/<carrier_name>/<storage_name>/",
         views.store_carrier_choose_slot,
         name="store_carrier_choose_slot",
     )
 )
 urlpatterns.append(
     path(
-        "store_carrier_choose_slot_confirm/<carrier>/<slot>/",
+        "store_carrier_choose_slot_confirm/<carrier_name>/<storage_name>/<slot_name>/",
         views.store_carrier_choose_slot_confirm,
         name="store_carrier_choose_slot_confirm",
     )
@@ -140,7 +140,7 @@ urlpatterns.append(
 
 urlpatterns.append(
     path(
-        "collectCarrierByArticle/<storage>/<article>/",
+        "collectCarrierByArticle/<article_name>/",
         views.collect_carrier_by_article,
         name="collect_carrier_by_article",
     )
@@ -148,7 +148,7 @@ urlpatterns.append(
 
 urlpatterns.append(
     path(
-        "confirmCarrierByArticle/<storage>/<article>/<carrier>/",
+        "confirmCarrierByArticle/<carrier_name>/",
         views.confirm_carrier_by_article,
         name="confirm_carrier_by_article",
     )
@@ -181,4 +181,4 @@ urlpatterns.append(
 )
 
 urlpatterns.append(path("collect_single_carrier/<carrier_name>/",views.collect_single_carrier,name="collect_single_carrier"))
-urlpatterns.append(path("collect_single_carrier_confirm/<carrier_name>/<storage_name>/<slot_name>/",views.collect_single_carrier_confirm,name="collect_single_carrier_confirm"))
+urlpatterns.append(path("collect_single_carrier_confirm/<carrier_name>/",views.collect_single_carrier_confirm,name="collect_single_carrier_confirm"))

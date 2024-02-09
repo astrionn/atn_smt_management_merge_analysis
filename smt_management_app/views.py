@@ -2,8 +2,8 @@ import json
 import csv
 import io
 import qrcode
-from threading import Thread
-
+from threading import Thread,Timer
+from pprint import pprint as pp
 
 from django_filters.rest_framework import DjangoFilterBackend
 from django.middleware.csrf import get_token
@@ -35,10 +35,18 @@ try:
     class NeoDummy:
         # for developement without actually having to connect a shelf
         def __init__(self):
-            pass
+            self._LED_On_Control({'status':{'A':'green','B':'green'}})
 
         def led_on(self, lamp, color):
             print(f"led on {lamp=} ; {color=}")
+        
+        def _LED_On_Control(self,lights_dict):
+            print('LED ON')
+            pp(lights_dict)
+        
+        def _LED_Off_Control(self, lamps=[], statusA=False, statusB=False):
+            print(f"Led OFF {statusA=} {statusB=}")
+            pp(lamps)
 
         def led_off(self, lamp):
             print(f"led of {lamp=}")
@@ -155,7 +163,7 @@ def dashboard_data(request):
     )
 
 
-def collect_carrier_by_article(request, article):
+def collect_carrier_by_article(request, article_name):
     """
     Collects a carrier by article from a storage unit.
     Lights up slots containing the specified article.
@@ -167,24 +175,31 @@ def collect_carrier_by_article(request, article):
     Returns:
     - JsonResponse indicating success or failure
     """
-    article = article.strip()
-    slots = StorageSlot.objects.filter(carrier__article__name=article,carrier_archived=False)
+    article_name = article_name.strip()
+    slot_queryset = StorageSlot.objects.filter(carrier__article__name=article_name,carrier__archived=False)
 
-    if not slots.exists():
+    if not slot_queryset:
         return JsonResponse(
             {
                 "success": False,
-                "message": f"Could not find a carrier with article {article} in any storage",
+                "message": f"Could not find a carrier with article {article_name} in any storage",
             }
         )
 
     # Activate LEDs for slots containing the article
-    for slot in slots:
-        Thread(target=neo.led_on, kwargs={"lamp": slot.name, "color": "green"}).start()
+    # refactor with _LED_On_Control to enable all at once
+    for slot in slot_queryset:
+        Thread(target=neo.led_on, kwargs={"lamp": slot.name, "color": "blue"}).start()
+
+    if any(slot.name <= 700 for slot in slot_queryset):
+           Thread(target=neo._LED_On_Control,kwargs={'lights_dict':{"status": {'A':'yellow'}}}).start()
+    if any(slot.name > 700 for slot in slot_queryset):
+           Thread(target=neo._LED_On_Control,kwargs={'lights_dict':{"status": {'B':'yellow'}}}).start()
+
 
     return JsonResponse({"success": True})
 
-def confirm_carrier_by_article(request, article, carrier):
+def confirm_carrier_by_article(request, carrier_name):
     """
     Confirms carrier by article from a storage unit.
     Empties the slot and resets LEDs upon carrier confirmation.
@@ -198,28 +213,44 @@ def confirm_carrier_by_article(request, article, carrier):
     Returns:
     - JsonResponse indicating success or failure
     """
-    article,carrier = article.strip(),carrier.strip()
-    slot = StorageSlot.objects.filter(
-        carrier__article__name=article, carrier__name=carrier
-    )
+    carrier_name = carrier_name.strip()
+    carrier_queryset = Carrier.objects.filter(name=carrier_name,archived=False)
+    if not carrier_queryset:
+        return JsonResponse({"success":False,"message":"Carrier not found."})
+    carrier = carrier_queryset.first()
 
-    if not slot.exists():
+    slot_queryset = StorageSlot.objects.filter(carrier=carrier)
+
+    if not slot_queryset:
         return JsonResponse(
             {
                 "success": False,
-                "message": f"Could not find a slot in that contains carrier {carrier} with article {article}",
+                "message": f"Could not find a slot in that contains carrier {carrier_name}.",
             }
         )
 
-    c = Carrier.objects.get(name=carrier,archived=False)
-    c.storage_slot = None
-    c.storage = None
-    c.save()
+    collected_slot = carrier.storage_slot
+    carrier.storage_slot = None
+    carrier.storage = None
+    carrier.save()
 
     # Reset LEDs after carrier confirmation
     Thread(target=neo.reset_leds).start()
     # Update LED state for all storage slots to 0
     StorageSlot.objects.all().update(led_state=0)
+
+    Thread(target=neo.led_on,kwargs={'lamp':collected_slot.name,'color':'green'}).start()
+    Timer(interval=2,function=neo.led_off, kwargs={'lamp':collected_slot.name}).start()
+
+    Thread(
+        target=neo._LED_On_Control,
+        kwargs={'lights_dict':{"status": {'A':'green'}}}
+    ).start()
+    Thread(
+        target=neo._LED_On_Control,
+        kwargs={'lights_dict':{"status": {'B':'green'}}}
+    ).start()
+
 
     return JsonResponse({"success": True})
 
@@ -238,7 +269,7 @@ def reset_leds(request, storage):
     """
     # Start a new thread to reset LEDs with working_light set to True
     Thread(target=neo.reset_leds, kwargs={"working_light": True}).start()
-
+    Thread(taraget=neo._LED_On_Control, kwargs={'lights_dict':{'status':{'A':'green','B':'green'}}})
     # Update LED state for all storage slots to 0
     StorageSlot.objects.all().update(led_state=0)
 
@@ -294,199 +325,280 @@ def get_csrf_token(request):
 
 
 @csrf_exempt
-def store_carrier_choose_slot(request, carrier, storage):
-    carrier = carrier.strip()
-    carriers = Carrier.objects.filter(name=carrier,archived=False)
-    if not carriers:
+def store_carrier_choose_slot(request, carrier_name, storage_name):
+    carrier_name = carrier_name.strip()
+    storage_name = storage_name.strip()
+
+    carrier_queryset = Carrier.objects.filter(name=carrier_name,archived=False)
+    
+    if not carrier_queryset:
         return JsonResponse({"success": False, "message": "Carrier not found."})
-    c = carriers.first()
-    if c.collecting:
+    carrier = carrier_queryset.first()
+    if carrier.collecting:
         return JsonResponse({"success": False, "message": "Carrier is collecting."})
-    if c.archived:
+    if carrier.archived:
         return JsonResponse({"success": False, "message": "Carrier has been archived."})
-    if not c.delivered:
+    if not carrier.delivered:
         return JsonResponse(
             {"success": False, "message": "Carrier has not been delivered."}
         )
-    if c.storage_slot:
+    if carrier.storage_slot:
         return JsonResponse({"success": False, "message": "Carrier is stored already."})
-    if c.machine_slot:
+    if carrier.machine_slot:
         return JsonResponse({"success": False})
 
-    storages = Storage.objects.filter(name=storage)
-    if not storages:
+    storage_queryset = Storage.objects.filter(name=storage_name)
+    if not storage_queryset:
         return JsonResponse({"success": False, "message": "No storage found."})
-    storage = storages.first()
+    storage = storage_queryset.first()
 
-    free_slots = StorageSlot.objects.filter(
+    free_slot_queryset = StorageSlot.objects.filter(
         carrier__isnull=True, storage=storage
     )  # later on take carrier size into consideration here
-    if len(free_slots) == 0:
+    if len(free_slot_queryset) == 0:
         return JsonResponse(
             {
                 "success": False,
                 "message": f"No free storage slots found in {storage.name}.",
             }
         )
-    msg = {"storage": storage.name, "carrier": c.name, "slot": [], "success": True}
-    if not hasattr(
-        neo, "_LED_On_Control"
-    ):  # iterative enabling for PTL from ATN via USB, see neo definition at the top
-        for fs in free_slots:
-            fs.led_state = 2
-            fs.save()
-            Thread(
-                target=neo.led_on,
-                kwargs={"lamp": fs.name, "color": "blue"},
-            ).start()
-            msg["slot"].append(fs.name)
-    else:  # compound enabling for neotel rack
-        neo._LED_On_Control({"lamps": {fs.name: "blue" for fs in free_slots}})
-        free_slots.update(led_state=0)
+    msg = {"storage": storage.name, "carrier": carrier.name, "slot": [free_slot.qr_value for free_slot in free_slot_queryset], "success": True}
 
+    if not hasattr(neo, "_LED_On_Control"):  # iterative enabling for PTL from ATN via USB, see neo definition at the top
+        for free_slot in free_slot_queryset:
+            free_slot.led_state = 2
+            free_slot.save()
+            Thread(target=neo.led_on,kwargs={"lamp": free_slot.name, "color": "blue"},).start()
+    
+    else:  # compound enabling for neotel rack
+        neo._LED_On_Control({"lamps": {free_slot.name: "blue" for free_slot in free_slot_queryset}})
+        free_slot_queryset.update(led_state=2)
+    
+
+    if any(free_slot.name <= 700 for free_slot in free_slot_queryset):
+           Thread(target=neo._LED_On_Control,kwargs={'lights_dict':{"status": {'A':'yellow'}}}).start()
+    if any(free_slot.name > 700 for free_slot in free_slot_queryset):
+           Thread(target=neo._LED_On_Control,kwargs={'lights_dict':{"status": {'B':'yellow'}}}).start()
+    
     return JsonResponse(msg)
 
 
 @csrf_exempt
-def store_carrier_choose_slot_confirm(request, carrier, slot):
+def store_carrier_choose_slot_confirm(request, carrier_name, storage_name, slot_name):
     # see store carrier choose slot
 
-    carrier = carrier.strip()  # remove whitespace
-    slot = slot.strip()  # remove whitespace
-    queryset = Carrier.objects.filter(name=carrier,archived=False)
-    if not queryset:
-        return JsonResponse({"success": False, "message": "Carrier not found."})
+    carrier_name = carrier_name.strip()
+    slot_name = slot_name.strip()  
+    storage_name = storage_name.strip()
 
-    queryset2 = StorageSlot.objects.filter(qr_value=slot)
-    if not queryset2:
+    carrier_queryset = Carrier.objects.filter(name=carrier_name,archived=False)
+    if not carrier_queryset:
+        return JsonResponse({"success": False, "message": "Carrier not found."})
+    carrier = carrier_queryset.first()
+
+    slot_queryset = StorageSlot.objects.filter(qr_value=slot_name,storage=storage_name)
+    if not slot_queryset:
         return JsonResponse({"success": False, "message": "no slot found"})
-    c = queryset.first()
-    ss = queryset2.first()
-    if ss.led_state == 0:
+    slot = slot_queryset.first()
+
+    if hasattr(slot,'carrier'):
+        Thread(target=neo.led_on,kwargs={"lamp":slot.name,"color":"red"}).start()
+        Timer(interval=2,function=neo.led_off,kwargs={"lamp":slot.name}).start()
+        return JsonResponse({"success": False, "message": f"Slot {slot.qr_value} should contain {slot.carrier.name}."})
+    
+    if slot.led_state == 0:
         return JsonResponse({"success": False, "message": "led is off but shouldn't"})
-    c.storage_slot = ss
-    c.save()
-    ss.led_state = 0
-    ss.save()
+    
+    carrier.storage_slot = slot
+    carrier.save()
+    
+    Thread(target=neo.reset_leds).start()
+    StorageSlot.objects.all().update(led_state=0)
+
+    Thread(target=neo.led_on,kwargs={'lamp':slot.name,'color':'green'}).start()
+    Timer(interval=2, function=neo.led_off, kwargs={'lamp':slot.name}).start()
+
     Thread(
-        target=neo.reset_leds,
+        target=neo._LED_On_Control,
+        kwargs={'lights_dict':{"status": {'A':'green'}}}
+    ).start()
+    Thread(
+        target=neo._LED_On_Control,
+        kwargs={'lights_dict':{"status": {'B':'green'}}}
     ).start()
 
     return JsonResponse(
         {
             "success": True,
-            "message": f"Carrier {c.name} stored in storage {ss.storage.name} slot {ss.qr_value}.",
+            "message": f"Carrier {carrier.name} stored in storage {slot.storage.name} slot {slot.qr_value}.",
         }
     )
 
 
 @csrf_exempt
-def store_carrier(request, carrier, storage):
-    carrier = carrier.strip()  
-    carriers = Carrier.objects.filter(name=carrier,archived=False)
-    if not carriers:
+def store_carrier(request, carrier_name, storage_name):
+    carrier_name = carrier_name.strip()  
+    storage_name = storage_name.strip()
+
+    carrier_queryset = Carrier.objects.filter(name=carrier_name,archived=False)
+    if not carrier_queryset:
         return JsonResponse({"success": False, "message": "Carrier not found."})
-    c = carriers.first()
-    if c.collecting:
+    carrier = carrier_queryset.first()
+    if carrier.collecting:
         return JsonResponse({"success": False, "message": "Carrier is collecting."})
-    if c.archived:
+    if carrier.archived:
         return JsonResponse({"success": False, "message": "Carrier has been archived."})
-    if not c.delivered:
-        return JsonResponse(
-            {"success": False, "message": "Carrier has not been delivered."}
-        )
-    if c.storage_slot:
-        return JsonResponse({"success": False, "message": "Carrier is stored already."})
-    if c.machine_slot:
-        return JsonResponse({"success": False})
+    if not carrier.delivered:
+        return JsonResponse({"success": False, "message": "Carrier has not been delivered."})
+    if carrier.storage_slot:
+        return JsonResponse({"success": False, "message": f"Carrier is stored already({carrier.storage_slot.qr_value})."})
+    if carrier.machine_slot:
+        return JsonResponse({"success": False, "message": f"Carrier is in Machine Slot {carrier.machine_slot.name}."})
 
-    storages = Storage.objects.filter(name=storage)
-    if not storages:
-        return JsonResponse({"success": False, "message": "No free storage slot."})
-    storage = storages.first()
+    storage_queryset = Storage.objects.filter(name=storage_name)
+    if not storage_queryset:
+        return JsonResponse({"success": False, "message": f"No such storage {storage_name}."})
+    storage = storage_queryset.first()
 
-    free_slots = StorageSlot.objects.filter(
+    free_slots_queryset = StorageSlot.objects.filter(
         carrier__isnull=True, storage=storage
     )  # later on take carrier size into consideration here
-    fs = free_slots.first()
-    fs.led_state = 2
-    fs.save()
-    Thread(
-        target=neo.led_on,
-        kwargs={"lamp": fs.name, "color": "blue"},
-    ).start()
+    if not free_slots_queryset:
+        return JsonResponse({"success": False, "message": f"No free storage slot in Storage {storage_name}."})
+    
+    free_slot = free_slots_queryset.first()
+    free_slot.led_state = 2
+    free_slot.save()
+    carrier.nominated_for_slot = free_slot
+    carrier.save()
+    Thread(target=neo.led_on,kwargs={"lamp": free_slot.name, "color": "blue"}).start()
+
+    working_light_side = 'A' if int(free_slot.name) <= 700 else 'B'
+
+    Thread(target=neo._LED_On_Control,kwargs={'lights_dict':{"status": {working_light_side:'yellow'}}}).start()
 
     msg = {
         "storage": storage.name,
-        "slot": fs.qr_value,
-        "carrier": c.name,
+        "slot": free_slot.qr_value,
+        "carrier": carrier.name,
         "success": True,
     }
     return JsonResponse(msg)
 
 
 @csrf_exempt
-def store_carrier_confirm(request, carrier,  slot):
+def store_carrier_confirm(request, carrier_name,  slot_name):
     # see store carrier
 
-    carrier = carrier.strip()  # remove whitespace
-    slot = slot.strip()  # remove whitespace
+    carrier_name = carrier_name.strip()
+    slot_name = slot_name.strip()
     
-    queryset = Carrier.objects.filter(name=carrier,archived=False)
-    if not queryset:
+    carrier_queryset = Carrier.objects.filter(name=carrier_name,archived=False)
+    if not carrier_queryset:
         return JsonResponse({"success": False, "message": "Carrier not found."})
+    carrier = carrier_queryset.first()
 
-    queryset2 = StorageSlot.objects.filter(qr_value=slot)
-    if not queryset2:
-        return JsonResponse({"success": False, "message": "no slot found"})
-    c = queryset.first()
-    ss = queryset2.first()
-    if ss.led_state == 0:
+    slot_queryset = StorageSlot.objects.filter(qr_value=slot_name)
+    if not slot_queryset:
+        return JsonResponse({"success": False, "message": "Slot not found."})
+    slot = slot_queryset.first()
+
+    if not carrier.nominated_for_slot == slot:
+        Thread(target=neo.led_on,kwargs={"lamp":slot.name,"color":"red"}).start()
+        Timer(interval=2,function=neo.led_off,kwargs={"lamp":slot.name}).start()
+        return JsonResponse({"sucess":False,"message":f"Scanned wrong slot {slot.qr_value} instead of slot {carrier.nominated_for_slot.qr_value}."})
+
+    if slot.led_state == 0:
         return JsonResponse({"success": False, "message": "led is off but shouldn't"})
-    c.storage_slot = ss
-    c.save()
-    ss.led_state = 0
+    
+    carrier.storage_slot = slot
+    carrier.nominated_for_slot = None
+    carrier.save()
+    slot.led_state = 0
+    slot.save()
+    
     Thread(
         target=neo.led_off,
         kwargs={
-            "lamp": ss.name,
+            "lamp": slot.name,
         },
     ).start()
-    ss.save()
+
+    
+
+    Thread(
+        target=neo._LED_Off_Control,
+        kwargs={
+            'statusA': True if int(slot.name) <= 700 else False,
+            'statusB': False if int(slot.name) <= 700 else True
+        },
+    ).start()
+
+    
+    Thread(
+        target=neo._LED_On_Control,
+        kwargs={'lights_dict':{"status": {'A':'green'}}}
+    ).start()
+    Thread(
+        target=neo._LED_On_Control,
+        kwargs={'lights_dict':{"status": {'B':'green'}}}
+    ).start()
     return JsonResponse({"success": True})
 
 
 def collect_single_carrier(request,carrier_name):
 
     carrier_name = carrier_name.strip()
-    requested_carrier = Carrier.objects.filter(name=carrier_name,archived=False).first()
-    if not requested_carrier.storage_slot:
-        return JsonResponse({"success":False,"message":"Carrier is not stored."})
-    requested_carrier.storage_slot.led_state = 2
-    Thread(
-        target=neo.led_on, kwargs={"lamp": requested_carrier.storage_slot.name, "color": "green"}
-    ).start()
-    return JsonResponse({"success":True,"carrier":requested_carrier.name,"slot":requested_carrier.storage_slot.qr_value,"storage":requested_carrier.storage_slot.storage.name})
+    carrier_queryset = Carrier.objects.filter(name=carrier_name,archived=False)
+    if not carrier_queryset:
+        return JsonResponse({"success": False, "message": "Carrier not found."})
+    carrier = carrier_queryset.first()
 
-def collect_single_carrier_confirm(request,carrier_name,storage_name,slot_name):
+    if not carrier.storage_slot:
+        return JsonResponse({"success":False,"message":"Carrier is not stored."})
+    carrier.storage_slot.led_state = 2
+    carrier.storage_slot.save()
+ 
+    Thread(target=neo.led_on, kwargs={"lamp": carrier.storage_slot.name, "color": "green"}).start()
+
+    working_light_side = 'A' if int(carrier.storage_slot.name) <= 700 else 'B'
+
+    Thread(target=neo._LED_On_Control,kwargs={'lights_dict':{"status": {working_light_side:'yellow'}}}).start()
+
+    return JsonResponse({"success":True,"carrier":carrier.name,"slot":carrier.storage_slot.qr_value,"storage":carrier.storage_slot.storage.name})
+
+def collect_single_carrier_confirm(request,carrier_name):
     
     carrier_name = carrier_name.strip()
-    slot_name = slot_name.strip()
-    storage_name = storage_name.strip()
-
-    carrier = Carrier.objects.filter(name=carrier_name,archived=False).first()
-    slot = StorageSlot.objects.filter(qr_value=slot_name,storage__name=storage_name).first()
-
-    if not carrier:
-        return JsonResponse({"success":False,"message":f"{carrier_name} does not exist."})
-    if not slot.carrier == carrier:
-        return JsonResponse({"success":False,"message":f"Carrier {carrier.name} is not in storage {slot.storage.name} slot {slot.name}."})
-    
+    carrier_queryset = Carrier.objects.filter(name=carrier_name,archived=False)
+    if not carrier_queryset:
+        return JsonResponse({"success": False, "message": "Carrier not found."})
+    carrier = carrier_queryset.first()
+    slot = carrier.storage_slot
+        
     slot.carrier = None
     slot.led_state = 0
     slot.save()
+
     Thread(
         target=neo.led_off, kwargs={"lamp": slot.name}
+    ).start()
+
+    Thread(
+        target=neo._LED_Off_Control,
+        kwargs={
+            'statusA': True if int(slot.name) <= 700 else False,
+            'statusB': False if int(slot.name) <= 700 else True
+        },
+    ).start()
+
+    Thread(
+        target=neo._LED_On_Control,
+        kwargs={'lights_dict':{"status": {'A':'green'}}}
+    ).start()
+    Thread(
+        target=neo._LED_On_Control,
+        kwargs={'lights_dict':{"status": {'B':'green'}}}
     ).start()
 
     return JsonResponse({"success":True})
@@ -500,15 +612,19 @@ def collect_carrier(request, carrier_name):
     so the user can collect batchwise, not one by one. In the next step, the user scans all the carriers to ensure they collected the correct ones.
     """
     carrier_name = carrier_name.strip()
-    requested_carrier = Carrier.objects.filter(name=carrier_name,archived=False).first()
+    carrier_queryset = Carrier.objects.filter(name=carrier_name,archived=False)
+    if not carrier_queryset:
+        return JsonResponse({"success": False, "message": "Carrier not found."})
+    carrier = carrier_queryset.first()
 
-    queued_carriers = Carrier.objects.filter(collecting=True,archived=False)  # collect queue
+    if not carrier.storage_slot:
+        return JsonResponse({"success": False, "message": f"Carrier is not stored."})
 
-    if requested_carrier in queued_carriers:
+    if carrier.collecting:
         return JsonResponse({"success": False, "message": "Already in queue."})
 
-    requested_carrier.collecting = True  # add to queue
-    requested_carrier.save()
+    carrier.collecting = True  # add to queue
+    carrier.save()
 
     queued_carriers = Carrier.objects.filter(collecting=True,archived=False)
     collection_queue = [
@@ -521,59 +637,95 @@ def collect_carrier(request, carrier_name):
     ]
 
     response_message = {
-        "storage": requested_carrier.storage_slot.storage.name,
-        "slot": requested_carrier.storage_slot.qr_value,
-        "carrier": requested_carrier.name,
+        "storage": carrier.storage_slot.storage.name,
+        "slot": carrier.storage_slot.qr_value,
+        "carrier": carrier.name,
         "queue": collection_queue,
     }
 
-    requested_carrier.storage_slot.led_state = 2
-    Thread(
-        target=neo.led_on, kwargs={"lamp": requested_carrier.storage_slot.name, "color": "green"}
-    ).start()
+    carrier.storage_slot.led_state = 2
+    carrier.storage_slot.save()
+    Thread(target=neo.led_on, kwargs={"lamp": carrier.storage_slot.name, "color": "green"}).start()
+    working_light_side = 'A' if int(carrier.storage_slot.name) <= 700 else 'B'
+
+    Thread(target=neo._LED_On_Control,kwargs={'lights_dict':{"status": {working_light_side:'yellow'}}}).start()
+
 
     return JsonResponse(response_message)
 
 
-def collect_carrier_confirm(request, carrier, slot):
-    carrier = carrier.strip()
-    slot = slot.strip()
+def collect_carrier_confirm(request, carrier_name, storage_name, slot_name):
+    carrier_name = carrier_name.strip()
+    storage_name = storage_name.strip()
+    slot_name = slot_name.strip()
 
-    queued_carrier = Carrier.objects.filter(collecting=True, name=carrier,archived=False).first()
+    carrier_queryset = Carrier.objects.filter(name=carrier_name,archived=False)
+    if not carrier_queryset:
+        return JsonResponse({"success":False, "message": "Carrier not found."})
+    carrier = carrier_queryset.first()
 
-    if not queued_carrier:
+    if not carrier.collecting:
         return JsonResponse({"success": False, "message": f"Carrier {carrier} is not in the collect queue."})
+    
+    slot_queryset = StorageSlot.objects.filter(qr_value=slot_name,storage=storage_name)
+    if not slot_queryset:
+        return JsonResponse({"success":False,"message":f"Slot {slot_name} not found."})
+    slot = slot_queryset.first()
 
-    if queued_carrier.storage_slot.qr_value != slot:
+
+    if carrier.storage_slot.qr_value != slot.qr_value:
         return JsonResponse(
             {"success": False,
-             "message": f"Carrier {carrier} is in slot {queued_carrier.storage_slot.qr_value} not in slot {slot}"}
+             "message": f"Carrier {carrier.name} is in slot {carrier.storage_slot.qr_value} not in slot {slot.qr_value}"}
         )
 
-    queued_carrier.storage_slot.led_state = 0
-    queued_carrier.storage_slot.save()
+    carrier.storage_slot.led_state = 0
+    carrier.storage_slot.save()
 
-    Thread(target=neo.led_off, kwargs={"lamp": queued_carrier.storage_slot.name}).start()
+    Thread(target=neo.led_off, kwargs={"lamp": carrier.storage_slot.name}).start()
 
-    queued_carrier.storage_slot = None
-    queued_carrier.collecting = False
-    queued_carrier.save()
+    turned_off_slot = carrier.storage_slot
 
-    collection_queue = [
+    carrier.storage_slot = None
+    carrier.collecting = False
+    carrier.save()
+
+    collect_queue_queryset = Carrier.objects.filter(collecting=True,archived=False)
+
+    storage_slots_same_side_as_turned_off_slot  = [carrier.storage_slot for carrier in collect_queue_queryset if (turned_off_slot.name <= 700 and carrier.storage_slot.name <= 700) or (turned_off_slot.name > 700 and carrier.storage_slot.name > 700)]
+    if not storage_slots_same_side_as_turned_off_slot:
+        Thread(
+        target=neo._LED_Off_Control,
+        kwargs={
+            'statusA': True if turned_off_slot.name <= 700 else False,
+            'statusB': False if turned_off_slot.name <= 700 else True
+        },
+    ).start()
+        
+        Thread(
+            target=neo._LED_On_Control,
+            kwargs={'lights_dict':{"status": {'A':'green'}}}
+            ).start()
+        Thread(
+            target=neo._LED_On_Control,
+            kwargs={'lights_dict':{"status": {'B':'green'}}}
+            ).start()
+
+    collect_queue = [
         {
-            "carrier": qc.name,
-            "storage": qc.storage_slot.storage.name,
-            "slot": qc.storage_slot.qr_value,
+            "carrier": carrier.name,
+            "storage": carrier.storage_slot.storage.name,
+            "slot": carrier.storage_slot.qr_value,
         }
-        for qc in Carrier.objects.filter(collecting=True,archived=False)
+        for carrier in collect_queue_queryset
     ]
 
     response_message = {
         "success": True,
         "storage": None,
         "slot": None,
-        "carrier": queued_carrier.name,
-        "queue": collection_queue,
+        "carrier": carrier.name,
+        "queue": collect_queue,
     }
 
     return JsonResponse(response_message)
