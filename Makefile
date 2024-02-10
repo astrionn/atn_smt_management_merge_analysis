@@ -15,7 +15,7 @@ superuser: venv
 	export DJANGO_SUPERUSER_PASSWORD=123456789; \
 	python manage.py createsuperuser --no-input --username=root --email=test@test.test
 
-run: venv migrations superuser
+run: venv clean_migrations migrations superuser
 	. venv/bin/activate; \
 	python manage.py runserver
 
