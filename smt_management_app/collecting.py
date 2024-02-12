@@ -22,15 +22,39 @@ from .utils.led_shelf_dispatcher import LED_shelf_dispatcher
 
 
 def collect_single_carrier(request, carrier_name):
+    """Collects a single carrier by name, turning on its LED and returning related information.
 
+    Args:
+        request: The Django HTTP request object.
+        carrier_name: The name of the carrier to collect.
+
+    Returns:
+        A JsonResponse with the following fields:
+            success: True if the carrier was collected successfully, False otherwise.
+            message: An error message if success is False, otherwise empty.
+            carrier: The name of the collected carrier.
+            slot: The QR code value of the carrier's storage slot.
+            storage: The name of the storage unit where the carrier is located.
+    """
+
+    # Strip leading and trailing whitespace from the carrier name.
     carrier_name = carrier_name.strip()
-    carrier_queryset = Carrier.objects.filter(name=carrier_name, archived=False)
+
+    # Look up the carrier in the database.
+    carrier_queryset = Carrier.objects.filter(name=carrier_name)
+
+    # Check if the carrier exists, is not archvived and is stored
     if not carrier_queryset:
         return JsonResponse({"success": False, "message": "Carrier not found."})
     carrier = carrier_queryset.first()
 
+    if carrier.archived:
+        return JsonResponse({"success": False, "message": "Carrier has been archived."})
+
     if not carrier.storage_slot:
         return JsonResponse({"success": False, "message": "Carrier is not stored."})
+
+    # Turn on the LED for the carrier's storage slot.
     carrier.storage_slot.led_state = 2
     carrier.storage_slot.save()
 
@@ -50,14 +74,34 @@ def collect_single_carrier(request, carrier_name):
 
 
 def collect_single_carrier_confirm(request, carrier_name):
+    """Confirms the collection of a single carrier by clearing its associated storage slot and controlling LEDs
 
+    Args:
+        request: The Django HTTP request object.
+        carrier_name: The name of the carrier to collect.
+
+    Returns:
+        A JsonResponse with the following fields:
+            success: True if the carrier was collected successfully, False otherwise.
+            message: An error message if success is False, otherwise empty.
+    """
+
+    # Strip leading and trailing whitespace from the carrier name.
     carrier_name = carrier_name.strip()
-    carrier_queryset = Carrier.objects.filter(name=carrier_name, archived=False)
+
+    # Look up the carrier in the database.
+    carrier_queryset = Carrier.objects.filter(name=carrier_name)
+
+    # Check if the carrier exists and is not archvied
     if not carrier_queryset:
         return JsonResponse({"success": False, "message": "Carrier not found."})
     carrier = carrier_queryset.first()
-    slot = carrier.storage_slot
 
+    if carrier.archived:
+        return JsonResponse({"success": False, "message": "Carrier has been archived."})
+
+    # Clear the carrier's storage slot and turn off LED and working_light
+    slot = carrier.storage_slot
     slot.carrier = None
     slot.led_state = 0
     slot.save()
@@ -65,6 +109,7 @@ def collect_single_carrier_confirm(request, carrier_name):
     led_dispatcher = LED_shelf_dispatcher(slot.storage)
     Thread(target=led_dispatcher.led_off, kwargs={"lamp": slot.name}).start()
 
+    # TODO instead of hardcoding the 700 we should base it on the storage capacity
     Thread(
         target=led_dispatcher._LED_Off_Control,
         kwargs={
@@ -77,14 +122,28 @@ def collect_single_carrier_confirm(request, carrier_name):
 
 def collect_carrier(request, carrier_name):
     """
-    The user requests to collect a carrier. If possible, it's added to the collection "queue" (actually a set but queue sounds better),
-    so the user can collect batchwise, not one by one. In the next step, the user scans all the carriers to ensure they collected the correct ones.
+    Endpoint for collecting a carrier. If possible, it's added to the collection "queue" (actually a set but 'queue' is a better term),
+    allowing users to collect carriers batchwise rather than one by one. In the subsequent step, users can scan all the carriers to ensure they collected the correct ones.
+
+    Args:
+        request: The Django HTTP request object.
+        carrier_name : The name of the carrier to be collected.
+
+    Returns:
+        JsonResponse: A JSON response indicating the success or failure of the operation, along with relevant messages and the current collection queue.
     """
+
+    # Strip leading and trailing whitespace from the carrier name.
     carrier_name = carrier_name.strip()
-    carrier_queryset = Carrier.objects.filter(name=carrier_name, archived=False)
+
+    # Check if the carrier exists, is not archvived is stored and not already in the collect queue
+    carrier_queryset = Carrier.objects.filter(name=carrier_name)
     if not carrier_queryset:
         return JsonResponse({"success": False, "message": "Carrier not found."})
     carrier = carrier_queryset.first()
+
+    if carrier.archived:
+        return JsonResponse({"success": False, "message": "Carrier has been archived."})
 
     if not carrier.storage_slot:
         return JsonResponse({"success": False, "message": f"Carrier is not stored."})
@@ -92,8 +151,20 @@ def collect_carrier(request, carrier_name):
     if carrier.collecting:
         return JsonResponse({"success": False, "message": "Already in queue."})
 
-    carrier.collecting = True  # add to queue
+    # add carrier to the queue
+    carrier.collecting = True
     carrier.save()
+
+    # turn on the LED
+    carrier.storage_slot.led_state = 2
+    carrier.storage_slot.save()
+
+    led_dispatcher = LED_shelf_dispatcher(carrier.storage_slot.storage)
+
+    Thread(
+        target=led_dispatcher.led_on,
+        kwargs={"lamp": carrier.storage_slot.name, "color": "green"},
+    ).start()
 
     queued_carriers = Carrier.objects.filter(collecting=True, archived=False)
     collection_queue = [
@@ -112,28 +183,26 @@ def collect_carrier(request, carrier_name):
         "queue": collection_queue,
     }
 
-    carrier.storage_slot.led_state = 2
-    carrier.storage_slot.save()
-
-    led_dispatcher = LED_shelf_dispatcher(carrier.storage_slot.storage)
-
-    Thread(
-        target=led_dispatcher.led_on,
-        kwargs={"lamp": carrier.storage_slot.name, "color": "green"},
-    ).start()
-
     return JsonResponse(response_message)
 
 
 def collect_carrier_confirm(request, carrier_name, storage_name, slot_name):
+
+    # Strip leading and trailing whitespace
     carrier_name = carrier_name.strip()
     storage_name = storage_name.strip()
     slot_name = slot_name.strip()
 
-    carrier_queryset = Carrier.objects.filter(name=carrier_name, archived=False)
+    # Look up the carrier in the database.
+    carrier_queryset = Carrier.objects.filter(name=carrier_name)
+
+    # Check if the carrier exists, is not archvived and is not already in the queue
     if not carrier_queryset:
         return JsonResponse({"success": False, "message": "Carrier not found."})
     carrier = carrier_queryset.first()
+
+    if carrier.archived:
+        return JsonResponse({"success": False, "message": "Carrier has been archived."})
 
     if not carrier.collecting:
         return JsonResponse(
@@ -143,13 +212,16 @@ def collect_carrier_confirm(request, carrier_name, storage_name, slot_name):
             }
         )
 
+    # Look up the storage slot in the database.
     slot_queryset = StorageSlot.objects.filter(qr_value=slot_name, storage=storage_name)
+
     if not slot_queryset:
         return JsonResponse(
             {"success": False, "message": f"Slot {slot_name} not found."}
         )
     slot = slot_queryset.first()
 
+    # Check if the carrier is in the provided slot
     if carrier.storage_slot.qr_value != slot.qr_value:
         return JsonResponse(
             {
@@ -158,21 +230,25 @@ def collect_carrier_confirm(request, carrier_name, storage_name, slot_name):
             }
         )
 
+    # Turn off the LED for the carrier's storage slot.
     carrier.storage_slot.led_state = 0
     carrier.storage_slot.save()
 
     led_dispatcher = LED_shelf_dispatcher(carrier.storage_slot.storage)
 
+    # TODO maybe change slot color for short interval before turning off
     Thread(
         target=led_dispatcher.led_off, kwargs={"lamp": carrier.storage_slot.name}
     ).start()
 
+    # Clear the carriers storage slot
     turned_off_slot = carrier.storage_slot
 
     carrier.storage_slot = None
     carrier.collecting = False
     carrier.save()
 
+    # If this is the last carrier to be collected from this side of this storage then turn off the yellow workinglight
     collect_queue_queryset = Carrier.objects.filter(collecting=True, archived=False)
 
     storage_slots_same_side_as_turned_off_slot = [
@@ -182,6 +258,7 @@ def collect_carrier_confirm(request, carrier_name, storage_name, slot_name):
         or (turned_off_slot.name > 700 and carrier.storage_slot.name > 700)
     ]
     if not storage_slots_same_side_as_turned_off_slot:
+        # TODO turn on the green working_light again
         Thread(
             target=led_dispatcher._LED_Off_Control,
             kwargs={
