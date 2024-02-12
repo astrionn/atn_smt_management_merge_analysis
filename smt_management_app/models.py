@@ -34,8 +34,12 @@ class LocalFile(models.Model):
     def get_upload_path(self, filename):
         return os.path.join(self.upload_type, filename)
 
-    UPLOAD_TYPE_CHOICES = [("article", "Article"), ("carrier", "Carrier"), ("board", "Board")]
-    DELIMITER_CHOICES = [(0,","),(1,";"),(2,"\t")]
+    UPLOAD_TYPE_CHOICES = [
+        ("article", "Article"),
+        ("carrier", "Carrier"),
+        ("board", "Board"),
+    ]
+    DELIMITER_CHOICES = [(0, ","), (1, ";"), (2, "\t")]
     name = models.BigAutoField(primary_key=True, unique=True, null=False, blank=False)
     upload_type = models.CharField(
         max_length=50, choices=UPLOAD_TYPE_CHOICES, null=False, blank=False
@@ -43,14 +47,18 @@ class LocalFile(models.Model):
     file_object = models.FileField(upload_to=get_upload_path)
     headers = models.CharField(max_length=5000, null=True, blank=True)
     board_name = models.CharField(max_length=5000, null=True, blank=True)
-    delimiter = models.CharField(max_length=2,choices=DELIMITER_CHOICES)
+    delimiter = models.CharField(max_length=2, choices=DELIMITER_CHOICES)
 
 
 class Storage(AbstractBaseModel):
-    DEVICE_CHOICES = [(0,"NeoLight"),(1,"Sophia"),(2,"ATNPTL")]
+    DEVICE_CHOICES = [(0, "NeoLight"), (1, "Sophia"), (2, "ATNPTL"), (3, "Dummy")]
     capacity = models.IntegerField()
     location = models.CharField(max_length=50, null=True, blank=True)
-    device = models.CharField(max_length=5000,choices=DEVICE_CHOICES)
+    device = models.CharField(max_length=5000, choices=DEVICE_CHOICES)
+    COM_address = models.CharField(max_length=10, blank=True, null=True)
+    ATNPTL_shelf_id = models.PositiveIntegerField(null=True, blank=True)
+    ip_adress = models.CharField(max_length=15, null=True, blank=True)
+    ip_port = models.PositiveIntegerField(null=True, blank=True)
 
     def get_absolute_url(self):
         return reverse("smt_management_app:storage-detail", kwargs={"name": self.name})
@@ -146,10 +154,20 @@ class Carrier(AbstractBaseModel):
     delivered = models.BooleanField(default=False)
     collecting = models.BooleanField(default=False)
 
-    nominated_for_slot = models.OneToOneField("StorageSlot",on_delete=models.SET_NULL,null=True,blank=True,related_name='nominated_carrier')
+    nominated_for_slot = models.OneToOneField(
+        "StorageSlot",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="nominated_carrier",
+    )
 
     storage_slot = models.OneToOneField(
-        "StorageSlot", on_delete=models.CASCADE, null=True, blank=True, related_name='carrier'
+        "StorageSlot",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="carrier",
     )
     machine_slot = models.OneToOneField(
         "MachineSlot", on_delete=models.CASCADE, null=True, blank=True
@@ -212,7 +230,7 @@ class StorageSlot(models.Model):
         return reverse(
             "smt_management_app:storageslot-detail", kwargs={"name": self.name}
         )
-    
+
     def __str__(self):
         return str(self.name)
 

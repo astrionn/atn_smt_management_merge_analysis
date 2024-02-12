@@ -1,12 +1,13 @@
 from smt_management_app.models import Storage, StorageSlot
 import random
 
+
 def run():
-    storage = Storage.objects.create(name=f"Storage_1",capacity = 1400,device="NeoLight")
-    storage2 = Storage.objects.create(name=f"Storage_2",capacity = 1400,device="NeoLight")
-    for i in range(1,1401):
-        storage_slot = StorageSlot.objects.create(name=i,storage=storage)
-        storage_slot2 = StorageSlot.objects.create(name=i,storage=storage2)
+    storage = Storage.objects.create(name=f"Storage_1", capacity=1400, device="Dummy")
+    storage2 = Storage.objects.create(name=f"Storage_2", capacity=1400, device="Dummy")
+    for i in range(1, 1401):
+        storage_slot = StorageSlot.objects.create(name=i, storage=storage)
+        storage_slot2 = StorageSlot.objects.create(name=i, storage=storage2)
         if i > 700:
             i -= 700
 
@@ -22,4 +23,3 @@ def run():
 
         storage_slot2.qr_value = qr_val
         storage_slot2.save()
-        
