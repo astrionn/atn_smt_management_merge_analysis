@@ -1,31 +1,17 @@
-from smt_management_app.models import StorageSlot
-from smt_management_app.utils.neolight_handler import NeoLightAPI
+from smt_management_app.models import Storage, StorageSlot
+from smt_management_app.utils.led_shelf_dispatcher import LED_shelf_dispatcher
 
 
 def run():
-    class NeoDummy:
-        # for developement without actually having to connect a shelf
-        def __init__(self):
-            pass
-
-        def led_on(self, lamp, color):
-            print(f"led on {lamp=} ; {color=}")
-
-        def led_off(self, lamp):
-            print(f"led of {lamp=}")
-
-        def reset_leds(self, working_light=False):
-            print("reset leds")
-
-    # neo = NeoLightAPI("192.168.178.11")
-    neo = NeoDummy()
-    neo.reset_leds()
-    qs = StorageSlot.objects.all()
-    qs = sorted(qs, key=lambda ss: int(ss.name))
-
-    for ss in qs:
-        neo.led_on(int(ss.name), "blue")
-        qr_value = input(f"Please scan the barcode of the indicated slot.")
-        neo.led_off(int(ss.name))
-        ss.qr_value = qr_value
-        ss.save()
+    storages_queryset = Storage.objects.all()
+    for storage in storages_queryset:
+        slot_queryset = StorageSlot.objects.filter(storage=storage)
+        sorted_slot_queryset = sorted(slot_queryset, key=lambda slot: int(slot.name))
+        led_dispatcher = LED_shelf_dispatcher(storage)
+        led_dispatcher.reset_leds()
+        for slot in sorted_slot_queryset:
+            led_dispatcher.led_on(int(slot.name), "blue")
+            qr_value = input(f"Please scan the barcode of the indicated slot.")
+            led_dispatcher.led_off(int(slot.name))
+            slot.qr_value = qr_value
+            slot.save()
