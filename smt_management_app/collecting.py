@@ -170,7 +170,7 @@ def collect_carrier(request, carrier_name):
 
     Thread(
         target=led_dispatcher.led_on,
-        kwargs={"lamp": carrier.storage_slot.name, "color": "green"},
+        kwargs={"lamp": carrier.storage_slot.name, "color": "blue"},
     ).start()
 
     queued_carriers = Carrier.objects.filter(collecting=True, archived=False)
