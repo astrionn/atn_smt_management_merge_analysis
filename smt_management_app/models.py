@@ -252,7 +252,7 @@ class Job(AbstractBaseModel):
     start_at = models.DateTimeField()
     finish_at = models.DateTimeField()
     status = models.IntegerField(default=0, choices=STATUS_CHOICES)
-    carriers = models.ManyToManyField(Carrier, blank=True, null=True)
+    carriers = models.ManyToManyField(Carrier, blank=True)
 
     def get_absolute_url(self):
         return reverse("smt_management_app:job-detail", kwargs={"name": self.name})

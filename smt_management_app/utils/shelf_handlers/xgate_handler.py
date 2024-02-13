@@ -166,6 +166,7 @@ class XGateHandler:
         self.ptltera.InErrorChanged += self.ptltera_error_changed
         self.clear_all_lights()
         self.clear_lhs()
+        self.light_house_on(mode="normal")
         # self.xgate.InputPortStatusChanged += self.xgate_status_changed
         # self.xgate.AppearanceChanged += self.xgate_appearance_changed
 
