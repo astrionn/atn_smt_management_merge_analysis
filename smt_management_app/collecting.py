@@ -36,7 +36,7 @@ def collect_single_carrier(request, carrier_name):
 
     Thread(
         target=LED_shelf_dispatcher(carrier.storage_slot.storage).led_on,
-        kwargs={"lamp": carrier.storage_slot.name, "color": "green"},
+        kwargs={"lamp": carrier.storage_slot.name, "color": "blue"},
     ).start()
 
     return JsonResponse(
@@ -63,7 +63,14 @@ def collect_single_carrier_confirm(request, carrier_name):
     slot.save()
 
     led_dispatcher = LED_shelf_dispatcher(slot.storage)
-    Thread(target=led_dispatcher.led_off, kwargs={"lamp": slot.name}).start()
+    Thread(
+        target=led_dispatcher.led_on, kwargs={"lamp": slot.name, "color": "green"}
+    ).start()
+    Timer(
+        interval=2,
+        function=led_dispatcher.led_off,
+        kwargs={"lamp": slot.name},
+    ).start()
 
     Thread(
         target=led_dispatcher._LED_Off_Control,
@@ -119,7 +126,7 @@ def collect_carrier(request, carrier_name):
 
     Thread(
         target=led_dispatcher.led_on,
-        kwargs={"lamp": carrier.storage_slot.name, "color": "green"},
+        kwargs={"lamp": carrier.storage_slot.name, "color": "blue"},
     ).start()
 
     return JsonResponse(response_message)
@@ -164,7 +171,12 @@ def collect_carrier_confirm(request, carrier_name, storage_name, slot_name):
     led_dispatcher = LED_shelf_dispatcher(carrier.storage_slot.storage)
 
     Thread(
-        target=led_dispatcher.led_off, kwargs={"lamp": carrier.storage_slot.name}
+        target=led_dispatcher.led_on, kwargs={"lamp": slot.name, "color": "green"}
+    ).start()
+    Timer(
+        interval=2,
+        function=led_dispatcher.led_off,
+        kwargs={"lamp": slot.name},
     ).start()
 
     turned_off_slot = carrier.storage_slot
@@ -352,7 +364,7 @@ def collect_job(request, job_name):
             target=dispatchers[storage.name]._LED_On_Control,
             kwargs={
                 "lights_dict": {
-                    "lamps": {slot.name: "yellow" for slot in slots_in_that_storage}
+                    "lamps": {slot.name: "blue" for slot in slots_in_that_storage}
                 }
             },
         )
