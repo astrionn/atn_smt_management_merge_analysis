@@ -81,7 +81,7 @@ def store_carrier(request, carrier_name, storage_name):
         Storage.objects.get(name=free_slot.storage.name)
     )
     Thread(
-        target=led_dispatcher.led_on, kwargs={"lamp": free_slot.name, "color": "blue"}
+        target=led_dispatcher.led_on, kwargs={"lamp": free_slot.name, "color": "yellow"}
     ).start()
 
     msg = {
@@ -142,10 +142,13 @@ def store_carrier_confirm(request, carrier_name, storage_name, slot_name):
     slot.save()
 
     Thread(
-        target=dispatchers[slot.storage.name].led_off,
-        kwargs={
-            "lamp": slot.name,
-        },
+        target=dispatchers[slot.storage.name].led_on,
+        kwargs={"lamp": slot.name, "color": "green"},
+    ).start()
+    Timer(
+        interval=2,
+        function=dispatchers[slot.storage.name].led_off,
+        kwargs={"lamp": slot.name},
     ).start()
 
     Thread(
@@ -217,7 +220,7 @@ def store_carrier_choose_slot(request, carrier_name, storage_name):
             dispatchers[storage.name]._LED_On_Control(
                 {
                     "lamps": {
-                        free_slot.name: "blue"
+                        free_slot.name: "yellow"
                         for free_slot in free_slot_queryset.filter(storage=storage)
                     }
                 }

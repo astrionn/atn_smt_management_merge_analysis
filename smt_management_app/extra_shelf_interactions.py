@@ -21,6 +21,16 @@ from .models import (
 
 from .utils.led_shelf_dispatcher import LED_shelf_dispatcher
 
+try:
+    storages = Storage.objects.all()
+    if storages:
+        # initialize the dispatchers for all shelfs to turn on the working lights to green
+        dispatchers = {
+            storage.name: LED_shelf_dispatcher(storage) for storage in storages
+        }
+except Exception:
+    pass
+
 
 @csrf_exempt
 def test_leds(request):
