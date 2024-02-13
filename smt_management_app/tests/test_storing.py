@@ -46,15 +46,14 @@ class StoringTestCase(TestCase):
                 storage=Storage(self.storage_names[1]),
             )
 
-    def test_workinglight_on_start(self):
+    def test_workinglight_on(self):
         query = input(f"Are all workinglights of {self.storage_names} green ? [Y/n]")
         if query.lower() == "n":
             raise Exception
 
-    def test_store_carrier_flow(self):
-
+    def test_store_carrier_success(self):
         # user does everything right
-        for i, carrier_name in enumerate(self.carrier_names[:-5]):
+        for i, carrier_name in enumerate(self.carrier_names):
             storage_name = self.storage_names[(i % 2) - 1]
             response_store = self.client.get(
                 f"/api/store_carrier/{carrier_name}/{storage_name}/"
@@ -81,9 +80,11 @@ class StoringTestCase(TestCase):
             if query.lower() == "n":
                 raise Exception
 
+    def test_store_carrier_fail_wrong_slot(self):
         # user scans wrong slot
-        carrier_name = self.carrier_names[-5]
+        carrier_name = self.carrier_names[0]
         storage_name = self.storage_names[0]
+
         response_store = self.client.get(
             f"/api/store_carrier/{carrier_name}/{storage_name}/"
         )
@@ -96,7 +97,6 @@ class StoringTestCase(TestCase):
         if query.lower() == "n":
             raise Exception
 
-        false_slot_name = slot_name
         for slot in self.storage_slot_names:
             false_slot_name = slot
             if not false_slot_name == slot_name:
