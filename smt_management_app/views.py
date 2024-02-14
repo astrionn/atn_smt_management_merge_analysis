@@ -87,7 +87,7 @@ def assign_carrier_to_job(request, job_name, carrier_name):
 
     if job and carrier:
         job.carriers.add(carrier)
-        if len(job.carriers) == len(job.board.articles):
+        if job.carriers.count() == job.board.articles.count():
             job.status = 1
         job.save()
         return JsonResponse({"success": True})
