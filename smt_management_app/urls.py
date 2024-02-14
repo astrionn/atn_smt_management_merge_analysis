@@ -40,7 +40,9 @@ urlpatterns.append(
     )
 )
 urlpatterns.append(
-    path("collect_carrier/<carrier_name>/", views.collect_carrier, name="collect_carrier")
+    path(
+        "collect_carrier/<carrier_name>/", views.collect_carrier, name="collect_carrier"
+    )
 )
 urlpatterns.append(
     path(
@@ -51,7 +53,9 @@ urlpatterns.append(
 )
 urlpatterns.append(
     path(
-        "store_carrier/<carrier_name>/<storage_name>/", views.store_carrier, name="store_carrier"
+        "store_carrier/<carrier_name>/<storage_name>/",
+        views.store_carrier,
+        name="store_carrier",
     )
 )
 urlpatterns.append(
@@ -116,7 +120,7 @@ urlpatterns.append(
 
 urlpatterns.append(
     path(
-        "reset_leds/<storage>/",
+        "reset_leds/<storage_name>/",
         views.reset_leds,
         name="reset_leds",
     )
@@ -140,7 +144,7 @@ urlpatterns.append(
 
 urlpatterns.append(
     path(
-        "collectCarrierByArticle/<article_name>/",
+        "collect_carrier_by_article/<article_name>/",
         views.collect_carrier_by_article,
         name="collect_carrier_by_article",
     )
@@ -148,9 +152,9 @@ urlpatterns.append(
 
 urlpatterns.append(
     path(
-        "confirmCarrierByArticle/<carrier_name>/",
-        views.confirm_carrier_by_article,
-        name="confirm_carrier_by_article",
+        "collect_carrier_by_article_confirm/<carrier_name>/",
+        views.collect_carrier_by_article_confirm,
+        name="collect_carrier_by_article_confirm",
     )
 )
 
@@ -174,13 +178,27 @@ urlpatterns.append(
 
 urlpatterns.append(
     path(
-        "assign_carrier_to_job/<job>/<carrier>/",
+        "assign_carrier_to_job/<job_name>/<carrier_name>/",
         views.assign_carrier_to_job,
         name="assign_carrier_to_job",
     )
 )
 
-urlpatterns.append(path("collect_single_carrier/<carrier_name>/",views.collect_single_carrier,name="collect_single_carrier"))
-urlpatterns.append(path("collect_single_carrier_confirm/<carrier_name>/",views.collect_single_carrier_confirm,name="collect_single_carrier_confirm"))
+urlpatterns.append(
+    path(
+        "collect_single_carrier/<carrier_name>/",
+        views.collect_single_carrier,
+        name="collect_single_carrier",
+    )
+)
+urlpatterns.append(
+    path(
+        "collect_single_carrier_confirm/<carrier_name>/",
+        views.collect_single_carrier_confirm,
+        name="collect_single_carrier_confirm",
+    )
+)
 
-urlpatterns.append(path("collect_job/<job_name>/",views.collect_job,name="collect_job"))
+urlpatterns.append(
+    path("collect_job/<job_name>/", views.collect_job, name="collect_job")
+)

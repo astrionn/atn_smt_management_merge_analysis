@@ -67,7 +67,7 @@ from .collecting import (
     collect_carrier,
     collect_carrier_confirm,
     collect_carrier_by_article,
-    confirm_carrier_by_article,
+    collect_carrier_by_article_confirm,
     collect_job,
 )
 
@@ -81,15 +81,15 @@ from .storing import (
 from .extra_shelf_interactions import test_leds, reset_leds
 
 
-def assign_carrier_to_job(request, job, carrier):
-    job_object = Job.objects.filter(name=job).first()
-    carrier_object = Carrier.objects.filter(name=carrier, archived=False).first()
+def assign_carrier_to_job(request, job_name, carrier_name):
+    job = Job.objects.filter(name=job_name).first()
+    carrier = Carrier.objects.filter(name=carrier_name, archived=False).first()
 
-    if job_object and carrier_object:
-        job_object.carriers.add(carrier_object)
-        if len(job_object.carriers) == len(job_object.board.articles):
-            job_object.status = 1
-        job_object.save()
+    if job and carrier:
+        job.carriers.add(carrier)
+        if len(job.carriers) == len(job.board.articles):
+            job.status = 1
+        job.save()
         return JsonResponse({"success": True})
     else:
         return JsonResponse({"success": False})

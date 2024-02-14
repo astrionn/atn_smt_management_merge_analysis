@@ -339,7 +339,7 @@ def collect_carrier_by_article(request, article_name):
     return JsonResponse({"success": True})
 
 
-def confirm_carrier_by_article(request, carrier_name):
+def collect_carrier_by_article_confirm(request, carrier_name):
     """
     Confirms carrier by article from a storage unit.
     Empties the slot and resets LEDs upon carrier confirmation.

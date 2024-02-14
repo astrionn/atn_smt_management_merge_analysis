@@ -61,11 +61,11 @@ def reset_leds(request, storage_name):
     # Start a new thread to reset LEDs with working_light set to True
     Thread(target=led_dispatcher.reset_leds, kwargs={"working_light": True}).start()
     Thread(
-        taraget=led_dispatcher._LED_On_Control,
+        target=led_dispatcher._LED_On_Control,
         kwargs={"lights_dict": {"status": {"A": "green", "B": "green"}}},
     )
     # Update LED state for all storage slots to 0
     StorageSlot.objects.filter(storage=storage).update(led_state=0)
 
     # Return JSON response indicating LED reset for the given storage
-    return JsonResponse({"reset_led": storage})
+    return JsonResponse({"reset_led": storage.name})
