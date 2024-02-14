@@ -169,6 +169,8 @@ class Carrier(AbstractBaseModel):
         blank=True,
         related_name="carrier",
     )
+
+    storage_slot_qr_value = models.CharField(max_length=5000, blank=True, null=True)
     machine_slot = models.OneToOneField(
         "MachineSlot", on_delete=models.CASCADE, null=True, blank=True
     )
@@ -185,6 +187,7 @@ class Carrier(AbstractBaseModel):
             storage = Storage.objects.filter(name=slot_storage).first()
             # print(storage)
             self.storage = storage
+            self.storage_slot_qr_value = self.storage_slot.qr_value
         else:
             self.storage = None
 
