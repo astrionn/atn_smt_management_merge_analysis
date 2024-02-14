@@ -160,6 +160,7 @@ class Carrier(AbstractBaseModel):
         null=True,
         blank=True,
         related_name="nominated_carrier",
+        related_query_name="nominated_carrier",
     )
 
     storage_slot = models.OneToOneField(

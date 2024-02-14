@@ -1,4 +1,6 @@
+from pprint import pp
 from threading import Thread, Timer
+from xml.sax.handler import feature_external_ges
 
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
@@ -74,7 +76,14 @@ def store_carrier(request, carrier_name, storage_name):
 
     free_slot = free_slots_queryset.first()
     free_slot.led_state = 2
+
+    # check if another carrier was nominated for this slot if yes clear it
+    if hasattr(free_slot, "nominated_carrier"):
+        other_carrier = free_slot.nominated_carrier
+        free_slot.nominated_carrier.nominated_for_slot = None
+        other_carrier.save()
     free_slot.save()
+
     carrier.nominated_for_slot = free_slot
     carrier.save()
     led_dispatcher = LED_shelf_dispatcher(
