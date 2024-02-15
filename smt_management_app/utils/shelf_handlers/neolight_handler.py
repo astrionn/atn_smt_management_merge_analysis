@@ -20,9 +20,6 @@ class NeoLightAPI:
         self.led_colors = led_colors
         self.tower_colors = tower_colors
         self.all_leds = list(range(1, max_led_address + 1))
-        self._LED_On_Control({'status':{'A':'green','B':'green'}})
-
-    
 
     def _LED_On_Control(self, lights_dict):
         """

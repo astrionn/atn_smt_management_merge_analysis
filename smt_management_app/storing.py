@@ -75,7 +75,7 @@ def store_carrier(request, carrier_name, storage_name):
         )
 
     free_slot = free_slots_queryset.first()
-    free_slot.led_state = 2
+    free_slot.led_state = 1
 
     # check if another carrier was nominated for this slot if yes clear it
     if hasattr(free_slot, "nominated_carrier"):
@@ -160,19 +160,6 @@ def store_carrier_confirm(request, carrier_name, storage_name, slot_name):
         kwargs={"lamp": slot.name},
     ).start()
 
-    Thread(
-        target=dispatchers[slot.storage.name]._LED_Off_Control,
-        kwargs={
-            "statusA": True if int(slot.name) <= 700 else False,
-            "statusB": False if int(slot.name) <= 700 else True,
-        },
-    ).start()
-
-    for storage_name in dispatchers.keys():
-        Thread(
-            target=dispatchers[storage_name]._LED_On_Control,
-            kwargs={"lights_dict": {"status": {"A": "green", "B": "green"}}},
-        ).start()
     return JsonResponse({"success": True})
 
 
@@ -235,7 +222,7 @@ def store_carrier_choose_slot(request, carrier_name, storage_name):
                 }
             )
         ).start()
-    free_slot_queryset.update(led_state=2)
+    free_slot_queryset.update(led_state=1)
 
     return JsonResponse(msg)
 
@@ -285,10 +272,6 @@ def store_carrier_choose_slot_confirm(request, carrier_name, storage_name, slot_
     carrier.save()
     for storage in storages:
         Thread(target=dispatchers[storage.name].reset_leds).start()
-        Thread(
-            target=dispatchers[storage.name]._LED_On_Control,
-            kwargs={"lights_dict": {"status": {"A": "green", "B": "green"}}},
-        ).start()
 
     Thread(
         target=dispatchers[slot.storage.name].led_on,

@@ -225,7 +225,7 @@ class MachineSlot(AbstractBaseModel):
 
 class StorageSlot(models.Model):
     name = models.PositiveIntegerField()
-    STATE_CHOICES = [(0, "off"), (1, "green"), (2, "yellow"), (3, "blue"), (4, "red")]
+    STATE_CHOICES = [(0, "off"), (1, "on")]
     storage = models.ForeignKey(Storage, on_delete=models.CASCADE)
     led_state = models.IntegerField(default=0, choices=STATE_CHOICES)
     qr_value = models.CharField(max_length=5000, blank=True, null=True)

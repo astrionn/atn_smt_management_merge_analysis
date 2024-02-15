@@ -55,7 +55,7 @@ def collect_single_carrier(request, carrier_name):
         return JsonResponse({"success": False, "message": "Carrier is not stored."})
 
     # Turn on the LED for the carrier's storage slot.
-    carrier.storage_slot.led_state = 2
+    carrier.storage_slot.led_state = 1
     carrier.storage_slot.save()
 
     Thread(
@@ -116,14 +116,6 @@ def collect_single_carrier_confirm(request, carrier_name):
         kwargs={"lamp": slot.name},
     ).start()
 
-    # TODO instead of hardcoding the 700 we should base it on the storage capacity
-    Thread(
-        target=led_dispatcher._LED_Off_Control,
-        kwargs={
-            "statusA": True if int(slot.name) <= 700 else False,
-            "statusB": False if int(slot.name) <= 700 else True,
-        },
-    ).start()
     return JsonResponse({"success": True})
 
 
@@ -163,7 +155,7 @@ def collect_carrier(request, carrier_name):
     carrier.save()
 
     # turn on the LED
-    carrier.storage_slot.led_state = 2
+    carrier.storage_slot.led_state = 1
     carrier.storage_slot.save()
 
     led_dispatcher = LED_shelf_dispatcher(carrier.storage_slot.storage)
@@ -243,7 +235,6 @@ def collect_carrier_confirm(request, carrier_name, storage_name, slot_name):
 
     led_dispatcher = LED_shelf_dispatcher(carrier.storage_slot.storage)
 
-    # TODO maybe change slot color for short interval before turning off
     Thread(
         target=led_dispatcher.led_on, kwargs={"lamp": slot.name, "color": "green"}
     ).start()
@@ -262,22 +253,6 @@ def collect_carrier_confirm(request, carrier_name, storage_name, slot_name):
 
     # If this is the last carrier to be collected from this side of this storage then turn off the yellow workinglight
     collect_queue_queryset = Carrier.objects.filter(collecting=True, archived=False)
-
-    storage_slots_same_side_as_turned_off_slot = [
-        carrier.storage_slot
-        for carrier in collect_queue_queryset
-        if (turned_off_slot.name <= 700 and carrier.storage_slot.name <= 700)
-        or (turned_off_slot.name > 700 and carrier.storage_slot.name > 700)
-    ]
-    if not storage_slots_same_side_as_turned_off_slot:
-        # TODO turn on the green working_light again
-        Thread(
-            target=led_dispatcher._LED_Off_Control,
-            kwargs={
-                "statusA": True if turned_off_slot.name <= 700 else False,
-                "statusB": False if turned_off_slot.name <= 700 else True,
-            },
-        ).start()
 
     collect_queue = [
         {
@@ -335,7 +310,7 @@ def collect_carrier_by_article(request, article_name):
             target=dispatchers[slot.storage.name].led_on,
             kwargs={"lamp": slot.name, "color": "blue"},
         ).start()
-
+    slot_queryset.update(led_state=1)
     return JsonResponse({"success": True})
 
 
@@ -381,10 +356,6 @@ def collect_carrier_by_article_confirm(request, carrier_name):
     # Reset LEDs after carrier confirmation
     for storage in storages:
         Thread(target=dispatchers[storage.name].reset_leds).start()
-        Thread(
-            target=dispatchers[storage.name]._LED_On_Control,
-            kwargs={"lights_dict": {"status": {"A": "green", "B": "green"}}},
-        ).start()
 
     # Update LED state for all storage slots to off
     slot_queryset.update(led_state=0)
@@ -428,12 +399,13 @@ def collect_job(request, job_name):
 
     slot_ids = carriers_of_job.values_list("storage_slot__id", flat=True)
     slots = StorageSlot.objects.filter(pk__in=slot_ids)
+    slots.update(led_state=1)
     slots_by_storage = {
         storage: list(slots.filter(Q(storage=storage))) for storage in storages
     }
 
     for carrier in carriers_of_job:
-        carrier.storage_slot.led_state = 2
+        carrier.storage_slot.led_state = 1
         carrier.save()
 
     for storage, slots_in_that_storage in slots_by_storage.items():
