@@ -19,17 +19,20 @@ router.register(r"storageslot", views.StorageSlotViewSet, "storageslot")
 name = "smt_management_app"
 urlpatterns = router.urls
 urlpatterns.append(
-    path(
-        "save_file_and_get_headers/",
-        views.save_file_and_get_headers,
-        name="save_file_and_get_headers",
-    )
+    path("articlelist/", views.ArticleNameViewSet.as_view(), name="articlelist")
 )
 urlpatterns.append(
+    path("carrierlist/", views.CarrierNameViewSet.as_view(), name="carrierlist")
+)
+urlpatterns.append(
+    path("providerlist/", views.ProviderNameViewSet.as_view(), name="providerlist")
+)
+
+urlpatterns.append(
     path(
-        "user_mapping_and_file_processing/",
-        views.user_mapping_and_file_processing,
-        name="user_mapping_and_file_processing",
+        "manufacturerlist/",
+        views.ManufacturerNameViewSet.as_view(),
+        name="manufacturerlist",
     )
 )
 urlpatterns.append(
@@ -39,6 +42,69 @@ urlpatterns.append(
         name="get_storage_content",
     )
 )
+######### helpers ###########
+urlpatterns.append(
+    path("create_qr_code/<code>/", views.create_qr_code, name="create_qr_code")
+)
+
+
+urlpatterns.append(path("get_csrf_token/", views.get_csrf_token, name="get_csrf_token"))
+
+urlpatterns.append(
+    path(
+        "check_unique/<field>/<value>/",
+        views.check_unique,
+        name="check_unique",
+    )
+)
+
+urlpatterns.append(
+    path(
+        "check_pk_unique/<model_name>/<value>/",
+        views.check_pk_unique,
+        name="check_pk_unique",
+    )
+)
+
+urlpatterns.append(
+    path(
+        "dashboard_data/",
+        views.dashboard_data,
+        name="dashboard_data",
+    )
+)
+
+urlpatterns.append(
+    path(
+        "print_carrier/<carrier>/",
+        views.print_carrier,
+        name="print_carrier",
+    )
+)
+######### collecting ###########
+urlpatterns.append(
+    path(
+        "collect_single_carrier/<carrier_name>/",
+        views.collect_single_carrier,
+        name="collect_single_carrier",
+    )
+)
+urlpatterns.append(
+    path(
+        "collect_single_carrier_confirm/<carrier_name>/",
+        views.collect_single_carrier_confirm,
+        name="collect_single_carrier_confirm",
+    )
+)
+
+urlpatterns.append(
+    path(
+        "collect_single_carrier_cancel/<carrier_name>/",
+        views.collect_single_carrier_cancel,
+        name="collect_single_carrier_cancel",
+    )
+)
+
 urlpatterns.append(
     path(
         "collect_carrier/<carrier_name>/", views.collect_carrier, name="collect_carrier"
@@ -53,92 +119,9 @@ urlpatterns.append(
 )
 urlpatterns.append(
     path(
-        "store_carrier/<carrier_name>/<storage_name>/",
-        views.store_carrier,
-        name="store_carrier",
-    )
-)
-urlpatterns.append(
-    path(
-        "store_carrier_confirm/<carrier_name>/<storage_name>/<slot_name>/",
-        views.store_carrier_confirm,
-        name="store_carrier_confirm",
-    )
-)
-
-urlpatterns.append(
-    path(
-        "store_carrier_choose_slot/<carrier_name>/<storage_name>/",
-        views.store_carrier_choose_slot,
-        name="store_carrier_choose_slot",
-    )
-)
-urlpatterns.append(
-    path(
-        "store_carrier_choose_slot_confirm/<carrier_name>/<storage_name>/<slot_name>/",
-        views.store_carrier_choose_slot_confirm,
-        name="store_carrier_choose_slot_confirm",
-    )
-)
-
-urlpatterns.append(
-    path("articlelist/", views.ArticleNameViewSet.as_view(), name="articlelist")
-)
-urlpatterns.append(
-    path("carrierlist/", views.CarrierNameViewSet.as_view(), name="carrierlist")
-)
-
-urlpatterns.append(
-    path("providerlist/", views.ProviderNameViewSet.as_view(), name="providerlist")
-)
-
-
-urlpatterns.append(
-    path(
-        "manufacturerlist/",
-        views.ManufacturerNameViewSet.as_view(),
-        name="manufacturerlist",
-    )
-)
-
-urlpatterns.append(path("get_csrf_token/", views.get_csrf_token, name="get_csrf_token"))
-urlpatterns.append(
-    path(
-        "check_pk_unique/<model_name>/<value>/",
-        views.check_pk_unique,
-        name="check_pk_unique",
-    )
-)
-
-urlpatterns.append(
-    path(
-        "check_unique/<field>/<value>/",
-        views.check_unique,
-        name="check_unique",
-    )
-)
-
-urlpatterns.append(
-    path(
-        "reset_leds/<storage_name>/",
-        views.reset_leds,
-        name="reset_leds",
-    )
-)
-
-urlpatterns.append(
-    path(
-        "dashboard_data/",
-        views.dashboard_data,
-        name="dashboard_data",
-    )
-)
-
-urlpatterns.append(
-    path(
-        "test_leds/",
-        views.test_leds,
-        name="test_leds",
+        "collect_carrier_cancel/<carrier_name>/",
+        views.collect_carrier_cancel,
+        name="collect_carrier_cancel",
     )
 )
 
@@ -160,22 +143,78 @@ urlpatterns.append(
 
 urlpatterns.append(
     path(
-        "print_carrier/<carrier>/",
-        views.print_carrier,
-        name="print_carrier",
+        "collect_carrier_by_article_cancel/<article_name>/",
+        views.collect_carrier_by_article_cancel,
+        name="collect_carrier_by_article_cancel",
     )
 )
-
 urlpatterns.append(
-    path("create_qr_code/<code>/", views.create_qr_code, name="create_qr_code")
+    path("collect_job/<job_name>/", views.collect_job, name="collect_job")
+)
+
+######### storing ###########
+urlpatterns.append(
+    path(
+        "store_carrier/<carrier_name>/<storage_name>/",
+        views.store_carrier,
+        name="store_carrier",
+    )
+)
+urlpatterns.append(
+    path(
+        "store_carrier_confirm/<carrier_name>/<storage_name>/<slot_name>/",
+        views.store_carrier_confirm,
+        name="store_carrier_confirm",
+    )
+)
+urlpatterns.append(
+    path(
+        "store_carrier_cancel/<carrier_name>/",
+        views.store_carrier_cancel,
+        name="store_carrier_cancel",
+    )
 )
 
 urlpatterns.append(
     path(
-        "deliver_all_carriers", views.deliver_all_carriers, name="deliver_all_carriers"
+        "store_carrier_choose_slot/<carrier_name>/<storage_name>/",
+        views.store_carrier_choose_slot,
+        name="store_carrier_choose_slot",
+    )
+)
+urlpatterns.append(
+    path(
+        "store_carrier_choose_slot_confirm/<carrier_name>/<storage_name>/<slot_name>/",
+        views.store_carrier_choose_slot_confirm,
+        name="store_carrier_choose_slot_confirm",
     )
 )
 
+urlpatterns.append(
+    path(
+        "store_carrier_choose_slot_cancel/<carrier_name>/",
+        views.store_carrier_choose_slot_cancel,
+        name="store_carrier_choose_slot_cancel",
+    )
+)
+######### extra shelf interactions ###########
+urlpatterns.append(
+    path(
+        "test_leds/",
+        views.test_leds,
+        name="test_leds",
+    )
+)
+
+urlpatterns.append(
+    path(
+        "reset_leds/<storage_name>/",
+        views.reset_leds,
+        name="reset_leds",
+    )
+)
+
+######### views ###########
 urlpatterns.append(
     path(
         "assign_carrier_to_job/<job_name>/<carrier_name>/",
@@ -186,19 +225,21 @@ urlpatterns.append(
 
 urlpatterns.append(
     path(
-        "collect_single_carrier/<carrier_name>/",
-        views.collect_single_carrier,
-        name="collect_single_carrier",
-    )
-)
-urlpatterns.append(
-    path(
-        "collect_single_carrier_confirm/<carrier_name>/",
-        views.collect_single_carrier_confirm,
-        name="collect_single_carrier_confirm",
+        "deliver_all_carriers", views.deliver_all_carriers, name="deliver_all_carriers"
     )
 )
 
 urlpatterns.append(
-    path("collect_job/<job_name>/", views.collect_job, name="collect_job")
+    path(
+        "save_file_and_get_headers/",
+        views.save_file_and_get_headers,
+        name="save_file_and_get_headers",
+    )
+)
+urlpatterns.append(
+    path(
+        "user_mapping_and_file_processing/",
+        views.user_mapping_and_file_processing,
+        name="user_mapping_and_file_processing",
+    )
 )

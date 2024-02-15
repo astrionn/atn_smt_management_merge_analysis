@@ -164,6 +164,38 @@ def store_carrier_confirm(request, carrier_name, storage_name, slot_name):
 
 
 @csrf_exempt
+def store_carrier_cancel(request, carrier_name):
+    # see store carrier
+
+    carrier_name = carrier_name.strip()
+
+    carrier_queryset = Carrier.objects.filter(name=carrier_name, archived=False)
+    carrier = carrier_queryset.first()
+
+    slot = carrier.nominated_for_slot
+    storage = slot.storage
+    dispatchers = {storage.name: LED_shelf_dispatcher(storage)}
+
+    carrier.nominated_for_slot = None
+    carrier.save()
+
+    slot.led_state = 0
+    slot.save()
+
+    Thread(
+        target=dispatchers[slot.storage.name].led_on,
+        kwargs={"lamp": slot.name, "color": "red"},
+    ).start()
+    Timer(
+        interval=2,
+        function=dispatchers[slot.storage.name].led_off,
+        kwargs={"lamp": slot.name},
+    ).start()
+
+    return JsonResponse({"success": True})
+
+
+@csrf_exempt
 def store_carrier_choose_slot(request, carrier_name, storage_name):
     carrier_name = carrier_name.strip()
     storage_name = storage_name.strip()
@@ -291,3 +323,13 @@ def store_carrier_choose_slot_confirm(request, carrier_name, storage_name, slot_
             "message": f"Carrier {carrier.name} stored in storage {slot.storage.name} slot {slot.qr_value}.",
         }
     )
+
+
+def store_carrier_choose_slot_cancel(request):
+    dispatchers = {
+        storage.name: LED_shelf_dispatcher(storage) for storage in Storage.objects.all()
+    }
+    for dispatcher in dispatchers.values():
+        Thread(dispatcher.reset_leds(working_light=True)).start()
+
+    return JsonResponse({"success": True})

@@ -64,18 +64,23 @@ from .helpers import (
 from .collecting import (
     collect_single_carrier,
     collect_single_carrier_confirm,
+    collect_single_carrier_cancel,
     collect_carrier,
     collect_carrier_confirm,
+    collect_carrier_cancel,
     collect_carrier_by_article,
     collect_carrier_by_article_confirm,
+    collect_carrier_by_article_cancel,
     collect_job,
 )
 
 from .storing import (
     store_carrier,
     store_carrier_confirm,
+    store_carrier_cancel,
     store_carrier_choose_slot,
     store_carrier_choose_slot_confirm,
+    store_carrier_choose_slot_cancel,
 )
 
 from .extra_shelf_interactions import test_leds, reset_leds
