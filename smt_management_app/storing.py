@@ -64,8 +64,11 @@ def store_carrier(request, carrier_name, storage_name):
     storage = storage_queryset.first()
 
     free_slots_queryset = StorageSlot.objects.filter(
-        carrier__isnull=True, storage=storage
-    )  # later on take carrier size into consideration here
+        carrier__isnull=True,
+        storage=storage,
+        diameter__gte=carrier.diameter,
+        width__gte=carrier.width,
+    )
     if not free_slots_queryset:
         return JsonResponse(
             {
@@ -224,7 +227,10 @@ def store_carrier_choose_slot(request, carrier_name, storage_name):
     storage = storage_queryset.first()
 
     free_slot_queryset = StorageSlot.objects.filter(
-        carrier__isnull=True, storage=storage
+        carrier__isnull=True,
+        storage=storage,
+        diameter__gte=carrier.diameter,
+        width__gte=carrier.width,
     )  # later on take carrier size into consideration here
     if len(free_slot_queryset) == 0:
         return JsonResponse(
