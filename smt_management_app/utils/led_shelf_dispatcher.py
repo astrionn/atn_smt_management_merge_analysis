@@ -50,10 +50,10 @@ class LED_shelf_dispatcher:
                 self.enable_working_lights_based_on_led_state()
 
     def enable_working_lights_based_on_led_state(self):
-        self._LED_On_Control(lights_dict={"status": {"A": "green", "B": "green"}})
+        self.lighthouse_control(lights_dict={"status": {"A": "green", "B": "green"}})
         enabled_leds = StorageSlot.objects.filter(storage=self.storage, led_state=1)
         if enabled_leds:
-            self._LED_On_Control(
+            self.lighthouse_control(
                 lights_dict={
                     "status": {
                         (
@@ -67,6 +67,24 @@ class LED_shelf_dispatcher:
                     }
                 }
             )
+
+    def lighthouse_control(self, lights_dict):
+        match self.device_type:
+            case "ATNPTL":
+                print("ATNPTL has no lighthouse")
+            case "NeoLight":
+                self.device_handler._LED_On_Control(lights_dict=lights_dict)
+            case "Sophia":
+                workinglight_dictionary = lights_dict.get("status", None)
+                lamps_dictionary = lights_dict.get("lamps", None)
+                if workinglight_dictionary:
+                    self.device_handler.light_house_on(mode="normal")
+                if lamps_dictionary:
+                    for lamp, color in lamps_dictionary.items():
+                        self.led_on(lamp=lamp, color=color)
+            case "Dummy":
+                print(f"LED ON {self.storage.name}")
+                pp(lights_dict)
 
     def test_leds(self):
         print("Testing LEDs is yet to be implemented")
@@ -85,6 +103,7 @@ class LED_shelf_dispatcher:
                 )
             case "Dummy":
                 print(f"led on {self.storage.name} {lamp=} ; {color=}")
+                self.enable_working_lights_based_on_led_state()
 
     def led_off(self, lamp):
         match self.device_type:
@@ -97,6 +116,7 @@ class LED_shelf_dispatcher:
                 self.led_on(lamp, "off")
             case "Dummy":
                 print(f"led off {self.storage.name} {lamp=}")
+                self.enable_working_lights_based_on_led_state()
 
     def _LED_On_Control(self, lights_dict):
         match self.device_type:
@@ -117,6 +137,7 @@ class LED_shelf_dispatcher:
             case "Dummy":
                 print(f"LED ON {self.storage.name}")
                 pp(lights_dict)
+                self.enable_working_lights_based_on_led_state()
 
     def _LED_Off_Control(self, lamps=[], statusA=False, statusB=False):
         match self.device_type:
@@ -136,6 +157,7 @@ class LED_shelf_dispatcher:
             case "Dummy":
                 print(f"Led OFF {self.storage.name} {statusA=} {statusB=}")
                 pp(lamps)
+                self.enable_working_lights_based_on_led_state()
 
     def reset_leds(self, working_light=False):
         match self.device_type:

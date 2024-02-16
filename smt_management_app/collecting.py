@@ -102,9 +102,11 @@ def collect_single_carrier_confirm(request, carrier_name):
 
     # Clear the carrier's storage slot and turn off LED and working_light
     slot = carrier.storage_slot
-    slot.carrier = None
     slot.led_state = 0
     slot.save()
+
+    carrier.storage_slot = None
+    carrier.save()
 
     led_dispatcher = LED_shelf_dispatcher(slot.storage)
     Thread(
