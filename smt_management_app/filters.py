@@ -87,6 +87,10 @@ class CarrierFilter(django_filters.FilterSet):
         method="article_provider_filter"
     )
 
+    storage_slot_is_null = django_filters.rest_framework.BooleanFilter(
+        field_name="storage_slot__isnull"
+    )
+
     class Meta:
         model = Carrier
         fields = {
@@ -110,6 +114,7 @@ class CarrierFilter(django_filters.FilterSet):
             "article__provider4__name": ["exact", "contains"],
             "article__provider5__name": ["exact", "contains"],
             "article__sap_number": ["exact", "contains"],
+            "storage_slot": ["isnull"],
             "storage_slot__name": ["exact", "contains"],
             "storage__name": ["exact", "contains"],
             "machine_slot__name": ["exact", "contains"],
