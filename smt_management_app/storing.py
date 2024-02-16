@@ -325,7 +325,7 @@ def store_carrier_choose_slot_confirm(request, carrier_name, storage_name, slot_
     )
 
 
-def store_carrier_choose_slot_cancel(request):
+def store_carrier_choose_slot_cancel(request, carrier_name):
     dispatchers = {
         storage.name: LED_shelf_dispatcher(storage) for storage in Storage.objects.all()
     }
