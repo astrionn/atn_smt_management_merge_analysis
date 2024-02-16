@@ -229,6 +229,8 @@ class StorageSlot(models.Model):
     storage = models.ForeignKey(Storage, on_delete=models.CASCADE)
     led_state = models.IntegerField(default=0, choices=STATE_CHOICES)
     qr_value = models.CharField(max_length=5000, blank=True, null=True)
+    diameter = models.IntegerField(default=7, null=True, blank=True)
+    width = models.IntegerField(default=12, null=True, blank=True)
 
     def get_absolute_url(self):
         return reverse(
