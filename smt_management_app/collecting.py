@@ -537,7 +537,11 @@ def collect_job(request, job_name):
         {
             "success": True,
             "message": (
+<<<<<<< HEAD
                 f"Not all Carriers of this job are stored! {number_of_stored_carriers_of_job} carriers to be collected."
+=======
+                "Not all Carriers of this job are stored!"
+>>>>>>> 53c2b7c1cd728ee5174c817ca35696d058011767
                 if number_of_stored_carriers_of_job != number_of_carriers_of_job
                 else f"{number_of_carriers_of_job} carriers to be collected."
             ),
