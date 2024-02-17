@@ -499,24 +499,28 @@ def collect_job(request, job_name):
     if job.status == 2:
         return JsonResponse({"success": False, "message": "Job is already complete."})
 
-    carriers_of_job = job.carriers.all()
-    storage_names = carriers_of_job.values_list(
+    stored_carriers_of_job = job.carriers.filter(storage_slot__isnull=False)
+
+    number_of_carriers_of_job = job.carriers.all().count()
+    number_of_stored_carriers_of_job = stored_carriers_of_job.count()
+
+    storage_names = stored_carriers_of_job.values_list(
         "storage_slot__storage__name", flat=True
     ).distinct()
 
     storages = Storage.objects.filter(pk__in=storage_names)
     dispatchers = {storage.name: LED_shelf_dispatcher(storage) for storage in storages}
 
-    carriers_of_job.update(collecting=True)
+    stored_carriers_of_job.update(collecting=True)
 
-    slot_ids = carriers_of_job.values_list("storage_slot__id", flat=True)
+    slot_ids = stored_carriers_of_job.values_list("storage_slot__id", flat=True)
     slots = StorageSlot.objects.filter(pk__in=slot_ids)
     slots.update(led_state=1)
     slots_by_storage = {
         storage: list(slots.filter(Q(storage=storage))) for storage in storages
     }
 
-    for carrier in carriers_of_job:
+    for carrier in stored_carriers_of_job:
         carrier.storage_slot.led_state = 1
         carrier.save()
 
@@ -529,4 +533,13 @@ def collect_job(request, job_name):
                 }
             },
         )
-    return JsonResponse({"success": True})
+    return JsonResponse(
+        {
+            "success": True,
+            "message": (
+                f"Not all Carriers of this job are stored! {number_of_stored_carriers_of_job} carriers to be collected."
+                if number_of_stored_carriers_of_job != number_of_carriers_of_job
+                else f"{number_of_carriers_of_job} carriers to be collected."
+            ),
+        }
+    )
