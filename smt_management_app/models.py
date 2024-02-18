@@ -191,6 +191,7 @@ class Carrier(AbstractBaseModel):
             self.storage_slot_qr_value = self.storage_slot.qr_value
         else:
             self.storage = None
+            self.storage_slot_qr_value = None
 
         super(Carrier, self).save(*args, **kwargs)
 
