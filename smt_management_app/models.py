@@ -165,7 +165,7 @@ class Carrier(AbstractBaseModel):
 
     storage_slot = models.OneToOneField(
         "StorageSlot",
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
         null=True,
         blank=True,
         related_name="carrier",
@@ -173,20 +173,17 @@ class Carrier(AbstractBaseModel):
 
     storage_slot_qr_value = models.CharField(max_length=5000, blank=True, null=True)
     machine_slot = models.OneToOneField(
-        "MachineSlot", on_delete=models.CASCADE, null=True, blank=True
+        "MachineSlot", on_delete=models.SET_NULL, null=True, blank=True
     )
 
     storage = models.ForeignKey(
-        Storage, on_delete=models.CASCADE, null=True, blank=True
+        Storage, on_delete=models.SET_NULL, null=True, blank=True
     )
 
     def save(self, *args, **kwargs):
-        # disallow archiving if in a storage-slot
         if self.storage_slot:
             slot_storage = self.storage_slot.storage
-            # print(slot_storage)
             storage = Storage.objects.filter(name=slot_storage).first()
-            # print(storage)
             self.storage = storage
             self.storage_slot_qr_value = self.storage_slot.qr_value
         else:
@@ -251,7 +248,7 @@ class Job(AbstractBaseModel):
 
     board = models.ForeignKey("Board", on_delete=models.CASCADE)
     machine = models.ForeignKey(
-        Machine, on_delete=models.CASCADE, null=True, blank=True
+        Machine, on_delete=models.SET_NULL, null=True, blank=True
     )
     project = models.CharField(max_length=50, null=True, blank=True)
     customer = models.CharField(max_length=50, null=True, blank=True)
