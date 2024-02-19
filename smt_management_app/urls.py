@@ -19,7 +19,7 @@ router.register(r"storageslot", views.StorageSlotViewSet, "storageslot")
 name = "smt_management_app"
 urlpatterns = router.urls
 
-# we overwrite the drf url for patch here to allow the 'path' in the url which allows encoded special characters like '%2F'->'/'
+# we overwrite the drf url for the http patch method here to allow the 'path' in the url which allows encoded special characters like '%2F'->'/'
 urlpatterns.append(
     path(
         "carrier/<path:pk>/",
@@ -96,9 +96,17 @@ urlpatterns.append(
 
 urlpatterns.append(
     path(
-        "print_carrier/<path:carrier>/",
+        "print_carrier/<path:carrier_name>/",
         views.print_carrier,
         name="print_carrier",
+    )
+)
+
+urlpatterns.append(
+    path(
+        "archive_carrier/<path:carrier_name>/",
+        views.archive_carrier,
+        name="archive_carrier",
     )
 )
 ######### collecting ###########

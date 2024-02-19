@@ -59,6 +59,7 @@ from .helpers import (
     check_pk_unique,
     dashboard_data,
     print_carrier,
+    archive_carrier,
 )
 
 from .collecting import (

@@ -114,7 +114,7 @@ def dashboard_data(request):
 
 
 @csrf_exempt
-def print_carrier(request, carrier):
+def print_carrier(request, carrier_name):
     """
     Print a label for the given carrier containing barcode information.
 
@@ -136,11 +136,11 @@ def print_carrier(request, carrier):
 
     # Check if the carrier exists
     try:
-        carrier_obj = Carrier.objects.get(name=carrier, archived=False)
+        carrier = Carrier.objects.get(name=carrier_name, archived=False)
     except Carrier.DoesNotExist:
         return JsonResponse({"success": False, "message": "Carrier not found"})
 
-    article = carrier_obj.article
+    article = carrier.article
 
     if not dymo:  # Assuming dymo is defined somewhere
         return JsonResponse(
@@ -149,7 +149,24 @@ def print_carrier(request, carrier):
 
     # Start a thread to print the label
     Thread(
-        target=dymo.print_label, args=(carrier_obj.name, article.name), daemon=True
+        target=dymo.print_label, args=(carrier.name, article.name), daemon=True
     ).start()
 
     return JsonResponse({"success": True})
+
+
+def archive_carrier(request, carrier_name):
+    carrier_queryset = Carrier.objects.filter(name=carrier_name)
+    if not carrier_queryset:
+        return JsonResponse({"success": False, "message": "Carrier not found."})
+    carrier = carrier_queryset.first()
+
+    if carrier.archived:
+        return JsonResponse({"success": False, "message": "Carrier is archived."})
+
+    carrier.archived = True
+    carrier.save()
+
+    return JsonResponse(
+        {"success": True, "message": f"Carrier {carrier.name} has been archived."}
+    )
