@@ -51,13 +51,13 @@ class LocalFile(models.Model):
 
 
 class Storage(AbstractBaseModel):
-    DEVICE_CHOICES = [(0, "NeoLight"), (1, "Sophia"), (2, "ATNPTL"), (3, "Dummy")]
+    DEVICE_CHOICES = [("NeoLight", 0), ("Sophia", 1), ("ATNPTL", 2), ("Dummy", 3)]
     capacity = models.IntegerField()
     location = models.CharField(max_length=50, null=True, blank=True)
     device = models.CharField(max_length=5000, choices=DEVICE_CHOICES)
     COM_address = models.CharField(max_length=10, blank=True, null=True)
     ATNPTL_shelf_id = models.PositiveIntegerField(null=True, blank=True)
-    ip_adress = models.CharField(max_length=15, null=True, blank=True)
+    ip_address = models.CharField(max_length=15, null=True, blank=True)
     ip_port = models.PositiveIntegerField(null=True, blank=True)
 
     def get_absolute_url(self):

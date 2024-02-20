@@ -33,6 +33,7 @@ class LED_shelf_dispatcher:
                 self.device_handler = NeoLightAPI(
                     ip=self.ip_address, port=self.ip_port
                 )  # 192.168.178.11 weytronik
+
                 self.enable_working_lights_based_on_led_state()
             case "Sophia":
                 # Sophia has one workinglight
@@ -50,25 +51,20 @@ class LED_shelf_dispatcher:
                 self.enable_working_lights_based_on_led_state()
 
     def enable_working_lights_based_on_led_state(self):
-        self.lighthouse_control(lights_dict={"status": {"A": "green", "B": "green"}})
+        self.lighthouse_off_control(statusA=True, statusB=True)
+        self.lighthouse_on_control(lights_dict={"status": {"A": "green", "B": "green"}})
         enabled_leds = StorageSlot.objects.filter(storage=self.storage, led_state=1)
         if enabled_leds:
-            self.lighthouse_control(
-                lights_dict={
-                    "status": {
-                        (
-                            "A"
-                            if any(
-                                led.name <= self.storage.capacity // 2
-                                for led in enabled_leds
-                            )
-                            else "B"
-                        ): "yellow"
-                    }
-                }
-            )
+            lights_dict = {"status": {}}
+            if any(led.name <= (self.storage.capacity // 2) for led in enabled_leds):
+                lights_dict["status"]["A"] = "yellow"
+            if any(led.name > (self.storage.capacity // 2) for led in enabled_leds):
+                lights_dict["status"]["B"] = "yellow"
+            print("ENABLE WORKINGLIGHTS")
+            pp(lights_dict)
+            self.lighthouse_on_control(lights_dict=lights_dict)
 
-    def lighthouse_control(self, lights_dict):
+    def lighthouse_on_control(self, lights_dict):
         match self.device_type:
             case "ATNPTL":
                 print("ATNPTL has no lighthouse")
@@ -85,6 +81,17 @@ class LED_shelf_dispatcher:
             case "Dummy":
                 print(f"LED ON {self.storage.name}")
                 pp(lights_dict)
+
+    def lighthouse_off_control(self, statusA=True, statusB=True):
+        match self.device_type:
+            case "ATNPTL":
+                print("ATNPTL has no lighthouse")
+            case "NeoLight":
+                self.device_handler._LED_Off_Control(statusA=statusA, statusB=statusB)
+            case "Sophia":
+                pass
+            case "Dummy":
+                print(f"LIGHTHOUSE LED OFF {self.storage.name}")
 
     def test_leds(self):
         print("Testing LEDs is yet to be implemented")
