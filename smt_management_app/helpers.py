@@ -158,15 +158,39 @@ def print_carrier(request, carrier_name):
 def archive_carrier(request, carrier_name):
     carrier_queryset = Carrier.objects.filter(name=carrier_name)
     if not carrier_queryset:
-        return JsonResponse({"success": False, "message": "Carrier not found."})
+        return JsonResponse(
+            {"success": False, "message": f"Carrier {carrier.name} not found."}
+        )
     carrier = carrier_queryset.first()
 
     if carrier.archived:
-        return JsonResponse({"success": False, "message": "Carrier is archived."})
+        return JsonResponse(
+            {"success": False, "message": f"Carrier {carrier.name} is archived."}
+        )
 
     carrier.archived = True
+    if carrier.storage_slot:
+        carrier.storage_slot = None
     carrier.save()
 
     return JsonResponse(
         {"success": True, "message": f"Carrier {carrier.name} has been archived."}
     )
+
+
+def get_collect_queue(request):
+    queued_carriers = Carrier.objects.filter(collecting=True, archived=False)
+    collection_queue = [
+        {
+            "carrier": queued_carrier.name,
+            "storage": queued_carrier.storage_slot.storage.name,
+            "slot": queued_carrier.storage_slot.qr_value,
+        }
+        for queued_carrier in queued_carriers
+    ]
+
+    response_message = {
+        "queue": collection_queue,
+    }
+
+    return JsonResponse(response_message)

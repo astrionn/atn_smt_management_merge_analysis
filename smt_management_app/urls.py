@@ -109,6 +109,14 @@ urlpatterns.append(
         name="archive_carrier",
     )
 )
+
+urlpatterns.append(
+    path(
+        "get_collect_queue/",
+        views.get_collect_queue,
+        name="get_collect_queue",
+    )
+)
 ######### collecting ###########
 urlpatterns.append(
     path(

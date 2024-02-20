@@ -212,6 +212,7 @@ def collect_carrier(request, carrier_name):
     ]
 
     response_message = {
+        "success": True,
         "storage": carrier.storage_slot.storage.name,
         "slot": carrier.storage_slot.qr_value,
         "carrier": carrier.name,
