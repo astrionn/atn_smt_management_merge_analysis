@@ -253,8 +253,8 @@ class Job(AbstractBaseModel):
     project = models.CharField(max_length=50, null=True, blank=True)
     customer = models.CharField(max_length=50, null=True, blank=True)
     count = models.IntegerField()
-    start_at = models.DateTimeField()
-    finish_at = models.DateTimeField()
+    start_at = models.DateTimeField(null=True, blank=True)
+    finish_at = models.DateTimeField(null=True, blank=True)
     status = models.IntegerField(default=0, choices=STATUS_CHOICES)
     carriers = models.ManyToManyField(Carrier, blank=True)
 
@@ -270,7 +270,7 @@ class Board(AbstractBaseModel):
 
 
 class BoardArticle(AbstractBaseModel):
-    article = models.OneToOneField(Article, on_delete=models.CASCADE)
+    article = models.ForeignKey(Article, on_delete=models.CASCADE)
     board = models.ForeignKey(Board, on_delete=models.CASCADE)
     count = models.PositiveIntegerField()
 
