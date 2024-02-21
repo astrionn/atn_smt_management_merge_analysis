@@ -533,7 +533,7 @@ def collect_job(request, job_name):
                     "lamps": {slot.name: "blue" for slot in slots_in_that_storage}
                 }
             },
-        )
+        ).start()
     return JsonResponse(
         {
             "success": True,
