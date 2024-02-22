@@ -230,7 +230,7 @@ urlpatterns.append(
 
 urlpatterns.append(
     path(
-        "store_carrier_choose_slot_cancel/<path:carrier_name>/",
+        "store_carrier_choose_slot_cancel/<path:carrier_name>/<storage_name>/",
         views.store_carrier_choose_slot_cancel,
         name="store_carrier_choose_slot_cancel",
     )

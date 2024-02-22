@@ -102,7 +102,7 @@ def collect_single_carrier_confirm(request, carrier_name):
 
     # Clear the carrier's storage slot and turn off LED and working_light
     slot = carrier.storage_slot
-    slot.led_state = 0
+    slot.led_state = 1
     slot.save()
 
     carrier.storage_slot = None
@@ -112,6 +112,8 @@ def collect_single_carrier_confirm(request, carrier_name):
     Thread(
         target=led_dispatcher.led_on, kwargs={"lamp": slot.name, "color": "green"}
     ).start()
+    slot.led_state = 0
+    slot.save()
     Timer(
         interval=2,
         function=led_dispatcher.led_off,
@@ -139,13 +141,15 @@ def collect_single_carrier_cancel(request, carrier_name):
     # turn off LED
     slot = carrier.storage_slot
 
-    slot.led_state = 0
+    slot.led_state = 1
     slot.save()
 
     led_dispatcher = LED_shelf_dispatcher(slot.storage)
     Thread(
         target=led_dispatcher.led_on, kwargs={"lamp": slot.name, "color": "red"}
     ).start()
+    slot.led_state = 0
+    slot.save()
     Timer(
         interval=2,
         function=led_dispatcher.led_off,
@@ -266,15 +270,16 @@ def collect_carrier_confirm(request, carrier_name, storage_name, slot_name):
             }
         )
 
-    # Turn off the LED for the carrier's storage slot.
-    carrier.storage_slot.led_state = 0
-    carrier.storage_slot.save()
-
     led_dispatcher = LED_shelf_dispatcher(carrier.storage_slot.storage)
+    carrier.storage_slot.led_state = 1
+    carrier.storage_slot.save()
 
     Thread(
         target=led_dispatcher.led_on, kwargs={"lamp": slot.name, "color": "green"}
     ).start()
+    carrier.storage_slot.led_state = 0
+    carrier.storage_slot.save()
+
     Timer(
         interval=2,
         function=led_dispatcher.led_off,
@@ -324,14 +329,15 @@ def collect_carrier_cancel(request, carrier_name):
     slot = carrier.storage_slot
 
     # Turn off the LED for the carrier's storage slot.
-    carrier.storage_slot.led_state = 0
-    carrier.storage_slot.save()
 
     led_dispatcher = LED_shelf_dispatcher(carrier.storage_slot.storage)
-
+    carrier.storage_slot.led_state = 1
+    carrier.storage_slot.save()
     Thread(
         target=led_dispatcher.led_on, kwargs={"lamp": slot.name, "color": "red"}
     ).start()
+    carrier.storage_slot.led_state = 0
+    carrier.storage_slot.save()
     Timer(
         interval=2,
         function=led_dispatcher.led_off,
@@ -395,11 +401,13 @@ def collect_carrier_by_article(request, article_name):
     storages = Storage.objects.filter(pk__in=storage_names)
     dispatchers = {storage.name: LED_shelf_dispatcher(storage) for storage in storages}
     for slot in slot_queryset:
+        slot.led_state = 1
+        slot.save()
         Thread(
             target=dispatchers[slot.storage.name].led_on,
             kwargs={"lamp": slot.name, "color": "blue"},
         ).start()
-    slot_queryset.update(led_state=1)
+
     return JsonResponse({"success": True})
 
 
@@ -442,18 +450,22 @@ def collect_carrier_by_article_confirm(request, carrier_name):
     storage_names = slot_queryset.values_list("storage", flat=True).distinct()
     storages = Storage.objects.filter(pk__in=storage_names)
     dispatchers = {storage.name: LED_shelf_dispatcher(storage) for storage in storages}
+    # Update LED state for all storage slots to off
+    slot_queryset.update(led_state=0)
+
     # Reset LEDs after carrier confirmation
     for storage in storages:
         Thread(target=dispatchers[storage.name].reset_leds).start()
 
-    # Update LED state for all storage slots to off
-    slot_queryset.update(led_state=0)
-
+    collected_slot.led_state = 1
+    collected_slot.save()
     # turn on collected_slot for a short duration
     Thread(
         target=dispatchers[collected_slot.storage.name].led_on,
         kwargs={"lamp": collected_slot.name, "color": "green"},
     ).start()
+    collected_slot.led_state = 0
+    collected_slot.save()
     Timer(
         interval=2,
         function=dispatchers[collected_slot.storage.name].led_off,
@@ -476,13 +488,11 @@ def collect_carrier_by_article_cancel(request, article_name):
     storages = Storage.objects.filter(pk__in=storage_names)
 
     dispatchers = {storage.name: LED_shelf_dispatcher(storage) for storage in storages}
-
+    # Update LED state for all storage slots to off
+    slot_queryset.update(led_state=0)
     # Reset LEDs
     for storage in storages:
         Thread(target=dispatchers[storage.name].reset_leds).start()
-
-    # Update LED state for all storage slots to off
-    slot_queryset.update(led_state=0)
 
     return JsonResponse({"success": True})
 
@@ -520,10 +530,6 @@ def collect_job(request, job_name):
     slots_by_storage = {
         storage: list(slots.filter(Q(storage=storage))) for storage in storages
     }
-
-    for carrier in stored_carriers_of_job:
-        carrier.storage_slot.led_state = 1
-        carrier.save()
 
     for storage, slots_in_that_storage in slots_by_storage.items():
         Thread(

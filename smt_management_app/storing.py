@@ -231,7 +231,7 @@ def store_carrier_choose_slot(request, carrier_name, storage_name):
         storage=storage,
         diameter__gte=carrier.diameter,
         width__gte=carrier.width,
-    )  # later on take carrier size into consideration here
+    )
     if len(free_slot_queryset) == 0:
         return JsonResponse(
             {
@@ -246,21 +246,18 @@ def store_carrier_choose_slot(request, carrier_name, storage_name):
         "success": True,
     }
 
-    storage_names = free_slot_queryset.values_list("storage", flat=True).distinct()
-    storages = Storage.objects.filter(pk__in=storage_names)
-    dispatchers = {storage.name: LED_shelf_dispatcher(storage) for storage in storages}
-    for storage in storages:
-        Thread(
-            dispatchers[storage.name]._LED_On_Control(
-                {
-                    "lamps": {
-                        free_slot.name: "yellow"
-                        for free_slot in free_slot_queryset.filter(storage=storage)
-                    }
-                }
-            )
-        ).start()
     free_slot_queryset.update(led_state=1)
+
+    Thread(
+        LED_shelf_dispatcher(storage)._LED_On_Control(
+            {
+                "lamps": {
+                    free_slot.name: "yellow"
+                    for free_slot in free_slot_queryset.filter(storage=storage)
+                }
+            }
+        )
+    ).start()
 
     return JsonResponse(msg)
 
@@ -283,17 +280,21 @@ def store_carrier_choose_slot_confirm(request, carrier_name, storage_name, slot_
         return JsonResponse({"success": False, "message": "no slot found"})
     slot = slot_queryset.first()
 
-    storages = Storage.objects.all()
-    dispatchers = {storage.name: LED_shelf_dispatcher(storage) for storage in storages}
+    storage = Storage.objects.filter(name=storage_name).first()
+    dispatcher = LED_shelf_dispatcher(storage)
 
     if hasattr(slot, "carrier"):
+        slot.led_state = 1
+        slot.save()
         Thread(
-            target=dispatchers[slot.storage.name].led_on,
+            target=dispatcher.led_on,
             kwargs={"lamp": slot.name, "color": "red"},
         ).start()
+        slot.led_state = 0
+        slot.save()
         Timer(
             interval=2,
-            function=dispatchers[slot.storage.name].led_off,
+            function=dispatcher.led_off,
             kwargs={"lamp": slot.name},
         ).start()
         return JsonResponse(
@@ -308,20 +309,23 @@ def store_carrier_choose_slot_confirm(request, carrier_name, storage_name, slot_
 
     carrier.storage_slot = slot
     carrier.save()
-    for storage in storages:
-        Thread(target=dispatchers[storage.name].reset_leds).start()
+    StorageSlot.objects.filter(storage=storage).update(led_state=0)
 
+    Thread(target=dispatcher.reset_leds).start()
+
+    slot.led_state = 1
+    slot.save()
     Thread(
-        target=dispatchers[slot.storage.name].led_on,
+        target=dispatcher.led_on,
         kwargs={"lamp": slot.name, "color": "green"},
     ).start()
+    slot.led_state = 0
+    slot.save()
     Timer(
         interval=2,
-        function=dispatchers[slot.storage.name].led_off,
+        function=dispatcher.led_off,
         kwargs={"lamp": slot.name},
     ).start()
-
-    StorageSlot.objects.all().update(led_state=0)
 
     return JsonResponse(
         {
@@ -331,11 +335,12 @@ def store_carrier_choose_slot_confirm(request, carrier_name, storage_name, slot_
     )
 
 
-def store_carrier_choose_slot_cancel(request, carrier_name):
-    dispatchers = {
-        storage.name: LED_shelf_dispatcher(storage) for storage in Storage.objects.all()
-    }
-    for dispatcher in dispatchers.values():
-        Thread(dispatcher.reset_leds(working_light=True)).start()
+def store_carrier_choose_slot_cancel(request, carrier_name, storage_name):
+    StorageSlot.objects.filter(storage=storage_name).update(led_state=0)
+    storage = Storage.objects.filter(name=storage_name).update(
+        lighthouse_A_yellow=False, lighthouse_B_yellow=False
+    )
+    dispatcher = LED_shelf_dispatcher(storage)
+    Thread(dispatcher.reset_leds(working_light=True)).start()
 
     return JsonResponse({"success": True})

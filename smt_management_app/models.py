@@ -60,6 +60,11 @@ class Storage(AbstractBaseModel):
     ip_address = models.CharField(max_length=15, null=True, blank=True)
     ip_port = models.PositiveIntegerField(null=True, blank=True)
 
+    lighthouse_A_green = models.BooleanField(default=False)
+    lighthouse_A_yellow = models.BooleanField(default=False)
+    lighthouse_B_green = models.BooleanField(default=False)
+    lighthouse_B_yellow = models.BooleanField(default=False)
+
     def get_absolute_url(self):
         return reverse("smt_management_app:storage-detail", kwargs={"name": self.name})
 
