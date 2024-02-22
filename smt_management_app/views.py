@@ -1,11 +1,15 @@
 import json
 import csv
+from pprint import pprint as pp
+from urllib import request
 
 from django.views.decorators.csrf import csrf_exempt
 
 from django.http import JsonResponse
 from django.core.files import File
-from rest_framework import viewsets, filters, generics
+from rest_framework import viewsets, filters, generics, status
+
+from rest_framework.response import Response
 
 import django_filters
 
@@ -332,6 +336,60 @@ class ArticleViewSet(viewsets.ModelViewSet):
     )
     filterset_class = ArticleFilter
     ordering_fields = "__all__"
+
+    def create(self, *args, **kwargs):
+
+        serializer = self.get_serializer(data=self.request.data)
+        manufacturer_name = self.request.data.pop("manufacturer", None)
+        provider1_name = self.request.data.pop("provider1", None)
+        provider2_name = self.request.data.pop("provider2", None)
+        provider3_name = self.request.data.pop("provider3", None)
+        provider4_name = self.request.data.pop("provider4", None)
+        provider5_name = self.request.data.pop("provider5", None)
+
+        if not serializer.is_valid():
+            print(serializer.errors)
+            return Response(
+                serializer.errors,
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        serializer_kwargs = {}
+        if provider1_name:
+            provider1, _ = Provider.objects.get_or_create(name=provider1_name["name"])
+            serializer_kwargs["provider1"] = provider1
+
+        if provider2_name:
+            provider2, _ = Provider.objects.get_or_create(name=provider2_name["name"])
+            serializer_kwargs["provider2"] = provider2
+
+        if provider3_name:
+            provider3, _ = Provider.objects.get_or_create(name=provider3_name["name"])
+            serializer_kwargs["provider3"] = provider3
+
+        if provider4_name:
+            provider4, _ = Provider.objects.get_or_create(name=provider4_name["name"])
+            serializer_kwargs["provider4"] = provider4
+
+        if provider5_name:
+            provider5, _ = Provider.objects.get_or_create(name=provider5_name["name"])
+            serializer_kwargs["provider5"] = provider5
+
+        if manufacturer_name:
+            manufacturer, _ = Manufacturer.objects.get_or_create(
+                name=manufacturer_name["name"]
+            )
+            serializer_kwargs["manufacturer"] = manufacturer
+        if serializer_kwargs:
+            serializer.save(**serializer_kwargs)
+
+        data = serializer.validated_data
+
+        headers = self.get_success_headers(serializer.data)
+
+        return Response(
+            serializer.data, status=status.HTTP_201_CREATED, headers=headers
+        )
 
 
 class BoardViewSet(viewsets.ModelViewSet):
