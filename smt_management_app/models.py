@@ -72,6 +72,9 @@ class Storage(AbstractBaseModel):
 class Manufacturer(models.Model):
     name = models.CharField(primary_key=True, max_length=50, null=False, blank=False)
 
+    def __str__(self):
+        return self.name
+
     def get_absolute_url(self):
         return reverse(
             "smt_management_app:manufacturer-detail", kwargs={"name": self.name}
@@ -80,6 +83,9 @@ class Manufacturer(models.Model):
 
 class Provider(models.Model):
     name = models.CharField(primary_key=True, max_length=50, null=False, blank=False)
+
+    def __str__(self):
+        return self.name
 
     def get_absolute_url(self):
         return reverse("smt_management_app:provider-detail", kwargs={"name": self.name})
