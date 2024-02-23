@@ -8,7 +8,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 from django.core.files import File
 from rest_framework import viewsets, filters, generics, status
-
+from rest_framework.mixins import DestroyModelMixin
 from rest_framework.response import Response
 
 import django_filters
@@ -403,7 +403,7 @@ class BoardViewSet(viewsets.ModelViewSet):
     filterset_class = BoardFilter
 
 
-class BoardArticleViewSet(viewsets.ModelViewSet):
+class BoardArticleViewSet(viewsets.ModelViewSet, DestroyModelMixin):
     queryset = BoardArticle.objects.all()
     serializer_class = BoardArticleSerializer
     filter_backends = (
