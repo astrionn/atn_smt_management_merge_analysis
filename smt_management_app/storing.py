@@ -337,10 +337,9 @@ def store_carrier_choose_slot_confirm(request, carrier_name, storage_name, slot_
 
 def store_carrier_choose_slot_cancel(request, carrier_name, storage_name):
     StorageSlot.objects.filter(storage=storage_name).update(led_state=0)
-    storage = Storage.objects.filter(name=storage_name).update(
-        lighthouse_A_yellow=False, lighthouse_B_yellow=False
-    )
-    dispatcher = LED_shelf_dispatcher(storage)
+    storage = Storage.objects.filter(name=storage_name)
+    storage.update(lighthouse_A_yellow=False, lighthouse_B_yellow=False)
+    dispatcher = LED_shelf_dispatcher(storage.first())
     Thread(dispatcher.reset_leds(working_light=True)).start()
 
     return JsonResponse({"success": True})
