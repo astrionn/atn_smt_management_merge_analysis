@@ -315,14 +315,15 @@ def store_carrier_choose_slot_confirm(request, carrier_name, storage_name, slot_
 
     slot.led_state = 1
     slot.save()
-    Thread(
-        target=dispatcher.led_on,
+    Timer(
+        interval=0.5,
+        function=dispatcher.led_on,
         kwargs={"lamp": slot.name, "color": "green"},
     ).start()
     slot.led_state = 0
     slot.save()
     Timer(
-        interval=2,
+        interval=4,
         function=dispatcher.led_off,
         kwargs={"lamp": slot.name},
     ).start()
