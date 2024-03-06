@@ -206,6 +206,9 @@ class Carrier(AbstractBaseModel):
             self.storage = None
             self.storage_slot_qr_value = None
 
+        if self.quantity_current < 0:
+            self.quantity_current = 0
+
         super(Carrier, self).save(*args, **kwargs)
 
     def get_absolute_url(self):
