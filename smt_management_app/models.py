@@ -265,6 +265,7 @@ class Job(AbstractBaseModel):
         (2, "finished"),
     ]
 
+    description = models.CharField(max_length=5000, null=True, blank=True)
     board = models.ForeignKey("Board", on_delete=models.CASCADE)
     machine = models.ForeignKey(
         Machine, on_delete=models.SET_NULL, null=True, blank=True

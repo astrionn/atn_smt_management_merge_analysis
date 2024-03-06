@@ -465,6 +465,14 @@ class JobViewSet(viewsets.ModelViewSet):
     queryset = Job.objects.all()
     serializer_class = JobSerializer
     filterset_class = JobFilter
+    ordering_fields = "__all__"
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        ordering = self.request.query_params.get("ordering", None)
+        if ordering:
+            queryset = queryset.order_by(ordering)
+        return queryset
 
 
 class MachineViewSet(viewsets.ModelViewSet):
