@@ -5,9 +5,15 @@ import random
 def run():
     storage = Storage.objects.create(name=f"Storage_1", capacity=1400, device="Dummy")
     storage2 = Storage.objects.create(name=f"Storage_2", capacity=1400, device="Dummy")
+
+    storage_slots = []
+    storage2_slots = []
+
     for i in range(1, 1401):
         storage_slot = StorageSlot.objects.create(name=i, storage=storage)
         storage_slot2 = StorageSlot.objects.create(name=i, storage=storage2)
+        storage_slots.append(storage_slot)
+        storage2_slots.append(storage_slot2)
         if i > 700:
             i -= 700
 
@@ -68,5 +74,12 @@ def run():
                 quantity_original=2000,
                 quantity_current=random.randint(1000, 2000),
                 lot_number=f"Bestellung_{i%4}",
+                storage_slot=storage_slots[i - 1],
+                delivered=True,
             )
+        )
+    board = Board.objects.create(name="board123")
+    for article in articles:
+        BoardArticle.objects.create(
+            name=f"123{article.name}", count=2, board=board, article=article
         )
