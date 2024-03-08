@@ -42,8 +42,8 @@ class ArticleFilter(django_filters.rest_framework.FilterSet):
             "provider5__name": ["exact", "contains"],
             "provider5_description": ["exact", "contains"],
             "sap_number": ["exact", "contains"],
-            "created_at": ["exact", "contains", "gte", "lte"],
-            "updated_at": ["exact", "contains", "gte", "lte"],
+            "created_at": ["exact", "contains", "gte", "lte", "lt", "gt"],
+            "updated_at": ["exact", "contains", "gte", "lte", "lt", "gt"],
             "archived": ["exact"],
         }
 
@@ -95,11 +95,11 @@ class CarrierFilter(django_filters.FilterSet):
         model = Carrier
         fields = {
             "name": ["exact", "contains"],
-            "diameter": ["exact", "gt", "lt"],
-            "width": ["exact", "gt", "lt"],
+            "diameter": ["exact", "gt", "lt", "lte", "gte"],
+            "width": ["exact", "gt", "lt", "lte", "gte"],
             "container_type": ["exact", "gt", "lt"],
-            "quantity_original": ["exact", "gt", "lt"],
-            "quantity_current": ["exact", "gt", "lt"],
+            "quantity_original": ["exact", "gt", "lt", "lte", "gte"],
+            "quantity_current": ["exact", "gt", "lt", "lte", "gte"],
             "lot_number": ["exact", "contains"],
             "reserved": ["exact"],
             "delivered": ["exact"],
@@ -119,8 +119,8 @@ class CarrierFilter(django_filters.FilterSet):
             "storage__name": ["exact", "contains"],
             "machine_slot__name": ["exact", "contains"],
             "archived": ["exact"],
-            "created_at": ["exact", "contains", "gte", "lte"],
-            "updated_at": ["exact", "contains", "gte", "lte"],
+            "created_at": ["exact", "contains", "gte", "lte", "lt", "gt"],
+            "updated_at": ["exact", "contains", "gte", "lte", "lt", "gt"],
         }
 
     def article_provider_filter(self, queryset, name, value):
@@ -148,8 +148,8 @@ class JobFilter(django_filters.FilterSet):
             "finish_at": ["exact", "gte", "lte"],
             "status": ["exact"],
             "archived": ["exact"],
-            "created_at": ["exact", "contains", "gte", "lte"],
-            "updated_at": ["exact", "contains", "gte", "lte"],
+            "created_at": ["exact", "contains", "gte", "lte", "lt", "gt"],
+            "updated_at": ["exact", "contains", "gte", "lte", "lt", "gt"],
         }
 
 
