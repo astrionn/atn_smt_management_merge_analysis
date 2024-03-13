@@ -95,6 +95,7 @@ def dashboard_data(request):
     active_storages = Storage.objects.filter(archived=False).count()
     total_finished_jobs = Job.objects.filter(status=2).count()
     open_jobs_created = Job.objects.filter(archived=False, status=0).count()
+    open_jobs_prepared = Job.objects.filter(archived=False, status=1).count()
     open_jobs_finished = Job.objects.filter(archived=False, status=2).count()
 
     return JsonResponse(
@@ -107,7 +108,7 @@ def dashboard_data(request):
             "storages": active_storages,
             "total_finished_jobs": total_finished_jobs,
             "open_jobs_created": open_jobs_created,
-            "open_jobs_prepared": open_jobs_created,
+            "open_jobs_prepared": open_jobs_prepared,
             "open_jobs_finished": open_jobs_finished,
         }
     )
