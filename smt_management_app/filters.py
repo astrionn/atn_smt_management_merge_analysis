@@ -143,7 +143,7 @@ class JobFilter(django_filters.FilterSet):
             "machine__name": ["exact", "icontains"],
             "project": ["exact", "icontains"],
             "customer": ["exact", "icontains"],
-            "count": ["exact", "gt", "lt"],
+            "count": ["exact", "gt", "lt", "lte", "gte"],
             "start_at": ["exact", "gte", "lte"],
             "finish_at": ["exact", "gte", "lte"],
             "status": ["exact"],
