@@ -39,7 +39,7 @@ class LocalFile(models.Model):
         ("carrier", "Carrier"),
         ("board", "Board"),
     ]
-    DELIMITER_CHOICES = [(0, ","), (1, ";"), (2, "\t")]
+    DELIMITER_CHOICES = [(",", 0), (";", 1), ("\t", 2)]
     name = models.BigAutoField(primary_key=True, unique=True, null=False, blank=False)
     upload_type = models.CharField(
         max_length=50, choices=UPLOAD_TYPE_CHOICES, null=False, blank=False
@@ -48,6 +48,14 @@ class LocalFile(models.Model):
     headers = models.CharField(max_length=5000, null=True, blank=True)
     board_name = models.CharField(max_length=5000, null=True, blank=True)
     delimiter = models.CharField(max_length=2, choices=DELIMITER_CHOICES)
+
+    @property
+    def delimiter(self):
+        return self._delimiter.replace("\\t", "\t")
+
+    @delimiter.setter
+    def delimiter(self, value):
+        self._delimiter = value
 
 
 class Storage(AbstractBaseModel):
