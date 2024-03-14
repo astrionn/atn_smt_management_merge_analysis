@@ -47,7 +47,7 @@ class LocalFile(models.Model):
     file_object = models.FileField(upload_to=get_upload_path)
     headers = models.CharField(max_length=5000, null=True, blank=True)
     board_name = models.CharField(max_length=5000, null=True, blank=True)
-    delimiter = models.CharField(max_length=2, choices=DELIMITER_CHOICES)
+    _delimiter = models.CharField(max_length=2, choices=DELIMITER_CHOICES)
 
     @property
     def delimiter(self):
@@ -214,7 +214,7 @@ class Carrier(AbstractBaseModel):
             self.storage = None
             self.storage_slot_qr_value = None
 
-        if self.quantity_current < 0:
+        if not self.quantity_current or self.quantity_current < 0:
             self.quantity_current = 0
 
         super(Carrier, self).save(*args, **kwargs)
