@@ -222,7 +222,7 @@ def user_mapping_and_file_processing(request):
                         if article:
                             carrier_dict["article"] = article
                         else:
-                            msg["fail"].append(article_name)
+                            msg["fail"].append(f"{article_name} does not exist.")
                             continue
 
                     # Set default values if not provided
@@ -231,6 +231,26 @@ def user_mapping_and_file_processing(request):
                     carrier_dict.setdefault("machine_slot", None)
                     carrier_dict.setdefault("diameter", 7)
                     carrier_dict.setdefault("width", 8)
+                    carrier_dict.setdefault("quantity_current", 0)
+                    carrier_dict.setdefault("quantity_original", 0)
+
+                    numeric_fields = [
+                        "diameter",
+                        "width",
+                        "quantity_current",
+                        "quantity_original",
+                    ]
+                    for numeric_field in numeric_fields:
+                        try:
+                            carrier_dict[numeric_field] = int(
+                                carrier_dict[numeric_field]
+                            )
+                        except Exception as e:
+                            print(e)
+                            msg["fail"].append(
+                                f"invalid {numeric_field}: {carrier_dict[numeric_field]}"
+                            )
+                            carrier_dict.pop(numeric_field)
 
                     container_type = carrier_dict.get("container_type", "").lower()
                     carrier_dict["container_type"] = {
@@ -245,7 +265,9 @@ def user_mapping_and_file_processing(request):
                         new_carrier = Carrier.objects.create(**carrier_dict)
                         msg["created"].append(new_carrier.name)
                     else:
-                        msg["fail"].append(carrier_name)
+                        msg["fail"].append(
+                            f" failed to create {carrier_name} ({carrier_dict})"
+                        )
 
                 elif lf.upload_type == "article":
                     article_dict = {
