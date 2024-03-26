@@ -1,6 +1,7 @@
 import os
 from django.db import models
 from django.db.models import Q
+from django.forms import ValidationError
 from django.urls import reverse
 
 # created by todo.org tangle
@@ -307,3 +308,14 @@ class BoardArticle(AbstractBaseModel):
         return reverse(
             "smt_management_app:boardarticle-detail", kwargs={"name": self.name}
         )
+    def save(self, *args, **kwargs):
+        # ensure the board does not have a boardarticle with the same article
+        if BoardArticle.objects.filter(article=self.article, board=self.board).exists():
+            raise ValidationError(
+                {
+                    "article": ValidationError(
+                        f"Article {self.article.name} is already assigned to this board"
+                    )
+                }
+            )
+        super(BoardArticle, self).save(*args, **kwargs)
