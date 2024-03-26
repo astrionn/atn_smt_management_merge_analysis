@@ -105,7 +105,7 @@ class Article(AbstractBaseModel):
     manufacturer = models.ForeignKey(
         Manufacturer, on_delete=models.CASCADE, null=True, blank=True
     )
-    manufacturer_description = models.CharField(max_length=50, null=True, blank=True)
+    manufacturer_description = models.CharField(max_length=255, null=True, blank=True)
 
     provider1 = models.ForeignKey(
         Provider,
@@ -115,7 +115,7 @@ class Article(AbstractBaseModel):
         related_name="provider1",
     )
 
-    provider1_description = models.CharField(max_length=50, null=True, blank=True)
+    provider1_description = models.CharField(max_length=255, null=True, blank=True)
     provider2 = models.ForeignKey(
         Provider,
         on_delete=models.CASCADE,
@@ -123,7 +123,7 @@ class Article(AbstractBaseModel):
         blank=True,
         related_name="provider2",
     )
-    provider2_description = models.CharField(max_length=50, null=True, blank=True)
+    provider2_description = models.CharField(max_length=255, null=True, blank=True)
     provider3 = models.ForeignKey(
         Provider,
         on_delete=models.CASCADE,
@@ -131,7 +131,7 @@ class Article(AbstractBaseModel):
         blank=True,
         related_name="provider3",
     )
-    provider3_description = models.CharField(max_length=50, null=True, blank=True)
+    provider3_description = models.CharField(max_length=255, null=True, blank=True)
     provider4 = models.ForeignKey(
         Provider,
         on_delete=models.CASCADE,
@@ -139,7 +139,7 @@ class Article(AbstractBaseModel):
         blank=True,
         related_name="provider4",
     )
-    provider4_description = models.CharField(max_length=50, null=True, blank=True)
+    provider4_description = models.CharField(max_length=255, null=True, blank=True)
     provider5 = models.ForeignKey(
         Provider,
         on_delete=models.CASCADE,
@@ -147,7 +147,7 @@ class Article(AbstractBaseModel):
         blank=True,
         related_name="provider5",
     )
-    provider5_description = models.CharField(max_length=50, null=True, blank=True)
+    provider5_description = models.CharField(max_length=255, null=True, blank=True)
 
     description = models.CharField(max_length=255, null=True, blank=True)
     sap_number = models.CharField(max_length=50, null=True, blank=True)
