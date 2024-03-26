@@ -445,6 +445,7 @@ def process_carrier_file(file_path,delimiter,map_,lot_number):
             integer_fields = ['diameter', 'width', 'container_type','quantity_original','quantity_current','reserved','delivered','collecting']
             try:
                 for field in integer_fields:
+                    if field not in carrier_dict.keys(): continue
                     carrier_dict[field] = int(carrier_dict[field]) if carrier_dict[field] else ''
             except Exception as e:
                 print('integer e',carrier_dict['name'],field,e)
