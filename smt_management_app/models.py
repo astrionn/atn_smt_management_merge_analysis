@@ -47,6 +47,7 @@ class LocalFile(models.Model):
     file_object = models.FileField(upload_to=get_upload_path)
     headers = models.CharField(max_length=5000, null=True, blank=True)
     board_name = models.CharField(max_length=5000, null=True, blank=True)
+    lot_number = models.CharField(default=None,max_length=5000, null=True, blank=True)
     _delimiter = models.CharField(max_length=2, choices=DELIMITER_CHOICES)
 
     @property
