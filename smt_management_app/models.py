@@ -294,7 +294,7 @@ class Job(AbstractBaseModel):
 
 class Board(AbstractBaseModel):
     articles = models.ManyToManyField(Article, through="BoardArticle")
-
+    description = models.CharField(max_length=5000, null=True, blank=True)
     def get_absolute_url(self):
         return reverse("smt_management_app:board-detail", kwargs={"name": self.name})
 

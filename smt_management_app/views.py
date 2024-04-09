@@ -387,8 +387,9 @@ def process_article_file(file_path,delimiter,map_):
                         message["created"]['provider'].append({k:v for k,v in provider.__dict__.items() if k != '_state'})
             try:
                 article = Article.objects.create(**article_dict)
-                message["created"]['article'].append({k:v for k,v in article_dict_only_strings.__dict__.items()})
+                message["created"]['article'].append({k:v for k,v in article_dict_only_strings.items()})
             except Exception as e:
+                print(e)
                 failed_article = article_dict_only_strings
                 failed_article["error"] = str(e)
                 message["fail"]['article'].append(failed_article)
@@ -663,31 +664,22 @@ class CarrierViewSet(viewsets.ModelViewSet):
         "article__description",
         "article__sap_number",
     ]
-    search_fields = "__all__"
+    search_fields = ['name', 'article__sap_number', 'article__description', 'article__manufacturer__name','article__provider1__name','article__provider2__name','article__provider3__name','article__provider4__name','article__provider5__name','article__manufacturer_description','article__provider1_description','article__provider2_description','article__provider3_description','article__provider4_description','article__provider5_description','diameter','width','container_type','quantity_original','quantity_current','lot_number','storage_slot_qr_value']
 
     def get_queryset(self):
-        name = self.request.GET.get("name")
-        lot_number = self.request.GET.get("lot_number")
-        storage = self.request.GET.get("storage")
-        filter_args = {
-            "name__icontains": name,
-            "lot_number__icontains": lot_number,
-            "storage__name__icontains": storage,
-        }
-        filter_args = dict(
-            (k, v)
-            for k, v in filter_args.items()
-            if (v is not None and v != "" and v != [])
-        )
-        carriers = Carrier.objects.filter(**filter_args)
-        return carriers
-
+        return Carrier.objects.all()
 
 class JobViewSet(viewsets.ModelViewSet):
     queryset = Job.objects.all()
     serializer_class = JobSerializer
     filterset_class = JobFilter
+    filter_backends = (
+        filters.SearchFilter,
+        django_filters.rest_framework.DjangoFilterBackend,
+        filters.OrderingFilter,
+    )
     ordering_fields = "__all__"
+    search_fields = ['name','description','board__name','machine__name','project','customer','start_at','finish_at','status']
 
     def get_queryset(self):
         queryset = super().get_queryset()
