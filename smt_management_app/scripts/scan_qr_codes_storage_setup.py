@@ -10,6 +10,8 @@ def run():
         led_dispatcher = LED_shelf_dispatcher(storage)
         led_dispatcher.reset_leds()
         for slot in sorted_slot_queryset:
+            if slot.name < 601 or slot.name > 700:
+                continue
             led_dispatcher.led_on(int(slot.name), "blue")
             qr_value = input(f"Please scan the barcode of the indicated slot.")
             led_dispatcher.led_off(int(slot.name))
