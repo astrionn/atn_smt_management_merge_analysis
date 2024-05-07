@@ -1,8 +1,16 @@
-
-
-# from .models import *
+from pprint import pprint as pp
 from .models import (
-    Article, Board, BoardArticle, Carrier, Job, Machine, MachineSlot, Manufacturer, Provider, Storage, StorageSlot
+    Article,
+    Board,
+    BoardArticle,
+    Carrier,
+    Job,
+    Machine,
+    MachineSlot,
+    Manufacturer,
+    Provider,
+    Storage,
+    StorageSlot,
 )
 from rest_framework import serializers
 
@@ -42,8 +50,8 @@ class ProviderNameSerializer(serializers.ModelSerializer):
     name = serializers.CharField(max_length=255)
 
     class Meta:
-        fields = ["name"]
         model = Provider
+        fields = ["name"]
 
 
 class ProviderSerializer(serializers.ModelSerializer):
@@ -89,35 +97,7 @@ class ArticleSerializer(serializers.ModelSerializer):
         ]
 
     def create(self, validated_data):
-        if "manufacturer" in validated_data.keys():
-            manufactuerdata = validated_data.pop("manufacturer")
-            manufacturer, created = Manufacturer.objects.get_or_create(
-                **manufactuerdata
-            )
-            validated_data["manufacturer"] = manufacturer
-
-        if "provider1" in validated_data.keys():
-            provider1data = validated_data.pop("provider1")
-            provider1, created = Provider.objects.get_or_create(provider1data)
-            validated_data["provider1"] = provider1
-        if "provider2" in validated_data.keys():
-            provider2data = validated_data.pop("provider2")
-            provider2, created = Provider.objects.get_or_create(provider2data)
-            validated_data["provider2"] = provider2
-        if "provider3" in validated_data.keys():
-            provider3data = validated_data.pop("provider3")
-            provider3, created = Provider.objects.get_or_create(provider3data)
-            validated_data["provider3"] = provider3
-        if "provider4" in validated_data.keys():
-            provider4data = validated_data.pop("provider4")
-            provider4, created = Provider.objects.get_or_create(provider4data)
-            validated_data["provider4"] = provider4
-        if "provider5" in validated_data.keys():
-            provider5data = validated_data.pop("provider5")
-            provider5, created = Provider.objects.get_or_create(provider5data)
-            validated_data["provider5"] = provider5
-
-        article = Article.objects.create(**validated_data)
+        article, _ = Article.objects.get_or_create(**validated_data)
         return article
 
     def validate(self, *args, **kwargs):

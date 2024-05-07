@@ -1,6 +1,7 @@
 import os
 from django.db import models
 from django.db.models import Q
+from django.forms import ValidationError
 from django.urls import reverse
 
 # created by todo.org tangle
@@ -39,7 +40,7 @@ class LocalFile(models.Model):
         ("carrier", "Carrier"),
         ("board", "Board"),
     ]
-    DELIMITER_CHOICES = [(0, ","), (1, ";"), (2, "\t")]
+    DELIMITER_CHOICES = [(",", 0), (";", 1), ("\t", 2)]
     name = models.BigAutoField(primary_key=True, unique=True, null=False, blank=False)
     upload_type = models.CharField(
         max_length=50, choices=UPLOAD_TYPE_CHOICES, null=False, blank=False
@@ -47,7 +48,16 @@ class LocalFile(models.Model):
     file_object = models.FileField(upload_to=get_upload_path)
     headers = models.CharField(max_length=5000, null=True, blank=True)
     board_name = models.CharField(max_length=5000, null=True, blank=True)
-    delimiter = models.CharField(max_length=2, choices=DELIMITER_CHOICES)
+    lot_number = models.CharField(default=None,max_length=5000, null=True, blank=True)
+    _delimiter = models.CharField(max_length=2, choices=DELIMITER_CHOICES)
+
+    @property
+    def delimiter(self):
+        return self._delimiter.replace("\\t", "\t")
+
+    @delimiter.setter
+    def delimiter(self, value):
+        self._delimiter = value
 
 
 class Storage(AbstractBaseModel):
@@ -60,18 +70,33 @@ class Storage(AbstractBaseModel):
     ip_address = models.CharField(max_length=15, null=True, blank=True)
     ip_port = models.PositiveIntegerField(null=True, blank=True)
 
+    lighthouse_A_green = models.BooleanField(default=False)
+    lighthouse_A_yellow = models.BooleanField(default=False)
+    lighthouse_B_green = models.BooleanField(default=False)
+    lighthouse_B_yellow = models.BooleanField(default=False)
+
     def get_absolute_url(self):
         return reverse("smt_management_app:storage-detail", kwargs={"name": self.name})
 
 
-class Manufacturer(AbstractBaseModel):
+class Manufacturer(models.Model):
+    name = models.CharField(primary_key=True, max_length=50, null=False, blank=False)
+
+    def __str__(self):
+        return self.name
+
     def get_absolute_url(self):
         return reverse(
             "smt_management_app:manufacturer-detail", kwargs={"name": self.name}
         )
 
 
-class Provider(AbstractBaseModel):
+class Provider(models.Model):
+    name = models.CharField(primary_key=True, max_length=50, null=False, blank=False)
+
+    def __str__(self):
+        return self.name
+
     def get_absolute_url(self):
         return reverse("smt_management_app:provider-detail", kwargs={"name": self.name})
 
@@ -80,7 +105,7 @@ class Article(AbstractBaseModel):
     manufacturer = models.ForeignKey(
         Manufacturer, on_delete=models.CASCADE, null=True, blank=True
     )
-    manufacturer_description = models.CharField(max_length=50, null=True, blank=True)
+    manufacturer_description = models.CharField(max_length=255, null=True, blank=True)
 
     provider1 = models.ForeignKey(
         Provider,
@@ -89,7 +114,8 @@ class Article(AbstractBaseModel):
         blank=True,
         related_name="provider1",
     )
-    provider1_description = models.CharField(max_length=50, null=True, blank=True)
+
+    provider1_description = models.CharField(max_length=255, null=True, blank=True)
     provider2 = models.ForeignKey(
         Provider,
         on_delete=models.CASCADE,
@@ -97,7 +123,7 @@ class Article(AbstractBaseModel):
         blank=True,
         related_name="provider2",
     )
-    provider2_description = models.CharField(max_length=50, null=True, blank=True)
+    provider2_description = models.CharField(max_length=255, null=True, blank=True)
     provider3 = models.ForeignKey(
         Provider,
         on_delete=models.CASCADE,
@@ -105,7 +131,7 @@ class Article(AbstractBaseModel):
         blank=True,
         related_name="provider3",
     )
-    provider3_description = models.CharField(max_length=50, null=True, blank=True)
+    provider3_description = models.CharField(max_length=255, null=True, blank=True)
     provider4 = models.ForeignKey(
         Provider,
         on_delete=models.CASCADE,
@@ -113,7 +139,7 @@ class Article(AbstractBaseModel):
         blank=True,
         related_name="provider4",
     )
-    provider4_description = models.CharField(max_length=50, null=True, blank=True)
+    provider4_description = models.CharField(max_length=255, null=True, blank=True)
     provider5 = models.ForeignKey(
         Provider,
         on_delete=models.CASCADE,
@@ -121,7 +147,7 @@ class Article(AbstractBaseModel):
         blank=True,
         related_name="provider5",
     )
-    provider5_description = models.CharField(max_length=50, null=True, blank=True)
+    provider5_description = models.CharField(max_length=255, null=True, blank=True)
 
     description = models.CharField(max_length=255, null=True, blank=True)
     sap_number = models.CharField(max_length=50, null=True, blank=True)
@@ -190,6 +216,9 @@ class Carrier(AbstractBaseModel):
             self.storage = None
             self.storage_slot_qr_value = None
 
+        if not self.quantity_current or self.quantity_current < 0:
+            self.quantity_current = 0
+
         super(Carrier, self).save(*args, **kwargs)
 
     def get_absolute_url(self):
@@ -246,6 +275,7 @@ class Job(AbstractBaseModel):
         (2, "finished"),
     ]
 
+    description = models.CharField(max_length=5000, null=True, blank=True)
     board = models.ForeignKey("Board", on_delete=models.CASCADE)
     machine = models.ForeignKey(
         Machine, on_delete=models.SET_NULL, null=True, blank=True
@@ -253,8 +283,8 @@ class Job(AbstractBaseModel):
     project = models.CharField(max_length=50, null=True, blank=True)
     customer = models.CharField(max_length=50, null=True, blank=True)
     count = models.IntegerField()
-    start_at = models.DateTimeField()
-    finish_at = models.DateTimeField()
+    start_at = models.DateTimeField(null=True, blank=True)
+    finish_at = models.DateTimeField(null=True, blank=True)
     status = models.IntegerField(default=0, choices=STATUS_CHOICES)
     carriers = models.ManyToManyField(Carrier, blank=True)
 
@@ -270,7 +300,7 @@ class Board(AbstractBaseModel):
 
 
 class BoardArticle(AbstractBaseModel):
-    article = models.OneToOneField(Article, on_delete=models.CASCADE)
+    article = models.ForeignKey(Article, on_delete=models.CASCADE)
     board = models.ForeignKey(Board, on_delete=models.CASCADE)
     count = models.PositiveIntegerField()
 
@@ -278,3 +308,14 @@ class BoardArticle(AbstractBaseModel):
         return reverse(
             "smt_management_app:boardarticle-detail", kwargs={"name": self.name}
         )
+    def save(self, *args, **kwargs):
+        # ensure the board does not have a boardarticle with the same article
+        if BoardArticle.objects.filter(article=self.article, board=self.board).exists():
+            raise ValidationError(
+                {
+                    "article": ValidationError(
+                        f"Article {self.article.name} is already assigned to this board"
+                    )
+                }
+            )
+        super(BoardArticle, self).save(*args, **kwargs)

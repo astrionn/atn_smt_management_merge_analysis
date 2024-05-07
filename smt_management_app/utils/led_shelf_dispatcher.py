@@ -47,24 +47,59 @@ class LED_shelf_dispatcher:
                     lights_dict={"status": {"A": "green", "B": "green"}}
                 )
             case "Dummy":
-                print("init LED_shelf_dispatcher Dummy class")
                 self.enable_working_lights_based_on_led_state()
 
     def enable_working_lights_based_on_led_state(self):
-        self.lighthouse_off_control(statusA=True, statusB=True)
-        self.lighthouse_on_control(lights_dict={"status": {"A": "green", "B": "green"}})
         enabled_leds = StorageSlot.objects.filter(storage=self.storage, led_state=1)
-        if enabled_leds:
-            lights_dict = {"status": {}}
-            if any(led.name <= (self.storage.capacity // 2) for led in enabled_leds):
-                lights_dict["status"]["A"] = "yellow"
-            if any(led.name > (self.storage.capacity // 2) for led in enabled_leds):
-                lights_dict["status"]["B"] = "yellow"
-            print("ENABLE WORKINGLIGHTS")
-            pp(lights_dict)
-            self.lighthouse_on_control(lights_dict=lights_dict)
 
-    def lighthouse_on_control(self, lights_dict):
+        if enabled_leds:
+
+            if (
+                all(led.name <= (self.storage.capacity // 2) for led in enabled_leds)
+                and self.storage.lighthouse_B_yellow
+            ):
+                self.storage.lighthouse_B_yellow = False
+                self.storage.save()
+                self.lighthouse_off_control(statusB=True)
+            if (
+                all(led.name > (self.storage.capacity // 2) for led in enabled_leds)
+                and self.storage.lighthouse_A_yellow
+            ):
+                self.storage.lighthouse_A_yellow = False
+                self.storage.save()
+                self.lighthouse_off_control(statusA=True)
+
+            if (
+                any(led.name <= (self.storage.capacity // 2) for led in enabled_leds)
+                and not self.storage.lighthouse_A_yellow
+            ):
+                self.storage.lighthouse_A_yellow = True
+                self.storage.save()
+                self.lighthouse_on_control(lights_dict={"status": {"A": "yellow"}})
+            if (
+                any(led.name > (self.storage.capacity // 2) for led in enabled_leds)
+                and not self.storage.lighthouse_B_yellow
+            ):
+                self.storage.lighthouse_B_yellow = True
+                self.storage.save()
+                self.lighthouse_on_control(lights_dict={"status": {"B": "yellow"}})
+
+        else:
+            self.lighthouse_off_control()
+            self.storage.lighthouse_A_green = False
+            self.storage.lighthouse_B_green = False
+            self.storage.lighthouse_A_yellow = False
+            self.storage.lighthouse_B_yellow = False
+            self.storage.save()
+        if not (self.storage.lighthouse_A_green and self.storage.lighthouse_B_green):
+            self.lighthouse_on_control()
+            self.storage.lighthouse_A_green = True
+            self.storage.lighthouse_B_green = True
+            self.storage.save()
+
+    def lighthouse_on_control(
+        self, lights_dict={"status": {"A": "green", "B": "green"}}
+    ):
         match self.device_type:
             case "ATNPTL":
                 print("ATNPTL has no lighthouse")
@@ -79,7 +114,7 @@ class LED_shelf_dispatcher:
                     for lamp, color in lamps_dictionary.items():
                         self.led_on(lamp=lamp, color=color)
             case "Dummy":
-                print(f"LED ON {self.storage.name}")
+                print(f"LIGHTHOUSE ON {self.storage.name}")
                 pp(lights_dict)
 
     def lighthouse_off_control(self, statusA=True, statusB=True):
@@ -91,7 +126,7 @@ class LED_shelf_dispatcher:
             case "Sophia":
                 pass
             case "Dummy":
-                print(f"LIGHTHOUSE LED OFF {self.storage.name}")
+                print(f"LIGHTHOUSE LED OFF {self.storage.name} {statusA=} {statusB=}")
 
     def test_leds(self):
         print("Testing LEDs is yet to be implemented")
@@ -172,7 +207,11 @@ class LED_shelf_dispatcher:
                 self.device_handler.reset_leds(shelf=self.ATNPTL_shelf_id)
             case "NeoLight":
                 self.device_handler.reset_leds(working_light=working_light)
-                self.enable_working_lights_based_on_led_state()
+                if working_light:
+                    self.storage.lighthouse_A_yellow = False
+                    self.storage.lighthouse_B_yellow = False
+                    self.storage.save()
+                self.lighthouse_on_control()
             case "Sophia":
                 self.device_handler.clear_leds()
                 if working_light:
@@ -181,6 +220,10 @@ class LED_shelf_dispatcher:
                 print(f"reset leds {self.storage.name}")
                 if working_light:
                     print(f"reset workinglight {self.storage.name}")
+                    self.storage.lighthouse_A_yellow = False
+                    self.storage.lighthouse_B_yellow = False
+                    self.storage.save()
+                self.lighthouse_on_control()
 
     def _xgate_slot_to_row_led(self, lamp):
         # the barcodes on the storage slots have a 5 char long prefix and the slot id is formatted a little differntly then its printed under the barcode
