@@ -4,7 +4,8 @@ from smt_management_app.utils.led_shelf_dispatcher import LED_shelf_dispatcher
 
 
 def run():
-    storages = Storage.objects.all()
+    #storages = Storage.objects.all()
+    storages = Storage.objects.filter(name="Storage_2")
     for storage in storages:
         led_dispatcher = LED_shelf_dispatcher(storage)
         led_dispatcher.reset_leds()
