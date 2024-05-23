@@ -252,6 +252,15 @@ urlpatterns.append(
     )
 )
 
+urlpatterns.append(
+    path(
+        "change_slot_color/<storage_name>/<slot_name>/<color>/",
+        views.change_slot_color,
+        name="change_slot_color",
+    )
+)
+
+
 ######### views ###########
 urlpatterns.append(
     path(

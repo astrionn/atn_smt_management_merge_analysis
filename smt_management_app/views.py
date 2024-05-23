@@ -89,7 +89,7 @@ from .storing import (
     store_carrier_choose_slot_cancel,
 )
 
-from .extra_shelf_interactions import test_leds, reset_leds
+from .extra_shelf_interactions import test_leds, reset_leds, change_slot_color
 
 
 def assign_carrier_to_job(request, job_name, carrier_name):
