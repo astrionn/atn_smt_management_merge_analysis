@@ -29,7 +29,7 @@ urlpatterns.append(
 urlpatterns.append(
     path(
         "article/<path:pk>/",
-        views.ArticleViewSet.as_view({"patch": "partial_update"}),
+        views.ArticleViewSet.as_view({"patch": "partial_update", "get": "retrieve"}),
     )
 )
 urlpatterns.append(

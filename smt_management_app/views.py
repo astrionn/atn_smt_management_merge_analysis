@@ -93,16 +93,31 @@ from .extra_shelf_interactions import test_leds, reset_leds, change_slot_color
 
 
 def assign_carrier_to_job(request, job_name, carrier_name):
+    print("assign_carrier_to_job")
+    print(f"job_name: {job_name}")
+    print(f"carrier_name: {carrier_name}")
+
     job = Job.objects.filter(name=job_name).first()
+    print(f"job: {job}")
+
     carrier = Carrier.objects.filter(name=carrier_name, archived=False).first()
+    print(f"carrier: {carrier}")
 
     if job and carrier:
         job.carriers.add(carrier)
+        print("Carrier added to job")
+
         if job.carriers.count() == job.board.articles.count():
             job.status = 1
+            print("Job status updated to 1")
+
         job.save()
+        print("Job saved")
+
         carrier.reserved = True
         carrier.save()
+        print("Carrier reserved")
+
         return JsonResponse({"success": True})
     else:
         return JsonResponse({"success": False})
