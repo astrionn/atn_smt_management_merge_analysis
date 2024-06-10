@@ -64,9 +64,15 @@ def run():
                 ),
             )
         )
-
+    storage_slots.extend(storage2_slots)
     carriers = []
     for i in range(1, 40):
+        if (i - 1) % 3 == 0:
+            j = None
+        elif (i - 1) % 3 == 1:
+            j = i - 1
+        else:
+            j = i + 1399
         carriers.append(
             Carrier.objects.create(
                 name=f"{i}",
@@ -74,7 +80,7 @@ def run():
                 quantity_original=2000,
                 quantity_current=random.randint(1000, 2000),
                 lot_number=f"Bestellung_{i%4}",
-                storage_slot=storage_slots[i - 1],
+                storage_slot=storage_slots[j] if j else None,
                 delivered=True,
             )
         )

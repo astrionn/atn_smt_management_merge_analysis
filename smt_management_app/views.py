@@ -89,20 +89,35 @@ from .storing import (
     store_carrier_choose_slot_cancel,
 )
 
-from .extra_shelf_interactions import test_leds, reset_leds
+from .extra_shelf_interactions import test_leds, reset_leds, change_slot_color
 
 
 def assign_carrier_to_job(request, job_name, carrier_name):
+    print("assign_carrier_to_job")
+    print(f"job_name: {job_name}")
+    print(f"carrier_name: {carrier_name}")
+
     job = Job.objects.filter(name=job_name).first()
+    print(f"job: {job}")
+
     carrier = Carrier.objects.filter(name=carrier_name, archived=False).first()
+    print(f"carrier: {carrier}")
 
     if job and carrier:
         job.carriers.add(carrier)
+        print("Carrier added to job")
+
         if job.carriers.count() == job.board.articles.count():
             job.status = 1
+            print("Job status updated to 1")
+
         job.save()
+        print("Job saved")
+
         carrier.reserved = True
         carrier.save()
+        print("Carrier reserved")
+
         return JsonResponse({"success": True})
     else:
         return JsonResponse({"success": False})
@@ -408,9 +423,10 @@ def process_article_file(file_path, delimiter, map_):
             try:
                 article = Article.objects.create(**article_dict)
                 message["created"]["article"].append(
-                    {k: v for k, v in article_dict_only_strings.__dict__.items()}
+                    {k: v for k, v in article_dict_only_strings.items()}
                 )
             except Exception as e:
+                print(e)
                 failed_article = article_dict_only_strings
                 failed_article["error"] = str(e)
                 message["fail"]["article"].append(failed_article)
@@ -608,55 +624,95 @@ class ArticleViewSet(viewsets.ModelViewSet):
     ordering_fields = "__all__"
 
     def create(self, *args, **kwargs):
-        print("in create of modelviewset")
-        pp(args[0].__dict__)
-        print(args[0].data)
-        return super().create(*args, **kwargs)
-        serializer = self.get_serializer(data=self.request.data)
 
-        manufacturer_name = self.request.data.pop("manufacturer", None)
-        provider1_name = self.request.data.pop("provider1", None)
-        provider2_name = self.request.data.pop("provider2", None)
-        provider3_name = self.request.data.pop("provider3", None)
-        provider4_name = self.request.data.pop("provider4", None)
-        provider5_name = self.request.data.pop("provider5", None)
-
-        if not serializer.is_valid():
-            print(serializer.errors)
-            return Response(
-                serializer.errors,
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        request_data = self.request.data.copy()
 
         serializer_kwargs = {}
-        if provider1_name:
+
+        provider1_name = request_data.pop("provider1", None)
+        print("provider1_name", provider1_name)
+        if provider1_name and provider1_name not in [
+            [""],
+            {"name": ""},
+            None,
+            {"name": None},
+        ]:
+            print(f"creating provider1_name name: {provider1_name}")
             provider1, _ = Provider.objects.get_or_create(name=provider1_name["name"])
             serializer_kwargs["provider1"] = provider1
 
-        if provider2_name:
+        provider2_name = request_data.pop("provider2", None)
+        print("provider2_name", provider2_name)
+        if provider2_name and provider2_name not in [
+            [""],
+            {"name": ""},
+            None,
+            {"name": None},
+        ]:
+            print(f"creating provider2_name name: {provider2_name}")
             provider2, _ = Provider.objects.get_or_create(name=provider2_name["name"])
             serializer_kwargs["provider2"] = provider2
 
-        if provider3_name:
+        provider3_name = request_data.pop("provider3", None)
+        print("provider3_name", provider3_name)
+        if provider3_name and provider3_name not in [
+            [""],
+            {"name": ""},
+            None,
+            {"name": None},
+        ]:
+            print(f"creating provider3_name name: {provider3_name}")
             provider3, _ = Provider.objects.get_or_create(name=provider3_name["name"])
             serializer_kwargs["provider3"] = provider3
 
-        if provider4_name:
+        provider4_name = request_data.pop("provider4", None)
+        print("provider4_name", provider4_name)
+        if provider4_name and provider4_name not in [
+            [""],
+            {"name": ""},
+            None,
+            {"name": None},
+        ]:
+            print(f"creating provider4_name name: {provider4_name}")
             provider4, _ = Provider.objects.get_or_create(name=provider4_name["name"])
             serializer_kwargs["provider4"] = provider4
 
-        if provider5_name:
+        provider5_name = request_data.pop("provider5", None)
+        print("provider5_name", provider5_name)
+        if provider5_name and provider5_name not in [
+            [""],
+            {"name": ""},
+            None,
+            {"name": None},
+        ]:
+            print(f"creating provider5_name name: {provider5_name}")
             provider5, _ = Provider.objects.get_or_create(name=provider5_name["name"])
             serializer_kwargs["provider5"] = provider5
 
-        if manufacturer_name:
+        manufacturer_name = request_data.pop("manufacturer", None)
+        print("manufacturer_name", manufacturer_name)
+        if manufacturer_name and manufacturer_name not in [
+            [""],
+            {"name": ""},
+            None,
+            {"name": None},
+        ]:
+            print(f"creating manufacturer_name name: {manufacturer_name}")
             manufacturer, _ = Manufacturer.objects.get_or_create(
                 name=manufacturer_name["name"]
             )
             serializer_kwargs["manufacturer"] = manufacturer
-        if serializer_kwargs:
-            serializer.save(**serializer_kwargs)
 
+        request_data.update(serializer_kwargs)
+        serializer = self.get_serializer(data=request_data)
+
+        if not serializer.is_valid():
+            print("serializer.errors", serializer.errors)
+            return Response(
+                serializer.errors,
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        serializer.save()
         data = serializer.validated_data
 
         headers = self.get_success_headers(serializer.data)
@@ -713,31 +769,56 @@ class CarrierViewSet(viewsets.ModelViewSet):
         "article__description",
         "article__sap_number",
     ]
-    search_fields = "__all__"
+    search_fields = [
+        "name",
+        "article__sap_number",
+        "article__description",
+        "article__manufacturer__name",
+        "article__provider1__name",
+        "article__provider2__name",
+        "article__provider3__name",
+        "article__provider4__name",
+        "article__provider5__name",
+        "article__manufacturer_description",
+        "article__provider1_description",
+        "article__provider2_description",
+        "article__provider3_description",
+        "article__provider4_description",
+        "article__provider5_description",
+        "diameter",
+        "width",
+        "container_type",
+        "quantity_original",
+        "quantity_current",
+        "lot_number",
+        "storage_slot_qr_value",
+    ]
 
     def get_queryset(self):
-        name = self.request.GET.get("name")
-        lot_number = self.request.GET.get("lot_number")
-        storage = self.request.GET.get("storage")
-        filter_args = {
-            "name__icontains": name,
-            "lot_number__icontains": lot_number,
-            "storage__name__icontains": storage,
-        }
-        filter_args = dict(
-            (k, v)
-            for k, v in filter_args.items()
-            if (v is not None and v != "" and v != [])
-        )
-        carriers = Carrier.objects.filter(**filter_args)
-        return carriers
+        return Carrier.objects.all()
 
 
 class JobViewSet(viewsets.ModelViewSet):
     queryset = Job.objects.all()
     serializer_class = JobSerializer
     filterset_class = JobFilter
+    filter_backends = (
+        filters.SearchFilter,
+        django_filters.rest_framework.DjangoFilterBackend,
+        filters.OrderingFilter,
+    )
     ordering_fields = "__all__"
+    search_fields = [
+        "name",
+        "description",
+        "board__name",
+        "machine__name",
+        "project",
+        "customer",
+        "start_at",
+        "finish_at",
+        "status",
+    ]
 
     def get_queryset(self):
         queryset = super().get_queryset()

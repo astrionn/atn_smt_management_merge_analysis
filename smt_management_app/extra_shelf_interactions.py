@@ -33,6 +33,59 @@ except Exception:
 
 
 @csrf_exempt
+def change_slot_color(request, storage_name, slot_name, color):
+    """
+    Changes the color of a slot in a storage unit.
+
+    Args:
+    - request: HTTP request object
+    - storage_name: Name of the storage unit
+    - slot_name: Name of the slot
+    - color: Color to change the slot to
+
+    Returns:
+    - JsonResponse indicating success or failure
+    """
+    storage_name = storage_name.strip()
+    slot_name = slot_name.strip()
+    color = color.strip()
+
+    slot_queryset = StorageSlot.objects.filter(
+        storage__name=storage_name, name=slot_name
+    )
+
+    if not slot_queryset:
+        return JsonResponse(
+            {
+                "success": False,
+                "message": f"Could not find slot {slot_name} in storage {storage_name}.",
+            }
+        )
+
+    if not color in ["red", "green", "yellow", "blue"]:
+        return JsonResponse(
+            {
+                "success": False,
+                "message": f"Invalid color {color}. Possible values are 'red', 'green', 'yellow', 'blue'.",
+            }
+        )
+
+    slot = slot_queryset.first()
+    slot.led_state = 1
+    slot.save()
+
+    led_dispatcher = LED_shelf_dispatcher(slot.storage)
+    Thread(
+        target=led_dispatcher.led_on,
+        kwargs={"lamp": slot.name, "color": color},
+    ).start()
+    slot.led_state = 1
+    slot.save()
+
+    return JsonResponse({"success": True})
+
+
+@csrf_exempt
 def test_leds(request):
     # only used for messe demonstrations, hidden from the frontend
     storage_queryset = Storage.objects.all()

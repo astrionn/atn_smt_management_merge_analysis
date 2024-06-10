@@ -29,7 +29,7 @@ urlpatterns.append(
 urlpatterns.append(
     path(
         "article/<path:pk>/",
-        views.ArticleViewSet.as_view({"patch": "partial_update"}),
+        views.ArticleViewSet.as_view({"patch": "partial_update", "get": "retrieve"}),
     )
 )
 urlpatterns.append(
@@ -251,6 +251,15 @@ urlpatterns.append(
         name="reset_leds",
     )
 )
+
+urlpatterns.append(
+    path(
+        "change_slot_color/<storage_name>/<slot_name>/<color>/",
+        views.change_slot_color,
+        name="change_slot_color",
+    )
+)
+
 
 ######### views ###########
 urlpatterns.append(

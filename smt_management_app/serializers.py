@@ -74,12 +74,24 @@ class ArticleNameSerializer(serializers.ModelSerializer):
 
 
 class ArticleSerializer(serializers.ModelSerializer):
-    manufacturer = ManufacturerSerializer(required=False)
-    provider1 = ProviderSerializer(required=False, allow_null=True)
-    provider2 = ProviderSerializer(required=False, allow_null=True)
-    provider3 = ProviderSerializer(required=False, allow_null=True)
-    provider4 = ProviderSerializer(required=False, allow_null=True)
-    provider5 = ProviderSerializer(required=False, allow_null=True)
+    manufacturer = serializers.PrimaryKeyRelatedField(
+        queryset=Manufacturer.objects.all(), required=False, allow_null=True
+    )
+    provider1 = serializers.PrimaryKeyRelatedField(
+        queryset=Provider.objects.all(), required=False, allow_null=True
+    )
+    provider2 = serializers.PrimaryKeyRelatedField(
+        queryset=Provider.objects.all(), required=False, allow_null=True
+    )
+    provider3 = serializers.PrimaryKeyRelatedField(
+        queryset=Provider.objects.all(), required=False, allow_null=True
+    )
+    provider4 = serializers.PrimaryKeyRelatedField(
+        queryset=Provider.objects.all(), required=False, allow_null=True
+    )
+    provider5 = serializers.PrimaryKeyRelatedField(
+        queryset=Provider.objects.all(), required=False, allow_null=True
+    )
 
     class Meta:
         model = Article
