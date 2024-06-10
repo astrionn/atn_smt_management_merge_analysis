@@ -325,31 +325,39 @@ def user_mapping_and_file_processing_old(request):
         return JsonResponse(msg, safe=False)
     return JsonResponse({"success": "false"})
 
+
 @csrf_exempt
 def user_mapping_and_file_processing(request):
     if request.method == "POST":
         file_name = request.POST.get("file_name")
         lf = LocalFile.objects.get(name=file_name)
         map_ = json.loads(request.POST["map"])
-        map_ = {v:k for k,v in map_.items() if v and k}
+        map_ = {v: k for k, v in map_.items() if v and k}
         match lf.upload_type:
             case "article":
-                return JsonResponse(process_article_file(lf.file_object.path,lf.delimiter,map_))
+                return JsonResponse(
+                    process_article_file(lf.file_object.path, lf.delimiter, map_)
+                )
             case "carrier":
-                return JsonResponse(process_carrier_file(lf.file_object.path,lf.delimiter,map_,lf.lot_number))
+                return JsonResponse(
+                    process_carrier_file(
+                        lf.file_object.path, lf.delimiter, map_, lf.lot_number
+                    )
+                )
             case "board":
-                return JsonResponse(process_board_file(lf.file_object.path,lf.delimiter,map_,lf.board_name))
+                return JsonResponse(
+                    process_board_file(
+                        lf.file_object.path, lf.delimiter, map_, lf.board_name
+                    )
+                )
 
-        
-def process_article_file(file_path,delimiter,map_):
-    
-    message = {"created": {'article':[],
-                           'manufacturer':[],
-                           'provider':[]},
-                "fail": {'article':[],
-                           'manufacturer':[],
-                           'provider':[]}
-                           }
+
+def process_article_file(file_path, delimiter, map_):
+
+    message = {
+        "created": {"article": [], "manufacturer": [], "provider": []},
+        "fail": {"article": [], "manufacturer": [], "provider": []},
+    }
     with open(file_path, "r", encoding="utf-8") as f:
         csv_reader = csv.reader(f, delimiter=delimiter)
         headers = next(csv_reader)
@@ -363,12 +371,18 @@ def process_article_file(file_path,delimiter,map_):
 
             manufacturer_name = article_dict.get("manufacturer")
             if manufacturer_name:
-                manufacturer, manufacturer_created = (
-                    Manufacturer.objects.get_or_create(name=manufacturer_name)
+                manufacturer, manufacturer_created = Manufacturer.objects.get_or_create(
+                    name=manufacturer_name
                 )
                 article_dict["manufacturer"] = manufacturer
                 if manufacturer_created:
-                    message["created"]['manufacturer'].append({k:v for k,v in manufacturer.__dict__.items() if k != '_state'})
+                    message["created"]["manufacturer"].append(
+                        {
+                            k: v
+                            for k, v in manufacturer.__dict__.items()
+                            if k != "_state"
+                        }
+                    )
 
             provider_keys = [
                 "provider1",
@@ -384,91 +398,116 @@ def process_article_file(file_path,delimiter,map_):
                     )
                     article_dict[provider_key] = provider
                     if provider_created:
-                        message["created"]['provider'].append({k:v for k,v in provider.__dict__.items() if k != '_state'})
+                        message["created"]["provider"].append(
+                            {
+                                k: v
+                                for k, v in provider.__dict__.items()
+                                if k != "_state"
+                            }
+                        )
             try:
                 article = Article.objects.create(**article_dict)
-                message["created"]['article'].append({k:v for k,v in article_dict_only_strings.__dict__.items()})
+                message["created"]["article"].append(
+                    {k: v for k, v in article_dict_only_strings.__dict__.items()}
+                )
             except Exception as e:
                 failed_article = article_dict_only_strings
                 failed_article["error"] = str(e)
-                message["fail"]['article'].append(failed_article)
+                message["fail"]["article"].append(failed_article)
 
     return message
 
-def process_carrier_file(file_path,delimiter,map_,lot_number):
-    print('process_carrier_file')
-    print(f'file_path: {file_path}')
-    print(f'delimiter: {delimiter}')
-    print(f'map_:')
-    pp(map_)
-    print(f'lot_number: {lot_number}')
 
-    message = {"created": {'carrier':[]},
-                "fail": {'carrier':[]}}
+def process_carrier_file(file_path, delimiter, map_, lot_number):
+    print("process_carrier_file")
+    print(f"file_path: {file_path}")
+    print(f"delimiter: {delimiter}")
+    print(f"map_:")
+    pp(map_)
+    print(f"lot_number: {lot_number}")
+
+    message = {"created": {"carrier": []}, "fail": {"carrier": []}}
     with open(file_path, "r", encoding="utf-8") as f:
         csv_reader = csv.reader(f, delimiter=delimiter)
         headers = next(csv_reader)
-        print('headers')
+        print("headers")
         print(headers)
         for row in csv_reader:
-            print('row')
+            print("row")
             print(row)
             carrier_dict = {}
             for i, col_name in enumerate(headers):
                 alternate_col = map_.get(col_name)
                 if alternate_col:
                     carrier_dict[alternate_col] = row[i]
-            
-            if lot_number:
-                carrier_dict['lot_number'] = lot_number
-                print('carrier_dict replace lot number')
-                pp(carrier_dict)
-            
-            carrier_dict_only_strings = carrier_dict.copy()
-            print('carrier_dict only strings')
-            pp(carrier_dict_only_strings)
 
+            if lot_number:
+                carrier_dict["lot_number"] = lot_number
+                print("carrier_dict replace lot number")
+                pp(carrier_dict)
+
+            carrier_dict_only_strings = carrier_dict.copy()
+            print("carrier_dict only strings")
+            pp(carrier_dict_only_strings)
 
             article_name = carrier_dict.get("article")
             if article_name:
                 try:
-                    article= Article.objects.get(name=article_name)
+                    article = Article.objects.get(name=article_name)
                     carrier_dict["article"] = article
                 except Exception as e:
-                    print('article e',article_name,e)
+                    print("article e", article_name, e)
                     failed_carrier = carrier_dict_only_strings.copy()
                     failed_carrier["error"] = str(e) + f" {article_name}"
-                    message["fail"]['carrier'].append(failed_carrier)
+                    message["fail"]["carrier"].append(failed_carrier)
                     continue
-            print('carrier_dict replace article obj')
+            print("carrier_dict replace article obj")
             pp(carrier_dict)
-            integer_fields = ['diameter', 'width', 'container_type','quantity_original','quantity_current','reserved','delivered','collecting']
+            integer_fields = [
+                "diameter",
+                "width",
+                "container_type",
+                "quantity_original",
+                "quantity_current",
+                "reserved",
+                "delivered",
+                "collecting",
+            ]
             try:
                 for field in integer_fields:
-                    if field not in carrier_dict.keys(): continue
-                    carrier_dict[field] = int(carrier_dict[field]) if carrier_dict[field] else ''
+                    if field not in carrier_dict.keys():
+                        continue
+                    carrier_dict[field] = (
+                        int(carrier_dict[field]) if carrier_dict[field] else ""
+                    )
             except Exception as e:
-                print('integer e',carrier_dict['name'],field,e)
+                print("integer e", carrier_dict["name"], field, e)
                 failed_carrier = carrier_dict_only_strings.copy()
                 failed_carrier["error"] = str(e) + f" {carrier_dict['name']} {field}"
-                message["fail"]['carrier'].append(failed_carrier)
+                message["fail"]["carrier"].append(failed_carrier)
                 continue
-            print('carrier_dict ensure numerics')
+            print("carrier_dict ensure numerics")
             pp(carrier_dict)
             try:
                 carrier = Carrier.objects.create(**carrier_dict)
-                message["created"]['carrier'].append({k:v for k,v in carrier_dict_only_strings.items()})
+                message["created"]["carrier"].append(
+                    {k: v for k, v in carrier_dict_only_strings.items()}
+                )
             except Exception as e:
-                print('carrier e',e)
-                failed_carrier = {k:v for k,v in carrier_dict_only_strings.items()}
+                print("carrier e", e)
+                failed_carrier = {k: v for k, v in carrier_dict_only_strings.items()}
                 failed_carrier["error"] = str(e)
-                message["fail"]['carrier'].append(failed_carrier)
+                message["fail"]["carrier"].append(failed_carrier)
     return message
-def process_board_file(file_path,delimiter,map_,board_name):
-    
-    message = {"created": {'board':[],'boardarticle':[]},
-                "fail": {'board':[],'boardarticle':[]}}
-    
+
+
+def process_board_file(file_path, delimiter, map_, board_name):
+
+    message = {
+        "created": {"board": [], "boardarticle": []},
+        "fail": {"board": [], "boardarticle": []},
+    }
+
     board = Board.objects.get(name=board_name)
 
     with open(file_path, "r", encoding="utf-8") as f:
@@ -482,46 +521,53 @@ def process_board_file(file_path,delimiter,map_,board_name):
                     board_article_dict[alternate_col] = row[i]
 
             board_article_dict_only_strings = board_article_dict.copy()
-            print('board_article_dict only strings')
+            print("board_article_dict only strings")
             pp(board_article_dict_only_strings)
 
-            board_article_dict['board'] = board
+            board_article_dict["board"] = board
 
             article_name = board_article_dict.get("article")
             if article_name:
                 try:
-                    article= Article.objects.get(name=article_name)
+                    article = Article.objects.get(name=article_name)
                     board_article_dict["article"] = article
                     board_article_dict["name"] = f"{board.name}_{article.name}"
                 except Exception as e:
-                    print('article e',article_name,e)
+                    print("article e", article_name, e)
                     failed_board_article = board_article_dict_only_strings.copy()
                     failed_board_article["error"] = str(e) + f" {article_name}"
-                    message["fail"]['boardarticle'].append(failed_board_article)
+                    message["fail"]["boardarticle"].append(failed_board_article)
                     continue
-                print('board_article_dict replace article obj')
+                print("board_article_dict replace article obj")
                 pp(board_article_dict)
             try:
-                board_article_dict['count'] = int(board_article_dict['count'])
+                board_article_dict["count"] = int(board_article_dict["count"])
             except Exception as e:
-                print('integer e',board_article_dict['name'],'count',e)
+                print("integer e", board_article_dict["name"], "count", e)
                 failed_board_article = board_article_dict_only_strings.copy()
-                failed_board_article["error"] = str(e) + f" {board_article_dict['name']} count"
-                message["fail"]['boardarticle'].append(failed_board_article)
+                failed_board_article["error"] = (
+                    str(e) + f" {board_article_dict['name']} count"
+                )
+                message["fail"]["boardarticle"].append(failed_board_article)
                 continue
-            print('board_article_dict ensure numerics')
+            print("board_article_dict ensure numerics")
             pp(board_article_dict)
 
             try:
                 board_article = BoardArticle.objects.create(**board_article_dict)
-                message["created"]['boardarticle'].append({k:v for k,v in board_article_dict_only_strings.items()})
+                message["created"]["boardarticle"].append(
+                    {k: v for k, v in board_article_dict_only_strings.items()}
+                )
             except Exception as e:
-                print('board_article e',e)
-                failed_board_article = {k:v for k,v in board_article_dict_only_strings.items()}
+                print("board_article e", e)
+                failed_board_article = {
+                    k: v for k, v in board_article_dict_only_strings.items()
+                }
                 failed_board_article["error"] = str(e)
-                message["fail"]['boardarticle'].append(failed_board_article)
+                message["fail"]["boardarticle"].append(failed_board_article)
     pp(message)
     return message
+
 
 class ListStoragesAPI(generics.ListAPIView):
     """List Storages API"""
@@ -562,8 +608,12 @@ class ArticleViewSet(viewsets.ModelViewSet):
     ordering_fields = "__all__"
 
     def create(self, *args, **kwargs):
-
+        print("in create of modelviewset")
+        pp(args[0].__dict__)
+        print(args[0].data)
+        return super().create(*args, **kwargs)
         serializer = self.get_serializer(data=self.request.data)
+
         manufacturer_name = self.request.data.pop("manufacturer", None)
         provider1_name = self.request.data.pop("provider1", None)
         provider2_name = self.request.data.pop("provider2", None)

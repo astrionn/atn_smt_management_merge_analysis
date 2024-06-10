@@ -210,3 +210,9 @@ class NeoLightAPI:
                 self._LED_On_Control({"lamps": {j: color for j in range(1, 1401)}})
                 time.sleep(t * 3)
                 self.reset_leds()
+
+    def test3(self):
+        for i in self.all_leds:
+            self._LED_On_Control({"lamps":{i:"green"}})
+            time.sleep(t)
+        self.reset_leds()
