@@ -45,6 +45,11 @@ class ManufacturerSerializer(serializers.ModelSerializer):
         model = Manufacturer
         fields = ["name"]
 
+    def create(self, validated_data, *args, **kwargs):
+        print("in serialization manufacturer")
+        print(validated_data)
+        return super().create(validated_data, *args, **kwargs)
+
 
 class ProviderNameSerializer(serializers.ModelSerializer):
     name = serializers.CharField(max_length=255)
@@ -109,6 +114,10 @@ class ArticleSerializer(serializers.ModelSerializer):
         ]
 
     def create(self, validated_data):
+        print("in serialization article")
+        print(validated_data)
+        manufacturer_data = validated_data.pop("manufacturer", None)
+        print("m:    ", manufacturer_data)
         article, _ = Article.objects.get_or_create(**validated_data)
         return article
 
