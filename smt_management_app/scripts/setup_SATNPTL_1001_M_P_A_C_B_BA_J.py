@@ -216,14 +216,14 @@ def run():
         if i == 0:
             j.description = 'Created'
             j.start_at = datetime.datetime.now() + datetime.timedelta(hours=1)
-            j.end_at = datetime.datetime.now() + datetime.timedelta(hours=2)
+            j.finish_at = datetime.datetime.now() + datetime.timedelta(hours=2)
             j.status = 0
             j.save()
         # assign carriers partial
         if i == 1:
             j.description = 'Partially assigned'
             j.start_at = datetime.datetime.now() + datetime.timedelta(hours=2)
-            j.end_at = datetime.datetime.now() + datetime.timedelta(hours=3)
+            j.finish_at = datetime.datetime.now() + datetime.timedelta(hours=3)
             j.status = 0
             for k in range(5):
                 j.carriers.add(Carrier.objects.filter(article=j.board.articles.all()[k],reserved=False).first())
@@ -235,7 +235,7 @@ def run():
         if i == 2:
             j.description = 'All assigned'
             j.start_at = datetime.datetime.now() + datetime.timedelta(hours=3)
-            j.end_at = datetime.datetime.now() + datetime.timedelta(hours=4)
+            j.finish_at = datetime.datetime.now() + datetime.timedelta(hours=4)
             j.status = 1
             for k in range(j.board.articles.count()):
                 j.carriers.add(Carrier.objects.filter(article=j.board.articles.all()[k],reserved=False).first())
@@ -247,7 +247,7 @@ def run():
         if i == 3:
             j.description = 'collected'
             j.start_at = datetime.datetime.now() + datetime.timedelta(hours=3)
-            j.end_at = datetime.datetime.now() + datetime.timedelta(hours=4)
+            j.finish_at = datetime.datetime.now() + datetime.timedelta(hours=4)
             j.status = 1
             for k in range(j.board.articles.count()):
                 j.carriers.add(Carrier.objects.filter(article=j.board.articles.all()[k],reserved=False).first())
@@ -260,7 +260,7 @@ def run():
         if i == 4:
             j.description = 'returned to storage'
             j.start_at = datetime.datetime.now() + datetime.timedelta(hours=4)- datetime.timedelta(days=1)
-            j.end_at = datetime.datetime.now() + datetime.timedelta(hours=5)- datetime.timedelta(days=1)
+            j.finish_at = datetime.datetime.now() + datetime.timedelta(hours=5)- datetime.timedelta(days=1)
             j.status = 1
             for k in range(j.board.articles.count()):
                 j.carriers.add(Carrier.objects.filter(article=j.board.articles.all()[k],reserved=False).first())
@@ -279,7 +279,7 @@ def run():
         if i == 5:
             j.description = 'Documented actual usage'
             j.start_at = datetime.datetime.now() + datetime.timedelta(hours=5) - datetime.timedelta(days=1)
-            j.end_at = datetime.datetime.now() + datetime.timedelta(hours=6)- datetime.timedelta(days=1)
+            j.finish_at = datetime.datetime.now() + datetime.timedelta(hours=6)- datetime.timedelta(days=1)
             j.status = 2
             for k in range(j.board.articles.count()):
                 j.carriers.add(Carrier.objects.filter(article=j.board.articles.all()[k],reserved=False).first())
@@ -302,7 +302,7 @@ def run():
         if i == 6:
             j.description = 'archive'
             j.start_at = datetime.datetime.now() + datetime.timedelta(hours=5) - datetime.timedelta(days=1)
-            j.end_at = datetime.datetime.now() + datetime.timedelta(hours=6) - datetime.timedelta(days=1)
+            j.finish_at = datetime.datetime.now() + datetime.timedelta(hours=6) - datetime.timedelta(days=1)
             j.status = 2
             for k in range(j.board.articles.count()):
                 j.carriers.add(Carrier.objects.filter(article=j.board.articles.all()[k],reserved=False).first())
