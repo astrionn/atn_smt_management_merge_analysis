@@ -395,19 +395,20 @@ def collect_carrier_by_article(request, article_name):
         )
 
     # Activate LEDs for slots containing the article
-    # refactor with _LED_On_Control to enable all at once
-
+    
     storage_names = slot_queryset.values_list("storage", flat=True).distinct()
     storages = Storage.objects.filter(pk__in=storage_names)
     dispatchers = {storage.name: LED_shelf_dispatcher(storage) for storage in storages}
+    slots_by_storage = {storage.name:[] for storage in storages}
+    
     for slot in slot_queryset:
-        slot.led_state = 1
-        slot.save()
-        Thread(
-            target=dispatchers[slot.storage.name].led_on,
-            kwargs={"lamp": slot.name, "color": "blue"},
-        ).start()
+        slots_by_storage[slot.storage.name].append(slot)
 
+    for storage_name, slots in slots_by_storage.items():
+        lights_dict = {'lamps':{slot.name:'blue' for slot in slots}}
+        StorageSlot.objects.filter(id__in=[slot.id for slot in slots]).update(led_state=1)
+        Thread(target=dispatcher[storage_name]._LED_on_Control,kwargs={'lights_dict':lights_dict}).start()
+ 
     return JsonResponse({"success": True})
 
 
