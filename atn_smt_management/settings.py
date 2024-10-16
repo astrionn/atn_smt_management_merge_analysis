@@ -34,6 +34,7 @@ INSTALLED_APPS = [
     "corsheaders",
     "rest_framework.authtoken",
     "django_extensions",
+    "dbbackup",
 ]
 
 MIDDLEWARE = [
@@ -77,6 +78,9 @@ DATABASES = {
         "NAME": BASE_DIR / "db.sqlite3",
     }
 }
+
+DBBACKUP_STORAGE = "django.core.files.storage.FileSystemStorage"
+DBBACKUP_STORAGE_OPTIONS = {"location": os.path.join(BASE_DIR, "backups")}
 
 
 # Password validation
