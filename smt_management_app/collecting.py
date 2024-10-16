@@ -452,12 +452,10 @@ def collect_carrier_by_article_confirm(request, carrier_name):
     carrier.storage = None
     carrier.save()
 
-    slot_queryset = StorageSlot.objects.filter(led_state=1)
-    storage_names = slot_queryset.values_list("storage", flat=True).distinct()
-    storages = Storage.objects.filter(pk__in=storage_names)
+    storages = Storage.objects.all()
     dispatchers = {storage.name: LED_shelf_dispatcher(storage) for storage in storages}
     # Update LED state for all storage slots to off
-    slot_queryset.update(led_state=0)
+    StorageSlot.objects.update(led_state=0)
 
     # Reset LEDs after carrier confirmation
     for storage in storages:
