@@ -7,6 +7,8 @@ from django.views.decorators.csrf import requires_csrf_token, csrf_exempt
 from django.middleware.csrf import get_token
 
 
+from .utils.dymo import DymoHandler
+
 from .models import (
     Manufacturer,
     Provider,
@@ -132,8 +134,8 @@ def print_carrier(request, carrier_name):
         def print_label(self, text1, text2):
             print(f"printing label {text1,text2}")
 
-    dymo = DymoDummy()
-    # dymo = DymoHandler()
+    #dymo = DymoDummy()
+    dymo = DymoHandler()
 
     # Check if the carrier exists
     try:
@@ -150,7 +152,7 @@ def print_carrier(request, carrier_name):
 
     # Start a thread to print the label
     Thread(
-        target=dymo.print_label, args=(carrier.name, article.name), daemon=True
+        target=dymo.print_label, args=(carrier.name, article.name,article.description), daemon=True
     ).start()
 
     return JsonResponse({"success": True})

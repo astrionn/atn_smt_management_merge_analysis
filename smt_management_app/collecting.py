@@ -407,7 +407,7 @@ def collect_carrier_by_article(request, article_name):
     for storage_name, slots in slots_by_storage.items():
         lights_dict = {'lamps':{slot.name:'blue' for slot in slots}}
         StorageSlot.objects.filter(id__in=[slot.id for slot in slots]).update(led_state=1)
-        Thread(target=dispatcher[storage_name]._LED_on_Control,kwargs={'lights_dict':lights_dict}).start()
+        Thread(target=dispatchers[storage_name]._LED_On_Control,kwargs={'lights_dict':lights_dict}).start()
  
     return JsonResponse({"success": True})
 

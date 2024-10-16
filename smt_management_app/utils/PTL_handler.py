@@ -2,12 +2,15 @@ import serial
 
 
 class PTL_API:
-    def __init__(self, port):
+    def __init__(self, port, connection=None):
         self.port = str(port)
         self.baudrate = 9600
-        self.serial = serial.Serial(
-            port=self.port, baudrate=self.baudrate, timeout=0.25
-        )
+        if not connection:
+            self.serial = serial.Serial(
+                port=self.port, baudrate=self.baudrate, timeout=0.25
+            )
+        else:
+            self.serial = connection
         self.slot_to_strip_map = {
             k: v + 1
             for k, v in enumerate(
