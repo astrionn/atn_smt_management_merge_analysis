@@ -373,7 +373,7 @@ def process_article_file(file_path, delimiter, map_):
         "created": {"article": [], "manufacturer": [], "provider": []},
         "fail": {"article": [], "manufacturer": [], "provider": []},
     }
-    with open(file_path, "r", encoding="utf-8") as f:
+    with open(file_path, "r", encoding="ISO-8859-1") as f:
         csv_reader = csv.reader(f, delimiter=delimiter)
         headers = next(csv_reader)
         for row in csv_reader:
@@ -443,7 +443,7 @@ def process_carrier_file(file_path, delimiter, map_, lot_number):
     print(f"lot_number: {lot_number}")
 
     message = {"created": {"carrier": []}, "fail": {"carrier": []}}
-    with open(file_path, "r", encoding="utf-8") as f:
+    with open(file_path, "r", encoding="ISO-8859-1") as f:
         csv_reader = csv.reader(f, delimiter=delimiter)
         headers = next(csv_reader)
         print("headers")
@@ -526,7 +526,7 @@ def process_board_file(file_path, delimiter, map_, board_name):
 
     board = Board.objects.get(name=board_name)
 
-    with open(file_path, "r", encoding="utf-8") as f:
+    with open(file_path, "r", encoding="ISO-8859-1") as f:
         csv_reader = csv.reader(f, delimiter=delimiter)
         headers = next(csv_reader)
         for row in csv_reader:

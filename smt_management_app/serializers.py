@@ -111,13 +111,16 @@ class ArticleSerializer(serializers.ModelSerializer):
             "provider5_description",
             "sap_number",
             "description",
+            "created_at",
+            "updated_at",
+            "archived",
         ]
 
     def create(self, validated_data):
-        print("in serialization article")
-        print(validated_data)
+        # print("in serialization article")
+        # print(validated_data)
         manufacturer_data = validated_data.pop("manufacturer", None)
-        print("m:    ", manufacturer_data)
+        # print("m:    ", manufacturer_data)
         article, _ = Article.objects.get_or_create(**validated_data)
         return article
 
