@@ -48,7 +48,7 @@ class LocalFile(models.Model):
     file_object = models.FileField(upload_to=get_upload_path)
     headers = models.CharField(max_length=5000, null=True, blank=True)
     board_name = models.CharField(max_length=5000, null=True, blank=True)
-    lot_number = models.CharField(default=None,max_length=5000, null=True, blank=True)
+    lot_number = models.CharField(default=None, max_length=5000, null=True, blank=True)
     _delimiter = models.CharField(max_length=2, choices=DELIMITER_CHOICES)
 
     @property
@@ -66,6 +66,8 @@ class Storage(AbstractBaseModel):
     location = models.CharField(max_length=50, null=True, blank=True)
     device = models.CharField(max_length=5000, choices=DEVICE_CHOICES)
     COM_address = models.CharField(max_length=10, blank=True, null=True)
+    COM_baudrate = models.PositiveIntegerField(null=True, blank=True)
+    COM_timeout = models.FloatField(null=True, blank=True)
     ATNPTL_shelf_id = models.PositiveIntegerField(null=True, blank=True)
     ip_address = models.CharField(max_length=15, null=True, blank=True)
     ip_port = models.PositiveIntegerField(null=True, blank=True)
@@ -295,6 +297,7 @@ class Job(AbstractBaseModel):
 class Board(AbstractBaseModel):
     articles = models.ManyToManyField(Article, through="BoardArticle")
     description = models.CharField(max_length=5000, null=True, blank=True)
+
     def get_absolute_url(self):
         return reverse("smt_management_app:board-detail", kwargs={"name": self.name})
 
@@ -308,6 +311,7 @@ class BoardArticle(AbstractBaseModel):
         return reverse(
             "smt_management_app:boardarticle-detail", kwargs={"name": self.name}
         )
+
     def save(self, *args, **kwargs):
         # ensure the board does not have a boardarticle with the same article
         if BoardArticle.objects.filter(article=self.article, board=self.board).exists():

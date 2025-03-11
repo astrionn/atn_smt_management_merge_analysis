@@ -2,18 +2,28 @@ from smt_management_app.models import *
 import random
 import datetime
 
-dbg = True
+dbg = False
+
+
 def run():
-    storage = Storage.objects.create(name=f"Storage_1", capacity=400, device=f"{'Dummy' if dbg else 'ATNPTL'}")
+    storage = Storage.objects.create(
+        name=f"Storage_1",
+        capacity=400,
+        device=f"{'Dummy' if dbg else 'ATNPTL'}",
+        COM_address="COM7",
+        ATNPTL_shelf_id=3,
+        COM_baudrate=115200,
+        COM_timeout=0.4,
+    )
 
     storage_slots = []
 
     for i in range(1, 401):
-        storage_slot = StorageSlot.objects.create(name=i, storage=storage)
-
+        qr_val = f"{((i-1) // 50 + 1) * 1000 + ((i-1) % 50 + 1)}"
+        storage_slot = StorageSlot.objects.create(name=qr_val, storage=storage)
         storage_slots.append(storage_slot)
 
-        qr_val = f"{(i % 8 or 8)*1000 + (i+7)//8}"
+        # New pattern logic
 
         storage_slot.qr_value = qr_val
         storage_slot.save()
@@ -157,7 +167,7 @@ def run():
                 ),
             )
         )
-        
+
     carriers = []
     for i in range(1, 41):
         if (i - 1) % 2 == 0:
@@ -175,25 +185,31 @@ def run():
                 delivered=True,
             )
         )
-        
-    
+
     board_red = Board.objects.create(name="RedStar IoT Control Board")
-    for n,article in zip([10,2,4,3,1,1,5,8,3,6],articles):
+    for n, article in zip([10, 2, 4, 3, 1, 1, 5, 8, 3, 6], articles):
         BoardArticle.objects.create(
-            name=f"{board_red.name}___{article.name}", count=n, board=board_red, article=article
+            name=f"{board_red.name}___{article.name}",
+            count=n,
+            board=board_red,
+            article=article,
         )
     board_green = Board.objects.create(name="GreenWave Sensor Interface Board")
-    for n,article in zip([6,2,3,2,1,1,4,5,2,4],articles):
+    for n, article in zip([6, 2, 3, 2, 1, 1, 4, 5, 2, 4], articles):
         BoardArticle.objects.create(
-            name=f"{board_green.name}___{article.name}", count=n, board=board_green, article=article
+            name=f"{board_green.name}___{article.name}",
+            count=n,
+            board=board_green,
+            article=article,
         )
-        
+
     jobs = []
-    for i in range(1,8):
-        jobs.append(Job.objects.create(
-            name = f"J__{i}",
-            description = f"J__{i}",
-            customer = f"{[
+    for i in range(1, 8):
+        jobs.append(
+            Job.objects.create(
+                name=f"J__{i}",
+                description=f"J__{i}",
+                customer=f"{[
                 "EcoVolt Supply Chain Solutions",
                 "BoltStream Logistics",
                 "SwiftTech Industrial Services",
@@ -205,52 +221,65 @@ def run():
                 "SecureGrid Infrastructure Management",
                 "DataStream Industrial Diagnostics"
             ][i-1]}",
-            project = f'Project {i%2}',
-            count = i*1000,
-            board = board_red if i%2==0 else board_green,
-        ))
-        
-    for i,j in enumerate(jobs):
-        print(i,j)
+                project=f"Project {i%2}",
+                count=i * 1000,
+                board=board_red if i % 2 == 0 else board_green,
+            )
+        )
+
+    for i, j in enumerate(jobs):
+        print(i, j)
         # created
         if i == 0:
-            j.description = 'Created'
+            j.description = "Created"
             j.start_at = datetime.datetime.now() + datetime.timedelta(hours=1)
             j.finish_at = datetime.datetime.now() + datetime.timedelta(hours=2)
             j.status = 0
             j.save()
         # assign carriers partial
         if i == 1:
-            j.description = 'Partially assigned'
+            j.description = "Partially assigned"
             j.start_at = datetime.datetime.now() + datetime.timedelta(hours=2)
             j.finish_at = datetime.datetime.now() + datetime.timedelta(hours=3)
             j.status = 0
             for k in range(5):
-                j.carriers.add(Carrier.objects.filter(article=j.board.articles.all()[k],reserved=False).first())
+                j.carriers.add(
+                    Carrier.objects.filter(
+                        article=j.board.articles.all()[k], reserved=False
+                    ).first()
+                )
             j.save()
             for c in j.carriers.all():
                 c.reserved = True
                 c.save()
         # assign carriers total
         if i == 2:
-            j.description = 'All assigned'
+            j.description = "All assigned"
             j.start_at = datetime.datetime.now() + datetime.timedelta(hours=3)
             j.finish_at = datetime.datetime.now() + datetime.timedelta(hours=4)
             j.status = 1
             for k in range(j.board.articles.count()):
-                j.carriers.add(Carrier.objects.filter(article=j.board.articles.all()[k],reserved=False).first())
+                j.carriers.add(
+                    Carrier.objects.filter(
+                        article=j.board.articles.all()[k], reserved=False
+                    ).first()
+                )
             j.save()
             for c in j.carriers.all():
                 c.reserved = True
                 c.save()
         # collect carriers
         if i == 3:
-            j.description = 'collected'
+            j.description = "collected"
             j.start_at = datetime.datetime.now() + datetime.timedelta(hours=3)
             j.finish_at = datetime.datetime.now() + datetime.timedelta(hours=4)
             j.status = 1
             for k in range(j.board.articles.count()):
-                j.carriers.add(Carrier.objects.filter(article=j.board.articles.all()[k],reserved=False).first())
+                j.carriers.add(
+                    Carrier.objects.filter(
+                        article=j.board.articles.all()[k], reserved=False
+                    ).first()
+                )
             j.save()
             for c in j.carriers.all():
                 c.reserved = True
@@ -258,12 +287,24 @@ def run():
                 c.save()
         # return carriers
         if i == 4:
-            j.description = 'returned to storage'
-            j.start_at = datetime.datetime.now() + datetime.timedelta(hours=4)- datetime.timedelta(days=1)
-            j.finish_at = datetime.datetime.now() + datetime.timedelta(hours=5)- datetime.timedelta(days=1)
+            j.description = "returned to storage"
+            j.start_at = (
+                datetime.datetime.now()
+                + datetime.timedelta(hours=4)
+                - datetime.timedelta(days=1)
+            )
+            j.finish_at = (
+                datetime.datetime.now()
+                + datetime.timedelta(hours=5)
+                - datetime.timedelta(days=1)
+            )
             j.status = 1
             for k in range(j.board.articles.count()):
-                j.carriers.add(Carrier.objects.filter(article=j.board.articles.all()[k],reserved=False).first())
+                j.carriers.add(
+                    Carrier.objects.filter(
+                        article=j.board.articles.all()[k], reserved=False
+                    ).first()
+                )
             j.save()
             for c in j.carriers.all():
                 c.reserved = True
@@ -271,18 +312,32 @@ def run():
                 c.save()
 
             for c in j.carriers.all():
-                c.storage_slot = StorageSlot.objects.filter(carrier__isnull=True).first()
+                c.storage_slot = StorageSlot.objects.filter(
+                    carrier__isnull=True
+                ).first()
                 c.reserved = False
                 c.save()
-                
+
         # note usage
         if i == 5:
-            j.description = 'Documented actual usage'
-            j.start_at = datetime.datetime.now() + datetime.timedelta(hours=5) - datetime.timedelta(days=1)
-            j.finish_at = datetime.datetime.now() + datetime.timedelta(hours=6)- datetime.timedelta(days=1)
+            j.description = "Documented actual usage"
+            j.start_at = (
+                datetime.datetime.now()
+                + datetime.timedelta(hours=5)
+                - datetime.timedelta(days=1)
+            )
+            j.finish_at = (
+                datetime.datetime.now()
+                + datetime.timedelta(hours=6)
+                - datetime.timedelta(days=1)
+            )
             j.status = 2
             for k in range(j.board.articles.count()):
-                j.carriers.add(Carrier.objects.filter(article=j.board.articles.all()[k],reserved=False).first())
+                j.carriers.add(
+                    Carrier.objects.filter(
+                        article=j.board.articles.all()[k], reserved=False
+                    ).first()
+                )
             j.save()
             for c in j.carriers.all():
                 c.reserved = True
@@ -290,22 +345,36 @@ def run():
                 c.save()
 
             for c in j.carriers.all():
-                c.storage_slot = StorageSlot.objects.filter(carrier__isnull=True).first()
+                c.storage_slot = StorageSlot.objects.filter(
+                    carrier__isnull=True
+                ).first()
                 c.reserved = False
                 c.save()
-            
+
             for c in j.carriers.all():
-                c.quantity_current  -= i*6
+                c.quantity_current -= i * 6
                 c.save()
-                
+
         # archive
         if i == 6:
-            j.description = 'archive'
-            j.start_at = datetime.datetime.now() + datetime.timedelta(hours=5) - datetime.timedelta(days=1)
-            j.finish_at = datetime.datetime.now() + datetime.timedelta(hours=6) - datetime.timedelta(days=1)
+            j.description = "archive"
+            j.start_at = (
+                datetime.datetime.now()
+                + datetime.timedelta(hours=5)
+                - datetime.timedelta(days=1)
+            )
+            j.finish_at = (
+                datetime.datetime.now()
+                + datetime.timedelta(hours=6)
+                - datetime.timedelta(days=1)
+            )
             j.status = 2
             for k in range(j.board.articles.count()):
-                j.carriers.add(Carrier.objects.filter(article=j.board.articles.all()[k],reserved=False).first())
+                j.carriers.add(
+                    Carrier.objects.filter(
+                        article=j.board.articles.all()[k], reserved=False
+                    ).first()
+                )
             j.save()
             for c in j.carriers.all():
                 c.reserved = True
@@ -313,13 +382,14 @@ def run():
                 c.save()
 
             for c in j.carriers.all():
-                c.storage_slot = StorageSlot.objects.filter(carrier__isnull=True).first()
+                c.storage_slot = StorageSlot.objects.filter(
+                    carrier__isnull=True
+                ).first()
                 c.reserved = False
                 c.save()
-            
+
             for c in j.carriers.all():
-                c.quantity_current  -= i*7
+                c.quantity_current -= i * 7
                 c.save()
             j.archived = True
             j.save()
-                
