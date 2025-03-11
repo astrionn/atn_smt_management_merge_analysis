@@ -10,21 +10,39 @@ def run():
         name=f"Storage_1",
         capacity=400,
         device=f"{'Dummy' if dbg else 'ATNPTL'}",
-        COM_address="COM7",
-        ATNPTL_shelf_id=3,
+        COM_address="COM8",
+        ATNPTL_shelf_id=2,
         COM_baudrate=115200,
         COM_timeout=0.4,
     )
 
+    # # correct qr codes applied
+    # storage_slots = []
+
+    # for i in range(1, 401):
+    #     qr_val = f"{((i-1) // 50 + 1) * 1000 + ((i-1) % 50 + 1)}"
+    #     storage_slot = StorageSlot.objects.create(name=qr_val, storage=storage)
+    #     storage_slots.append(storage_slot)
+    #     storage_slot.qr_value = qr_val
+    #     storage_slot.save()
+
+    # qr codes for side A and B are switched so 1001 is actually 5001 , 2001 is 6001 and so on
     storage_slots = []
-
     for i in range(1, 401):
-        qr_val = f"{((i-1) // 50 + 1) * 1000 + ((i-1) % 50 + 1)}"
-        storage_slot = StorageSlot.objects.create(name=qr_val, storage=storage)
+        # Calculate the group (1-8) and position within group (1-50)
+        group = (i - 1) // 50 + 1
+        position = (i - 1) % 50 + 1
+
+        # Calculate the slot name (always the original slot number)
+        slot_name = group * 1000 + position
+
+        # Apply the QR swapping logic (first half with second half)
+        qr_group = group + 4 if group <= 4 else group - 4
+        qr_val = str(qr_group * 1000 + position)
+
+        # Create storage slot
+        storage_slot = StorageSlot.objects.create(name=slot_name, storage=storage)
         storage_slots.append(storage_slot)
-
-        # New pattern logic
-
         storage_slot.qr_value = qr_val
         storage_slot.save()
 
@@ -54,19 +72,10 @@ def run():
         )
 
     articles = []
-    for i in range(1, 11):
+    for i in range(1, 6):
         articles.append(
             Article.objects.create(
-                name=f"{["Chip Resistor_0603_100kOhm_1%",
-                         "Inductor Coil SMD_10uH_0805_5%",
-                         "Tantalum Capacitor SMD_A_Series_10uF_6.3V_0805",
-                         "Schottky Barrier Diode SMD_DO-214AA_BAT54S",
-                         "Crystal Oscillator SMD_HC-49S_25MHz",
-                         "Voltage Regulator Chip SMD_SOT-23_3.3V",
-                         "Transistor NPN SMD_SOT-23_BC547",
-                         "Light Emitting Diode SMD_LED_0603_Red",
-                         "Push Button Tact Switch SMD_SMD-4x4x2.3_Red",
-                         "Ferrite Bead SMD_EMI_Suppression_0603"][i-1]}",
+                name=f"A_{str(i).zfill(3)}",
                 description=f"{[
                     "A small surface-mount resistor with a resistance of 100,000 ohms and a tolerance of 1%.",
                     "A small surface-mount inductor with an inductance of 10 microhenries and a tolerance of 5%.",
@@ -176,12 +185,12 @@ def run():
             j = i
         carriers.append(
             Carrier.objects.create(
-                name=f"C__{i}",
-                article=articles[i % 10],
+                name=f"C_{str(i).zfill(3)}",
+                article=articles[i % 5],
                 quantity_original=2000,
                 quantity_current=random.randint(1000, 2000),
                 lot_number=f"Bestellung_{i % 4}",
-                storage_slot=storage_slots[j] if j else None,
+                # storage_slot=storage_slots[j] if j else None,
                 delivered=True,
             )
         )
@@ -268,128 +277,128 @@ def run():
             for c in j.carriers.all():
                 c.reserved = True
                 c.save()
-        # collect carriers
-        if i == 3:
-            j.description = "collected"
-            j.start_at = datetime.datetime.now() + datetime.timedelta(hours=3)
-            j.finish_at = datetime.datetime.now() + datetime.timedelta(hours=4)
-            j.status = 1
-            for k in range(j.board.articles.count()):
-                j.carriers.add(
-                    Carrier.objects.filter(
-                        article=j.board.articles.all()[k], reserved=False
-                    ).first()
-                )
-            j.save()
-            for c in j.carriers.all():
-                c.reserved = True
-                c.storage_slot = None
-                c.save()
-        # return carriers
-        if i == 4:
-            j.description = "returned to storage"
-            j.start_at = (
-                datetime.datetime.now()
-                + datetime.timedelta(hours=4)
-                - datetime.timedelta(days=1)
-            )
-            j.finish_at = (
-                datetime.datetime.now()
-                + datetime.timedelta(hours=5)
-                - datetime.timedelta(days=1)
-            )
-            j.status = 1
-            for k in range(j.board.articles.count()):
-                j.carriers.add(
-                    Carrier.objects.filter(
-                        article=j.board.articles.all()[k], reserved=False
-                    ).first()
-                )
-            j.save()
-            for c in j.carriers.all():
-                c.reserved = True
-                c.storage_slot = None
-                c.save()
+        # # collect carriers
+        # if i == 3:
+        #     j.description = "collected"
+        #     j.start_at = datetime.datetime.now() + datetime.timedelta(hours=3)
+        #     j.finish_at = datetime.datetime.now() + datetime.timedelta(hours=4)
+        #     j.status = 1
+        #     for k in range(j.board.articles.count()):
+        #         j.carriers.add(
+        #             Carrier.objects.filter(
+        #                 article=j.board.articles.all()[k], reserved=False
+        #             ).first()
+        #         )
+        #     j.save()
+        #     for c in j.carriers.all():
+        #         c.reserved = True
+        #         c.storage_slot = None
+        #         c.save()
+        # # return carriers
+        # if i == 4:
+        #     j.description = "returned to storage"
+        #     j.start_at = (
+        #         datetime.datetime.now()
+        #         + datetime.timedelta(hours=4)
+        #         - datetime.timedelta(days=1)
+        #     )
+        #     j.finish_at = (
+        #         datetime.datetime.now()
+        #         + datetime.timedelta(hours=5)
+        #         - datetime.timedelta(days=1)
+        #     )
+        #     j.status = 1
+        #     for k in range(j.board.articles.count()):
+        #         j.carriers.add(
+        #             Carrier.objects.filter(
+        #                 article=j.board.articles.all()[k], reserved=False
+        #             ).first()
+        #         )
+        #     j.save()
+        #     for c in j.carriers.all():
+        #         c.reserved = True
+        #         c.storage_slot = None
+        #         c.save()
 
-            for c in j.carriers.all():
-                c.storage_slot = StorageSlot.objects.filter(
-                    carrier__isnull=True
-                ).first()
-                c.reserved = False
-                c.save()
+        #     for c in j.carriers.all():
+        #         c.storage_slot = StorageSlot.objects.filter(
+        #             carrier__isnull=True
+        #         ).first()
+        #         c.reserved = False
+        #         c.save()
 
-        # note usage
-        if i == 5:
-            j.description = "Documented actual usage"
-            j.start_at = (
-                datetime.datetime.now()
-                + datetime.timedelta(hours=5)
-                - datetime.timedelta(days=1)
-            )
-            j.finish_at = (
-                datetime.datetime.now()
-                + datetime.timedelta(hours=6)
-                - datetime.timedelta(days=1)
-            )
-            j.status = 2
-            for k in range(j.board.articles.count()):
-                j.carriers.add(
-                    Carrier.objects.filter(
-                        article=j.board.articles.all()[k], reserved=False
-                    ).first()
-                )
-            j.save()
-            for c in j.carriers.all():
-                c.reserved = True
-                c.storage_slot = None
-                c.save()
+        # # note usage
+        # if i == 5:
+        #     j.description = "Documented actual usage"
+        #     j.start_at = (
+        #         datetime.datetime.now()
+        #         + datetime.timedelta(hours=5)
+        #         - datetime.timedelta(days=1)
+        #     )
+        #     j.finish_at = (
+        #         datetime.datetime.now()
+        #         + datetime.timedelta(hours=6)
+        #         - datetime.timedelta(days=1)
+        #     )
+        #     j.status = 2
+        #     for k in range(j.board.articles.count()):
+        #         j.carriers.add(
+        #             Carrier.objects.filter(
+        #                 article=j.board.articles.all()[k], reserved=False
+        #             ).first()
+        #         )
+        #     j.save()
+        #     for c in j.carriers.all():
+        #         c.reserved = True
+        #         c.storage_slot = None
+        #         c.save()
 
-            for c in j.carriers.all():
-                c.storage_slot = StorageSlot.objects.filter(
-                    carrier__isnull=True
-                ).first()
-                c.reserved = False
-                c.save()
+        #     for c in j.carriers.all():
+        #         c.storage_slot = StorageSlot.objects.filter(
+        #             carrier__isnull=True
+        #         ).first()
+        #         c.reserved = False
+        #         c.save()
 
-            for c in j.carriers.all():
-                c.quantity_current -= i * 6
-                c.save()
+        #     for c in j.carriers.all():
+        #         c.quantity_current -= i * 6
+        #         c.save()
 
-        # archive
-        if i == 6:
-            j.description = "archive"
-            j.start_at = (
-                datetime.datetime.now()
-                + datetime.timedelta(hours=5)
-                - datetime.timedelta(days=1)
-            )
-            j.finish_at = (
-                datetime.datetime.now()
-                + datetime.timedelta(hours=6)
-                - datetime.timedelta(days=1)
-            )
-            j.status = 2
-            for k in range(j.board.articles.count()):
-                j.carriers.add(
-                    Carrier.objects.filter(
-                        article=j.board.articles.all()[k], reserved=False
-                    ).first()
-                )
-            j.save()
-            for c in j.carriers.all():
-                c.reserved = True
-                c.storage_slot = None
-                c.save()
+        # # archive
+        # if i == 6:
+        #     j.description = "archive"
+        #     j.start_at = (
+        #         datetime.datetime.now()
+        #         + datetime.timedelta(hours=5)
+        #         - datetime.timedelta(days=1)
+        #     )
+        #     j.finish_at = (
+        #         datetime.datetime.now()
+        #         + datetime.timedelta(hours=6)
+        #         - datetime.timedelta(days=1)
+        #     )
+        #     j.status = 2
+        #     for k in range(j.board.articles.count()):
+        #         j.carriers.add(
+        #             Carrier.objects.filter(
+        #                 article=j.board.articles.all()[k], reserved=False
+        #             ).first()
+        #         )
+        #     j.save()
+        #     for c in j.carriers.all():
+        #         c.reserved = True
+        #         c.storage_slot = None
+        #         c.save()
 
-            for c in j.carriers.all():
-                c.storage_slot = StorageSlot.objects.filter(
-                    carrier__isnull=True
-                ).first()
-                c.reserved = False
-                c.save()
+        #     for c in j.carriers.all():
+        #         c.storage_slot = StorageSlot.objects.filter(
+        #             carrier__isnull=True
+        #         ).first()
+        #         c.reserved = False
+        #         c.save()
 
-            for c in j.carriers.all():
-                c.quantity_current -= i * 7
-                c.save()
-            j.archived = True
-            j.save()
+        #     for c in j.carriers.all():
+        #         c.quantity_current -= i * 7
+        #         c.save()
+        #     j.archived = True
+        #     j.save()
