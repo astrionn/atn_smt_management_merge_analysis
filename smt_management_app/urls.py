@@ -47,6 +47,16 @@ urlpatterns.append(
 urlpatterns.append(
     path("providerlist/", views.ProviderNameViewSet.as_view(), name="providerlist")
 )
+urlpatterns.append(
+    path("storagelist/", views.StorageNameViewSet.as_view(), name="storagelist")
+)
+urlpatterns.append(
+    path(
+        "storageslotlist/",
+        views.StorageSlotNameViewSet.as_view(),
+        name="storageslotlist",
+    )
+)
 
 urlpatterns.append(
     path(

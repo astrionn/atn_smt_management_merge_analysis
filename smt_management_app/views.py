@@ -53,7 +53,9 @@ from .serializers import (
     ProviderNameSerializer,
     ProviderSerializer,
     StorageSerializer,
+    StorageNameSerializer,
     StorageSlotSerializer,
+    StorageSlotNameSerializer,
 )
 
 from .helpers import (
@@ -751,6 +753,26 @@ class CarrierNameViewSet(generics.ListAPIView):
         queryset = Carrier.objects.all()
         serializer = CarrierNameSerializer(queryset, many=True)
         data = [{k: v for k, v in c.items()} for c in serializer.data]
+        return JsonResponse(data, safe=False)
+
+
+class StorageNameViewSet(generics.ListAPIView):
+    model = Storage
+
+    def get(self, request):
+        queryset = Storage.objects.all()
+        serializer = StorageNameSerializer(queryset, many=True)
+        data = [{k: v for k, v in s.items()} for s in serializer.data]
+        return JsonResponse(data, safe=False)
+
+
+class StorageSlotNameViewSet(generics.ListAPIView):
+    model = StorageSlot
+
+    def get(self, request):
+        queryset = StorageSlot.objects.all()
+        serializer = StorageSlotNameSerializer(queryset, many=True)
+        data = [{k: v for k, v in s.items()} for s in serializer.data]
         return JsonResponse(data, safe=False)
 
 

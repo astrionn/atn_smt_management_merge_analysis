@@ -160,6 +160,22 @@ class CarrierNameSerializer(serializers.ModelSerializer):
         model = Carrier
 
 
+class StorageNameSerializer(serializers.ModelSerializer):
+    name = serializers.CharField(max_length=255)
+
+    class Meta:
+        fields = ["name"]
+        model = Storage
+
+
+class StorageSlotNameSerializer(serializers.ModelSerializer):
+    name = serializers.CharField(max_length=255)
+
+    class Meta:
+        fields = ["name"]
+        model = StorageSlot
+
+
 class CarrierSerializer(serializers.ModelSerializer):
     article = serializers.PrimaryKeyRelatedField(
         many=False, queryset=Article.objects.all()
