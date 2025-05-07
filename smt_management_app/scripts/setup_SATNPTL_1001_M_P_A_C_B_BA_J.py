@@ -10,24 +10,23 @@ def run():
         name=f"Storage_1",
         capacity=400,
         device=f"{'Dummy' if dbg else 'ATNPTL'}",
-        COM_address="COM8",
-        ATNPTL_shelf_id=2,
+        COM_address="COM7",
+        ATNPTL_shelf_id=3,
         COM_baudrate=115200,
         COM_timeout=0.4,
     )
 
-    # # correct qr codes applied
-    # storage_slots = []
-
-    # for i in range(1, 401):
-    #     qr_val = f"{((i-1) // 50 + 1) * 1000 + ((i-1) % 50 + 1)}"
-    #     storage_slot = StorageSlot.objects.create(name=qr_val, storage=storage)
-    #     storage_slots.append(storage_slot)
-    #     storage_slot.qr_value = qr_val
-    #     storage_slot.save()
+    # correct qr codes applied
+    storage_slots = []
+    for i in range(1, 401):
+        qr_val = f"{((i-1) // 50 + 1) * 1000 + ((i-1) % 50 + 1)}"
+        storage_slot = StorageSlot.objects.create(name=qr_val, storage=storage)
+        storage_slots.append(storage_slot)
+        storage_slot.qr_value = qr_val
+        storage_slot.save()
 
     # qr codes for side A and B are switched so 1001 is actually 5001 , 2001 is 6001 and so on
-    storage_slots = []
+    """ storage_slots = []
     for i in range(1, 401):
         # Calculate the group (1-8) and position within group (1-50)
         group = (i - 1) // 50 + 1
@@ -44,7 +43,7 @@ def run():
         storage_slot = StorageSlot.objects.create(name=slot_name, storage=storage)
         storage_slots.append(storage_slot)
         storage_slot.qr_value = qr_val
-        storage_slot.save()
+        storage_slot.save() """
 
     manufacturers = []
     for i in range(1, 4):
@@ -178,7 +177,7 @@ def run():
         )
 
     carriers = []
-    for i in range(1, 41):
+    for i in range(1, 11):
         if (i - 1) % 2 == 0:
             j = None
         else:
