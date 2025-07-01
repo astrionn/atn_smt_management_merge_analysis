@@ -4,6 +4,7 @@ from xml.sax.handler import feature_external_ges
 
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
+from django.db.models import Q
 
 
 from .models import (
@@ -22,6 +23,7 @@ from .models import (
 )
 
 from .utils.led_shelf_dispatcher import LED_shelf_dispatcher
+from .helpers import find_slot_by_qr_code, slot_matches_qr_code
 
 
 @csrf_exempt
@@ -118,16 +120,18 @@ def store_carrier_confirm(request, carrier_name, storage_name, slot_name):
         return JsonResponse({"success": False, "message": "Carrier not found."})
     carrier = carrier_queryset.first()
 
-    slot_queryset = StorageSlot.objects.filter(qr_value=slot_name, storage=storage_name)
-    if not slot_queryset:
+    # Use combined slots support for QR lookup
+    slot = find_slot_by_qr_code(slot_name, storage_name)
+    if not slot:
         return JsonResponse({"success": False, "message": "Slot not found."})
-    slot = slot_queryset.first()
 
     dispatchers = {
         storage.name: LED_shelf_dispatcher(storage)
         for storage in set([carrier.nominated_for_slot.storage, slot.storage])
     }
-    if not carrier.nominated_for_slot == slot:
+
+    # Check if scanned slot matches nominated slot (using combined slots support)
+    if not slot_matches_qr_code(carrier.nominated_for_slot, slot_name):
         Thread(
             target=dispatchers[slot.storage.name].led_on,
             kwargs={"lamp": slot.name, "color": "red"},
@@ -139,8 +143,8 @@ def store_carrier_confirm(request, carrier_name, storage_name, slot_name):
         ).start()
         return JsonResponse(
             {
-                "sucess": False,
-                "message": f"Scanned wrong slot {slot.qr_value} instead of slot {carrier.nominated_for_slot.qr_value}.",
+                "success": False,
+                "message": f"Scanned wrong slot {slot_name} instead of slot {carrier.nominated_for_slot.qr_value}.",
             }
         )
 
@@ -249,14 +253,15 @@ def store_carrier_choose_slot(request, carrier_name, storage_name):
     free_slot_queryset.update(led_state=1)
 
     Thread(
-        LED_shelf_dispatcher(storage)._LED_On_Control(
-            {
+        target=LED_shelf_dispatcher(storage)._LED_On_Control,
+        kwargs={
+            "lights_dict": {
                 "lamps": {
                     free_slot.name: "yellow"
                     for free_slot in free_slot_queryset.filter(storage=storage)
                 }
             }
-        )
+        },
     ).start()
 
     return JsonResponse(msg)
@@ -275,15 +280,15 @@ def store_carrier_choose_slot_confirm(request, carrier_name, storage_name, slot_
         return JsonResponse({"success": False, "message": "Carrier not found."})
     carrier = carrier_queryset.first()
 
-    slot_queryset = StorageSlot.objects.filter(qr_value=slot_name, storage=storage_name)
-    if not slot_queryset:
+    # Use combined slots support for QR lookup
+    slot = find_slot_by_qr_code(slot_name, storage_name)
+    if not slot:
         return JsonResponse({"success": False, "message": "no slot found"})
-    slot = slot_queryset.first()
 
     storage = Storage.objects.filter(name=storage_name).first()
     dispatcher = LED_shelf_dispatcher(storage)
 
-    if hasattr(slot, "carrier"):
+    if hasattr(slot, "carrier") and slot.carrier:
         slot.led_state = 1
         slot.save()
         Thread(
@@ -300,7 +305,7 @@ def store_carrier_choose_slot_confirm(request, carrier_name, storage_name, slot_
         return JsonResponse(
             {
                 "success": False,
-                "message": f"Slot {slot.qr_value} should contain {slot.carrier.name}.",
+                "message": f"Slot {slot_name} should contain {slot.carrier.name}.",
             }
         )
 
@@ -331,7 +336,7 @@ def store_carrier_choose_slot_confirm(request, carrier_name, storage_name, slot_
     return JsonResponse(
         {
             "success": True,
-            "message": f"Carrier {carrier.name} stored in storage {slot.storage.name} slot {slot.qr_value}.",
+            "message": f"Carrier {carrier.name} stored in storage {slot.storage.name} slot {slot_name}.",
         }
     )
 
@@ -341,6 +346,6 @@ def store_carrier_choose_slot_cancel(request, carrier_name, storage_name):
     storage = Storage.objects.filter(name=storage_name)
     storage.update(lighthouse_A_yellow=False, lighthouse_B_yellow=False)
     dispatcher = LED_shelf_dispatcher(storage.first())
-    Thread(dispatcher.reset_leds(working_light=True)).start()
+    Thread(target=dispatcher.reset_leds, kwargs={"working_light": True}).start()
 
     return JsonResponse({"success": True})

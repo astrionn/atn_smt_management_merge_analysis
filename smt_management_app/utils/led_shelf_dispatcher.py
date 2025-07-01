@@ -262,48 +262,90 @@ class LED_shelf_dispatcher:
                 print("LED testing completed")
                 self.enable_working_lights_based_on_led_state()
 
+    def _get_all_slot_names_for_lamp(self, lamp):
+        """For a given lamp number, return all lamp numbers that should be controlled"""
+        # First check if this is a primary slot
+        try:
+            slot = StorageSlot.objects.get(storage=self.storage, name=lamp)
+            return slot.get_all_slot_names()
+        except StorageSlot.DoesNotExist:
+            # This might be a related slot, find the primary
+            all_slots = StorageSlot.objects.filter(storage=self.storage)
+            for slot in all_slots:
+                if lamp in slot.related_names:
+                    return slot.get_all_slot_names()
+        # If not found anywhere, just return the lamp itself
+        return [lamp]
+
     def led_on(self, lamp, color):
+        # Get all related lamps for combined slots
+        all_lamps = self._get_all_slot_names_for_lamp(lamp)
+
         match self.device_type:
             case "ATNPTL":
                 print(
-                    f"led on {self.storage.name} with ID {self.ATNPTL_shelf_id} {lamp=} ; {color=}"
+                    f"led on {self.storage.name} with ID {self.ATNPTL_shelf_id} {lamp=} (all: {all_lamps}) ; {color=}"
                 )
-                self.device_handler.led_on(
-                    lamp=lamp, color=color, shelf=self.ATNPTL_shelf_id
-                )
-                self.device_handler.led_on(
-                    lamp=lamp, color=color, shelf=self.ATNPTL_shelf_id
-                )
+                for lamp_name in all_lamps:
+                    self.device_handler.led_on(
+                        lamp=lamp_name, color=color, shelf=self.ATNPTL_shelf_id
+                    )
             case "NeoLight":
-                self.device_handler.led_on(lamp, color)
+                for lamp_name in all_lamps:
+                    self.device_handler.led_on(lamp_name, color)
                 self.enable_working_lights_based_on_led_state()
             case "Sophia":
-                row, led = self._xgate_slot_to_row_led(lamp)
-                self.device_handler.switch_lights(
-                    address=row, lamp=led, col=color, blink=False
-                )
+                for lamp_name in all_lamps:
+                    row, led = self._xgate_slot_to_row_led(lamp_name)
+                    self.device_handler.switch_lights(
+                        address=row, lamp=led, col=color, blink=False
+                    )
             case "Dummy":
-                print(f"led on {self.storage.name} {lamp=} ; {color=}")
+                print(
+                    f"led on {self.storage.name} {lamp=} (all: {all_lamps}) ; {color=}"
+                )
                 self.enable_working_lights_based_on_led_state()
 
     def led_off(self, lamp):
+        # Get all related lamps for combined slots
+        all_lamps = self._get_all_slot_names_for_lamp(lamp)
+
         match self.device_type:
             case "ATNPTL":
-                self.device_handler.led_off(lamp=lamp, shelf=self.ATNPTL_shelf_id)
+                for lamp_name in all_lamps:
+                    self.device_handler.led_off(
+                        lamp=lamp_name, shelf=self.ATNPTL_shelf_id
+                    )
             case "NeoLight":
-                self.device_handler.led_off(lamp)
+                for lamp_name in all_lamps:
+                    self.device_handler.led_off(lamp_name)
                 self.enable_working_lights_based_on_led_state()
             case "Sophia":
-                self.led_on(lamp, "off")
+                for lamp_name in all_lamps:
+                    self.led_on(lamp_name, "off")
             case "Dummy":
-                print(f"led off {self.storage.name} {lamp=}")
+                print(f"led off {self.storage.name} {lamp=} (all: {all_lamps})")
                 self.enable_working_lights_based_on_led_state()
 
     def _LED_On_Control(self, lights_dict):
+        # Expand lamps dict to include related slots
+        if "lamps" in lights_dict:
+            expanded_lamps = {}
+            for lamp, color in lights_dict["lamps"].items():
+                all_lamps = self._get_all_slot_names_for_lamp(lamp)
+                for lamp_name in all_lamps:
+                    expanded_lamps[lamp_name] = color
+            lights_dict = lights_dict.copy()
+            lights_dict["lamps"] = expanded_lamps
+
         match self.device_type:
             case "ATNPTL":
-                for lamp, color in lights_dict["lamps"].items():
-                    self.led_on(lamp=lamp, color=color)
+                if "lamps" in lights_dict:
+                    for lamp, color in lights_dict["lamps"].items():
+                        self.led_on(lamp=lamp, color=color)
+                # Fixed: Handle status lights properly
+                if "status" in lights_dict:
+                    print(f"ATNPTL has no lighthouse/status lights")
             case "NeoLight":
                 self.device_handler._LED_On_Control(lights_dict=lights_dict)
                 self.enable_working_lights_based_on_led_state()
@@ -321,23 +363,31 @@ class LED_shelf_dispatcher:
                 self.enable_working_lights_based_on_led_state()
 
     def _LED_Off_Control(self, lamps=[], statusA=False, statusB=False):
+        # Expand lamps list to include related slots
+        expanded_lamps = []
+        for lamp in lamps:
+            all_lamps = self._get_all_slot_names_for_lamp(lamp)
+            expanded_lamps.extend(all_lamps)
+        # Remove duplicates
+        expanded_lamps = list(set(expanded_lamps))
+
         match self.device_type:
             case "ATNPTL":
-                for lamp in lamps:
+                for lamp in expanded_lamps:
                     self.led_off(lamp=lamp)
             case "NeoLight":
                 self.device_handler._LED_Off_Control(
-                    lamps=lamps, statusA=statusA, statusB=statusB
+                    lamps=expanded_lamps, statusA=statusA, statusB=statusB
                 )
                 self.enable_working_lights_based_on_led_state()
             case "Sophia":
-                for lamp in lamps:
+                for lamp in expanded_lamps:
                     self.led_off(lamp)
                 if statusA or statusB:
                     self.device_handler.clear_lhs()
             case "Dummy":
                 print(f"Led OFF {self.storage.name} {statusA=} {statusB=}")
-                pp(lamps)
+                pp(expanded_lamps)
                 self.enable_working_lights_based_on_led_state()
 
     def reset_leds(self, working_light=False):

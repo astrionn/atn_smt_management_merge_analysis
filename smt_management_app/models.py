@@ -261,6 +261,16 @@ class StorageSlot(models.Model):
     diameter = models.IntegerField(default=7, null=True, blank=True)
     width = models.IntegerField(default=12, null=True, blank=True)
 
+    # New fields for combined slots feature
+    qr_codes = models.JSONField(
+        default=list, blank=True, help_text="Additional QR codes for combined slots"
+    )
+    related_names = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Related slot LED positions for combined slots",
+    )
+
     def get_absolute_url(self):
         return reverse(
             "smt_management_app:storageslot-detail", kwargs={"name": self.name}
@@ -268,6 +278,28 @@ class StorageSlot(models.Model):
 
     def __str__(self):
         return str(self.name)
+
+    def get_all_qr_codes(self):
+        """Return primary qr_value + qr_codes list, deduplicated"""
+        all_codes = []
+        if self.qr_value:
+            all_codes.append(self.qr_value)
+        if self.qr_codes:
+            all_codes.extend(self.qr_codes)
+        # Remove duplicates while preserving order
+        seen = set()
+        return [x for x in all_codes if not (x in seen or seen.add(x))]
+
+    def get_all_slot_names(self):
+        """Return [self.name] + related_names"""
+        names = [self.name]
+        if self.related_names:
+            names.extend(self.related_names)
+        return names
+
+    def is_combined_slot(self):
+        """Return bool(self.related_names)"""
+        return bool(self.related_names)
 
 
 class Job(AbstractBaseModel):
@@ -323,3 +355,87 @@ class BoardArticle(AbstractBaseModel):
                 }
             )
         super(BoardArticle, self).save(*args, **kwargs)
+
+
+# Helper function to merge storage slots
+def merge_storage_slots(primary_slot, *additional_slots):
+    """
+    Combine multiple slots into one, delete additional slots.
+
+    Args:
+        primary_slot: The StorageSlot that will remain as the combined slot
+        *additional_slots: StorageSlot instances to merge into the primary
+
+    Returns:
+        The updated primary_slot
+
+    Raises:
+        ValueError: If slots are from different storages or if any slot is occupied
+    """
+    from django.db import transaction
+
+    # Validate all slots are from the same storage
+    storage = primary_slot.storage
+    for slot in additional_slots:
+        if slot.storage != storage:
+            raise ValueError(
+                f"Cannot merge slots from different storages: {slot.name} is in {slot.storage.name}, not {storage.name}"
+            )
+
+    # Check that no slots are occupied
+    all_slots = [primary_slot] + list(additional_slots)
+    for slot in all_slots:
+        if hasattr(slot, "carrier") and slot.carrier:
+            raise ValueError(
+                f"Cannot merge occupied slot: {slot.name} contains carrier {slot.carrier.name}"
+            )
+        if hasattr(slot, "nominated_carrier") and slot.nominated_carrier:
+            raise ValueError(
+                f"Cannot merge slot with nominated carrier: {slot.name} is nominated for carrier {slot.nominated_carrier.name}"
+            )
+
+    with transaction.atomic():
+        # Collect all QR codes
+        additional_qr_codes = []
+        for slot in additional_slots:
+            if slot.qr_value and slot.qr_value not in additional_qr_codes:
+                additional_qr_codes.append(slot.qr_value)
+            if slot.qr_codes:
+                for qr in slot.qr_codes:
+                    if qr not in additional_qr_codes:
+                        additional_qr_codes.append(qr)
+
+        # Collect all related names (LED positions)
+        related_names = []
+        for slot in additional_slots:
+            related_names.append(slot.name)
+            if slot.related_names:
+                related_names.extend(slot.related_names)
+
+        # Update primary slot
+        if not primary_slot.qr_codes:
+            primary_slot.qr_codes = []
+        primary_slot.qr_codes.extend(additional_qr_codes)
+
+        if not primary_slot.related_names:
+            primary_slot.related_names = []
+        primary_slot.related_names.extend(related_names)
+
+        # Remove duplicates
+        primary_slot.qr_codes = list(set(primary_slot.qr_codes))
+        primary_slot.related_names = list(set(primary_slot.related_names))
+
+        # Update dimensions if needed (take maximum)
+        for slot in additional_slots:
+            if slot.diameter and slot.diameter > primary_slot.diameter:
+                primary_slot.diameter = slot.diameter
+            if slot.width and slot.width > primary_slot.width:
+                primary_slot.width = slot.width
+
+        primary_slot.save()
+
+        # Delete additional slots
+        for slot in additional_slots:
+            slot.delete()
+
+    return primary_slot

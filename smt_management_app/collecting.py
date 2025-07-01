@@ -19,6 +19,7 @@ from .models import (
 )
 
 from .utils.led_shelf_dispatcher import LED_shelf_dispatcher
+from .helpers import find_slot_by_qr_code, slot_matches_qr_code
 
 
 def collect_single_carrier(request, carrier_name):
@@ -209,7 +210,10 @@ def collect_carrier(request, carrier_name):
         kwargs={"lamp": carrier.storage_slot.name, "color": "blue"},
     ).start()
 
-    queued_carriers = Carrier.objects.filter(collecting=True, archived=False)
+    # FIXED: Filter out carriers without storage_slot
+    queued_carriers = Carrier.objects.filter(
+        collecting=True, archived=False, storage_slot__isnull=False
+    )
     collection_queue = [
         {
             "carrier": queued_carrier.name,
@@ -256,21 +260,20 @@ def collect_carrier_confirm(request, carrier_name, storage_name, slot_name):
             }
         )
 
-    # Look up the storage slot in the database.
-    slot_queryset = StorageSlot.objects.filter(qr_value=slot_name, storage=storage_name)
+    # Look up the storage slot using combined slots support
+    slot = find_slot_by_qr_code(slot_name, storage_name)
 
-    if not slot_queryset:
+    if not slot:
         return JsonResponse(
             {"success": False, "message": f"Slot {slot_name} not found."}
         )
-    slot = slot_queryset.first()
 
-    # Check if the carrier is in the provided slot
-    if carrier.storage_slot.qr_value != slot.qr_value:
+    # Check if the carrier is in the provided slot (using combined slots support)
+    if not slot_matches_qr_code(carrier.storage_slot, slot_name):
         return JsonResponse(
             {
                 "success": False,
-                "message": f"Carrier {carrier.name} is in slot {carrier.storage_slot.qr_value} not in slot {slot.qr_value}",
+                "message": f"Carrier {carrier.name} is in slot {carrier.storage_slot.qr_value} not in slot {slot_name}",
             }
         )
 
@@ -290,24 +293,29 @@ def collect_carrier_confirm(request, carrier_name, storage_name, slot_name):
         kwargs={"lamp": slot.name},
     ).start()
 
+    # FIXED: Build queue BEFORE clearing storage_slot
+    # Get current queue before modifications
+    collect_queue_queryset = Carrier.objects.filter(
+        collecting=True, archived=False, storage_slot__isnull=False
+    ).exclude(
+        pk=carrier.pk
+    )  # Exclude current carrier
+
+    collect_queue = [
+        {
+            "carrier": c.name,
+            "storage": c.storage_slot.storage.name,
+            "slot": c.storage_slot.qr_value,
+        }
+        for c in collect_queue_queryset
+    ]
+
     # Clear the carriers storage slot
     turned_off_slot = carrier.storage_slot
 
     carrier.storage_slot = None
     carrier.collecting = False
     carrier.save()
-
-    # If this is the last carrier to be collected from this side of this storage then turn off the yellow workinglight
-    collect_queue_queryset = Carrier.objects.filter(collecting=True, archived=False)
-
-    collect_queue = [
-        {
-            "carrier": carrier.name,
-            "storage": carrier.storage_slot.storage.name,
-            "slot": carrier.storage_slot.qr_value,
-        }
-        for carrier in collect_queue_queryset
-    ]
 
     response_message = {
         "success": True,
@@ -351,15 +359,18 @@ def collect_carrier_cancel(request, carrier_name):
     carrier.collecting = False
     carrier.save()
 
-    collect_queue_queryset = Carrier.objects.filter(collecting=True, archived=False)
+    # FIXED: Filter out carriers without storage_slot
+    collect_queue_queryset = Carrier.objects.filter(
+        collecting=True, archived=False, storage_slot__isnull=False
+    )
 
     collect_queue = [
         {
-            "carrier": carrier.name,
-            "storage": carrier.storage_slot.storage.name,
-            "slot": carrier.storage_slot.qr_value,
+            "carrier": c.name,
+            "storage": c.storage_slot.storage.name,
+            "slot": c.storage_slot.qr_value,
         }
-        for carrier in collect_queue_queryset
+        for c in collect_queue_queryset
     ]
 
     response_message = {

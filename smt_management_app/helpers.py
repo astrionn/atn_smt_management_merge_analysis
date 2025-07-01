@@ -239,3 +239,61 @@ def get_collect_queue(request):
     }
 
     return JsonResponse(response_message)
+
+
+def find_slot_by_qr_code(qr_code, storage_name=None):
+    """
+    Find slot by ANY of its QR codes (primary or additional).
+
+    Args:
+        qr_code: The QR code to search for
+        storage_name: Optional storage name to narrow search
+
+    Returns:
+        StorageSlot instance or None
+    """
+    from django.db.utils import NotSupportedError
+
+    query = Q(qr_value=qr_code)
+    if storage_name:
+        query &= Q(storage__name=storage_name)
+
+    try:
+        # Attempt to use JSONField __contains lookup
+        query |= Q(qr_codes__contains=qr_code)
+        slot = StorageSlot.objects.filter(query).first()
+    except NotSupportedError:
+        # Fall back to manual filtering for backends like PostgreSQL
+        base_qs = StorageSlot.objects.filter(Q(qr_value=qr_code))
+        if storage_name:
+            base_qs = base_qs.filter(storage__name=storage_name)
+
+        base_qs = list(base_qs)  # force evaluation
+        matching_slots = base_qs[:]
+
+        for slot in StorageSlot.objects.all():
+            if slot.qr_codes and qr_code in slot.qr_codes:
+                if storage_name is None or (
+                    slot.storage and slot.storage.name == storage_name
+                ):
+                    matching_slots.append(slot)
+
+        slot = matching_slots[0] if matching_slots else None
+
+    return slot
+
+
+def slot_matches_qr_code(slot, qr_code):
+    """
+    Check if slot matches QR code (checking all QR codes).
+
+    Args:
+        slot: StorageSlot instance
+        qr_code: QR code to check
+
+    Returns:
+        bool: True if QR code matches any of slot's QR codes
+    """
+    if not slot:
+        return False
+    return qr_code in slot.get_all_qr_codes()
