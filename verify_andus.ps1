@@ -1,0 +1,1 @@
+.\venv\Scripts\python.exe .\manage.py runscript verify_andus
