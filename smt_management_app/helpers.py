@@ -5,10 +5,10 @@ import qrcode
 from django.http import FileResponse, JsonResponse
 from django.views.decorators.csrf import requires_csrf_token, csrf_exempt
 from django.middleware.csrf import get_token
+from django.db.models import Q
 
 
-from .utils.dymo import DymoHandler
-
+from .utils.brother import BrotherQLHandler
 from .models import (
     Manufacturer,
     Provider,
@@ -123,19 +123,26 @@ def print_carrier(request, carrier_name):
 
     Args:
     - request: HTTP request object
-    - carrier: Name of the carrier to print the label for
+    - carrier_name: Name of the carrier to print the label for
 
     Returns:
     - JsonResponse: Success or failure message
     """
 
-    class DymoDummy:
+    class BrotherDummy:
+        """Dummy class for testing without actual printer"""
 
-        def print_label(self, text1, text2):
-            print(f"printing label {text1,text2}")
+        def print_label(self, message_a, message_b, message_c):
+            print(
+                f"printing label - Barcode: {message_a}, Article: {message_b}, Description: {message_c}"
+            )
+            return True
 
-    #dymo = DymoDummy()
-    dymo = DymoHandler()
+    # Use dummy for testing, replace with actual handler for production
+    # brother_printer = BrotherDummy()
+
+    # Initialize Brother QL printer handler
+    brother_printer = BrotherQLHandler()
 
     # Check if the carrier exists
     try:
@@ -145,24 +152,56 @@ def print_carrier(request, carrier_name):
 
     article = carrier.article
 
-    if not dymo:  # Assuming dymo is defined somewhere
+    if not brother_printer:
         return JsonResponse(
-            {"success": False, "message": "Dymo label printer not reachable"}
+            {"success": False, "message": "Brother QL label printer not reachable"}
         )
+
+    # Test printer connection before attempting to print
+    try:
+        if not brother_printer.test_connection():
+            return JsonResponse(
+                {"success": False, "message": "Brother QL printer not responding"}
+            )
+    except Exception as e:
+        return JsonResponse(
+            {"success": False, "message": f"Printer connection error: {str(e)}"}
+        )
+
+    def print_label_threaded():
+        """Thread function to print the label"""
+        try:
+            success = brother_printer.print_label(
+                message_a=carrier.name,  # Barcode content + carrier field
+                message_b=article.name,  # Article field
+                message_c=article.description,  # Description field
+                carrier_uid=str(carrier.name),  # Add carrier UID for QR code
+                label_height_mm=25,  # Smaller label height for better fit
+            )
+            if not success:
+                print(f"Failed to print label for carrier: {carrier_name}")
+        except Exception as e:
+            print(f"Error in print thread for carrier {carrier_name}: {e}")
 
     # Start a thread to print the label
     Thread(
-        target=dymo.print_label, args=(carrier.name, article.name,article.description), daemon=True
+        target=print_label_threaded,
+        daemon=True,
     ).start()
 
-    return JsonResponse({"success": True})
+    return JsonResponse(
+        {
+            "success": True,
+            "message": f"Label printing started for carrier: {carrier_name}",
+        }
+    )
 
 
 def archive_carrier(request, carrier_name):
     carrier_queryset = Carrier.objects.filter(name=carrier_name)
     if not carrier_queryset:
         return JsonResponse(
-            {"success": False, "message": f"Carrier {carrier.name} not found."}
+            {"success": False, "message": f"Carrier {carrier_name} not found."}
         )
     carrier = carrier_queryset.first()
 
@@ -182,7 +221,10 @@ def archive_carrier(request, carrier_name):
 
 
 def get_collect_queue(request):
-    queued_carriers = Carrier.objects.filter(collecting=True, archived=False)
+    # FIXED: Filter out carriers without storage_slot to prevent crashes
+    queued_carriers = Carrier.objects.filter(
+        collecting=True, archived=False, storage_slot__isnull=False
+    )
     collection_queue = [
         {
             "carrier": queued_carrier.name,
