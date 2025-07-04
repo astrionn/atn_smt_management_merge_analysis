@@ -175,6 +175,7 @@ def print_carrier(request, carrier_name):
                 message_a=carrier.name,  # Barcode content + carrier field
                 message_b=article.name,  # Article field
                 message_c=article.description,  # Description field
+                message_d=carrier.storage.name if carrier.storage else "No Storage",
                 carrier_uid=str(carrier.name),  # Add carrier UID for QR code
                 label_height_mm=25,  # Smaller label height for better fit
             )

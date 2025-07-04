@@ -51,17 +51,21 @@ class BrotherQLHandler:
         message_a="",
         message_b="",
         message_c="",
+        message_d="",
         carrier_uid="",
         width_mm=62,
-        height_mm=25,
+        height_mm=29,
     ):
         """
         Create carrier label image with QR code, carrier info, article, and description
+        Fixed positioning to ensure QR code is on the left and text doesn't get cut off
+        MAXIMUM FONT SIZES for all fields
 
         Args:
             message_a: Carrier name/barcode content
             message_b: Article name
             message_c: Article description
+            message_d: Storage location
             carrier_uid: Carrier unique identifier for QR code
             width_mm: Label width in millimeters
             height_mm: Label height in millimeters
@@ -73,18 +77,23 @@ class BrotherQLHandler:
         img = Image.new("RGB", (width_px, height_px), "white")
         draw = ImageDraw.Draw(img)
 
-        # Font sizes for different sections
+        # MAXIMUM font sizes for all fields
         try:
-            font_large = ImageFont.truetype("arial.ttf", 28)  # For carrier/barcode
-            font_medium = ImageFont.truetype("arial.ttf", 20)  # For article
-            font_small = ImageFont.truetype("arial.ttf", 16)  # For description
+            font_carrier = ImageFont.truetype("arial.ttf", 45)  # Maximum for carrier
+            font_article = ImageFont.truetype("arial.ttf", 38)  # Maximum for article
+            font_desc = ImageFont.truetype("arial.ttf", 32)  # Maximum for description
+            font_location = ImageFont.truetype("arial.ttf", 28)  # Maximum for location
         except:
-            font_large = ImageFont.load_default()
-            font_medium = ImageFont.load_default()
-            font_small = ImageFont.load_default()
+            # Fallback to default font if Arial not available
+            font_carrier = ImageFont.load_default()
+            font_article = ImageFont.load_default()
+            font_desc = ImageFont.load_default()
+            font_location = ImageFont.load_default()
 
-        margin = 8
-        qr_size = height_px - (2 * margin)  # QR code size based on label height
+        margin = 6  # Reduced margin for more space
+
+        # Make QR code smaller to leave more room for text
+        qr_size = min(height_px - (2 * margin), int(height_px * 0.8))
 
         # Generate QR code if carrier_uid is provided
         qr_img = None
@@ -92,7 +101,7 @@ class BrotherQLHandler:
             qr = qrcode.QRCode(
                 version=1,
                 error_correction=qrcode.constants.ERROR_CORRECT_L,
-                box_size=3,
+                box_size=2,  # Reduced box size for smaller QR code
                 border=1,
             )
             qr.add_data(carrier_uid)
@@ -100,72 +109,124 @@ class BrotherQLHandler:
             qr_img = qr.make_image(fill_color="black", back_color="white")
             qr_img = qr_img.resize((qr_size, qr_size), Image.Resampling.LANCZOS)
 
-        # Calculate text area (space remaining after QR code)
+        # Calculate positions - ensure QR is on LEFT and text has enough space
         if qr_img:
-            text_start_x = qr_size + margin * 2
+            # QR code on the left side
+            qr_x = margin
+            qr_y = margin
+
+            # Text area starts after QR code with small gap
+            text_start_x = qr_x + qr_size + margin
             text_width = width_px - text_start_x - margin
         else:
             text_start_x = margin
             text_width = width_px - (2 * margin)
 
-        # Place QR code on the left side
+        # Place QR code on the LEFT side
         if qr_img:
-            img.paste(qr_img, (margin, margin))
+            img.paste(qr_img, (qr_x, qr_y))
 
-        # Calculate text layout in remaining space
-        text_section_height = (height_px - 2 * margin) // 3
+        # Calculate text layout in remaining space with larger fonts
+        # Divide available height into sections for different text elements
+        available_height = height_px - (2 * margin)
 
-        # Section 1: Carrier name (top right)
+        # Estimate line heights based on actual font sizes
+        carrier_height = int(available_height * 0.3)  # 30% for carrier (largest)
+        article_height = int(available_height * 0.25)  # 25% for article
+        desc_height = int(available_height * 0.25)  # 25% for description
+        location_height = int(available_height * 0.2)  # 20% for location
+
+        current_y = margin
+
+        # Section 1: Carrier name (top) - MAXIMUM FONT
         if message_a:
-            y_pos = margin
             text = f"Carrier: {message_a}"
             # Truncate if too long for available width
             while (
-                draw.textbbox((0, 0), text, font=font_large)[2] > text_width
+                draw.textbbox((0, 0), text, font=font_carrier)[2] > text_width
                 and len(text) > 10
             ):
                 message_a = message_a[:-1]
                 text = f"Carrier: {message_a}..."
 
-            draw.text((text_start_x, y_pos), text, fill="black", font=font_large)
+            draw.text((text_start_x, current_y), text, fill="black", font=font_carrier)
+            current_y += carrier_height
 
-        # Section 2: Article (middle right)
+        # Section 2: Article - MAXIMUM FONT
         if message_b:
-            y_pos = margin + text_section_height
-            text = f"Article: {message_b}"
+            text = f"Art: {message_b}"  # Shortened label to save space
             # Truncate if too long for available width
             while (
-                draw.textbbox((0, 0), text, font=font_medium)[2] > text_width
-                and len(text) > 10
+                draw.textbbox((0, 0), text, font=font_article)[2] > text_width
+                and len(text) > 8
             ):
                 message_b = message_b[:-1]
-                text = f"Article: {message_b}..."
+                text = f"Art: {message_b}..."
 
-            draw.text((text_start_x, y_pos), text, fill="black", font=font_medium)
+            draw.text((text_start_x, current_y), text, fill="black", font=font_article)
+            current_y += article_height
 
-        # Section 3: Description (bottom right)
+        # Section 3: Description - MAXIMUM FONT
         if message_c:
-            y_pos = margin + 2 * text_section_height
-            # Truncate description if too long
-            max_chars = max(15, text_width // 8)  # Estimate based on available width
+            # Calculate max characters that fit in available width with larger font
+            test_text = "A" * 30  # Test string
+            test_width = draw.textbbox((0, 0), test_text, font=font_desc)[2]
+            chars_per_pixel = len(test_text) / test_width
+            max_chars = int(text_width * chars_per_pixel * 0.85)  # 85% safety margin
+
             description = (
                 message_c[:max_chars] + "..."
                 if len(message_c) > max_chars
                 else message_c
             )
 
-            draw.text((text_start_x, y_pos), description, fill="black", font=font_small)
+            draw.text(
+                (text_start_x, current_y), description, fill="black", font=font_desc
+            )
+            current_y += desc_height
 
-        # Add UID below QR code if present
-        if carrier_uid and qr_img:
-            uid_y = qr_size + margin + 5
-            if uid_y < height_px - 20:  # Only if there's space
-                uid_text = f"UID: {carrier_uid}"
-                draw.text((margin, uid_y), uid_text, fill="black", font=font_small)
+        # Section 4: Storage location - MAXIMUM FONT
+        if message_d:
+            text = f"Loc: {message_d}"  # Shortened label
+            # Calculate max characters that fit with larger font
+            test_text = "A" * 20
+            test_width = draw.textbbox((0, 0), test_text, font=font_location)[2]
+            chars_per_pixel = len(test_text) / test_width
+            max_chars = int(text_width * chars_per_pixel * 0.85)
+
+            if len(text) > max_chars:
+                # Truncate message_d to fit
+                available_for_location = max_chars - 5  # Account for "Loc: "
+                location_text = (
+                    message_d[:available_for_location] + "..."
+                    if len(message_d) > available_for_location
+                    else message_d
+                )
+                text = f"Loc: {location_text}"
+
+            draw.text((text_start_x, current_y), text, fill="black", font=font_location)
 
         # Add border for better visibility
         draw.rectangle([0, 0, width_px - 1, height_px - 1], outline="black", width=2)
 
+        # Apply positioning offset: 0.5mm right, 1mm up
+        offset_right_mm = 1.5
+        offset_up_mm = 1.0
+        offset_right_px = int(offset_right_mm * dpi / 25.4)  # ~6 pixels
+        offset_up_px = int(offset_up_mm * dpi / 25.4)  # ~12 pixels
+
+        # Create a new image and paste the content with offset
+        offset_img = Image.new("RGB", (width_px, height_px), "white")
+        # Paste the original image content offset by the specified amount
+        # Moving right = positive x offset, moving up = negative y offset
+        offset_img.paste(img, (offset_right_px, -offset_up_px))
+        img = offset_img
+
+        # Rotate the entire image 90 degrees clockwise
+        img = img.transpose(Image.Transpose.ROTATE_90)
+
+        # Save the image to a file (optional, for debugging)
+        img.save("carrier_label.png")
         return img
 
     def print_label(
@@ -174,6 +235,7 @@ class BrotherQLHandler:
         message_a="",
         message_b="",
         message_c="",
+        message_d="",
         carrier_uid="",
         label_height_mm=25,
     ):
@@ -185,6 +247,7 @@ class BrotherQLHandler:
             message_a: Carrier name/barcode content
             message_b: Article name
             message_c: Article description
+            message_d: Storage location
             carrier_uid: Carrier unique identifier for QR code
             label_height_mm: Label height in millimeters
         """
@@ -199,6 +262,7 @@ class BrotherQLHandler:
                     message_a=message_a,
                     message_b=message_b,
                     message_c=message_c,
+                    message_d=message_d,
                     carrier_uid=carrier_uid,
                     height_mm=label_height_mm,
                 )
@@ -239,6 +303,7 @@ if __name__ == "__main__":
             message_a="CARR-001",
             message_b="Sample Article",
             message_c="This is a sample description for testing",
+            message_d="A1-B2",
             carrier_uid="12345-ABCDE-67890",
         )
     else:
