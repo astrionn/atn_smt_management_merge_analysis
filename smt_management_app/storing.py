@@ -38,23 +38,37 @@ def get_truly_free_slots(storage, min_diameter, min_width):
     Returns:
         List of StorageSlot instances that are truly free (including their combined slots)
     """
-    potentially_free = StorageSlot.objects.filter(
-        carrier__isnull=True,
-        storage=storage,
-        diameter__gte=min_diameter,
-        width__gte=min_width,
+    # Step 1: Get all potentially free slots that meet requirements
+    potentially_free = list(
+        StorageSlot.objects.filter(
+            carrier__isnull=True,
+            storage=storage,
+            diameter__gte=min_diameter,
+            width__gte=min_width,
+        ).select_related("storage")
     )
 
+    # Step 2: Collect all slot names that need checking in one batch
+    all_names_to_check = set()
+    slot_to_related_names = {}
+
+    for slot in potentially_free:
+        related_names = set(slot.get_all_slot_names())
+        all_names_to_check.update(related_names)
+        slot_to_related_names[slot.id] = related_names
+
+    # Step 3: Check all occupied slots in a single query
+    occupied_slots = set(
+        StorageSlot.objects.filter(
+            storage=storage, name__in=list(all_names_to_check), carrier__isnull=False
+        ).values_list("name", flat=True)
+    )
+
+    # Step 4: Filter the truly free slots (no related occupied slots)
     truly_free = []
     for slot in potentially_free:
-        # Check if ALL related slots are also free
-        all_slot_names = slot.get_all_slot_names()
-        related_slots = StorageSlot.objects.filter(
-            storage=storage, name__in=all_slot_names
-        )
-
-        # If any related slot is occupied, this slot group is not free
-        if not related_slots.filter(carrier__isnull=False).exists():
+        related_names = slot_to_related_names[slot.id]
+        if not occupied_slots.intersection(related_names):
             truly_free.append(slot)
 
     return truly_free
@@ -278,7 +292,11 @@ def store_carrier_choose_slot(request, carrier_name, storage_name):
     storage = storage_queryset.first()
 
     # Use combined-slot-aware free slot detection
+    print(f"Searching for free slots in {storage.name} for carrier {carrier.name}")
     free_slots = get_truly_free_slots(storage, carrier.diameter, carrier.width)
+    print(
+        f"Found {len(free_slots)} free slots in {storage.name} for carrier {carrier.name}"
+    )
     if len(free_slots) == 0:
         return JsonResponse(
             {

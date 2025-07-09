@@ -10,7 +10,8 @@ from django.core.files import File
 from rest_framework import viewsets, filters, generics, status
 from rest_framework.mixins import DestroyModelMixin
 from rest_framework.response import Response
-
+from django.db.models import Q
+from rest_framework.decorators import action
 import django_filters
 
 
@@ -588,17 +589,66 @@ def process_board_file(file_path, delimiter, map_, board_name):
 
 
 class ListStoragesAPI(generics.ListAPIView):
-    """List Storages API"""
+    """Get storage content with combined slots support"""
 
-    model = Carrier
-    serializer_class = CarrierSerializer
+    def get(self, request, storage):
+        try:
+            storage_obj = Storage.objects.get(name=storage)
+        except Storage.DoesNotExist:
+            return JsonResponse({"error": "Storage not found"}, status=404)
 
-    def get_queryset(self):
-        """Retrieve Carrier queryset based on storage slots"""
-        storage = self.kwargs["storage"]
-        slots_qs = StorageSlot.objects.filter(storage__name=storage)
-        queryset = Carrier.objects.filter(storage_slot__in=slots_qs)
-        return queryset
+        # Get all slots with their carriers
+        slots = StorageSlot.objects.filter(storage=storage_obj).select_related(
+            "carrier"
+        )
+
+        # Build logical view of slots
+        logical_slots = {}
+        seen_names = set()
+
+        for slot in slots:
+            if slot.name in seen_names:
+                continue
+
+            all_names = slot.get_all_slot_names()
+            seen_names.update(all_names)
+
+            # Get carrier info if any slot in the group has one
+            carrier_info = None
+            for name in all_names:
+                try:
+                    check_slot = StorageSlot.objects.get(storage=storage_obj, name=name)
+                    if hasattr(check_slot, "carrier") and check_slot.carrier:
+                        carrier_info = {
+                            "name": check_slot.carrier.name,
+                            "article": check_slot.carrier.article.name,
+                            "quantity": check_slot.carrier.quantity_current,
+                            "lot": check_slot.carrier.lot_number,
+                        }
+                        break
+                except StorageSlot.DoesNotExist:
+                    continue
+
+            logical_slots[str(slot.name)] = {
+                "name": slot.name,
+                "qr_value": slot.qr_value,
+                "all_qr_codes": slot.get_all_qr_codes(),
+                "related_slots": all_names,
+                "is_combined": len(all_names) > 1,
+                "diameter": slot.diameter,
+                "width": slot.width,
+                "carrier": carrier_info,
+                "led_state": slot.led_state,
+            }
+
+        return JsonResponse(
+            {
+                "storage": storage,
+                "physical_slots": slots.count(),
+                "logical_slots": len(logical_slots),
+                "slots": logical_slots,
+            }
+        )
 
 
 class ArticleNameViewSet(generics.ListAPIView):
@@ -905,5 +955,93 @@ class StorageViewSet(viewsets.ModelViewSet):
 
 
 class StorageSlotViewSet(viewsets.ModelViewSet):
-    queryset = StorageSlot.objects.all()
     serializer_class = StorageSlotSerializer
+
+    def get_queryset(self):
+        queryset = StorageSlot.objects.all()
+
+        # Add filter for finding slots by any QR code
+        qr_code = self.request.query_params.get("qr_code", None)
+        if qr_code:
+            # Search in both primary qr_value and qr_codes array
+            queryset = queryset.filter(
+                Q(qr_value=qr_code) | Q(qr_codes__contains=qr_code)
+            )
+
+        # Add filter for combined slots only
+        combined_only = self.request.query_params.get("combined_only", None)
+        if combined_only and combined_only.lower() == "true":
+            # Filter for slots that have related_names (are combined)
+            queryset = queryset.exclude(related_names=[])
+
+        # Add filter for storage
+        storage = self.request.query_params.get("storage", None)
+        if storage:
+            queryset = queryset.filter(storage__name=storage)
+
+        return queryset.order_by("storage__name", "name")
+
+    @action(detail=True, methods=["get"])
+    def combined_group(self, request, pk=None):
+        """Get all slots in the same combined group"""
+        slot = self.get_object()
+        all_slot_names = slot.get_all_slot_names()
+
+        # Get all slots in the group
+        group_slots = StorageSlot.objects.filter(
+            storage=slot.storage, name__in=all_slot_names
+        ).order_by("name")
+
+        serializer = self.get_serializer(group_slots, many=True)
+        return Response(
+            {
+                "primary_slot": slot.name,
+                "group_size": len(all_slot_names),
+                "slots": serializer.data,
+            }
+        )
+
+    @action(detail=False, methods=["get"])
+    def logical_view(self, request):
+        """
+        Return slots grouped logically (combined slots appear as one).
+        This view is useful for UI display where combined slots should appear as single entries.
+        """
+        storage = request.query_params.get("storage", None)
+
+        queryset = self.get_queryset()
+        if storage:
+            queryset = queryset.filter(storage__name=storage)
+
+        # Group slots logically
+        seen_slots = set()
+        logical_slots = []
+
+        for slot in queryset:
+            if slot.name in seen_slots:
+                continue
+
+            # Get all related slots
+            all_names = slot.get_all_slot_names()
+            seen_slots.update(all_names)
+
+            # Use the slot with the lowest name as the representative
+            if len(all_names) > 1:
+                representative = (
+                    StorageSlot.objects.filter(storage=slot.storage, name__in=all_names)
+                    .order_by("name")
+                    .first()
+                )
+            else:
+                representative = slot
+
+            logical_slots.append(representative)
+
+        # Serialize with pagination
+        page = self.paginate_queryset(logical_slots)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = self.get_serializer(logical_slots, many=True)
+        return Response(serializer.data)

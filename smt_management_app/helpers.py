@@ -82,6 +82,7 @@ def dashboard_data(request):
     """
     Fetches data for the dashboard including total carriers, undelivered carriers,
     carriers in storage, available storage slots, and active storages.
+    Combined slots are counted as one logical slot.
     """
     total_carriers = Carrier.objects.filter(archived=False).count()
     undelivered_carriers = Carrier.objects.filter(
@@ -93,7 +94,10 @@ def dashboard_data(request):
     carriers_in_production = Carrier.objects.filter(
         archived=False, storage_slot__isnull=True, delivered=True
     ).count()
-    free_slots = StorageSlot.objects.filter(carrier__isnull=True).count()
+
+    # Count free slots considering combined slots
+    free_slots_count = count_logical_free_slots()
+
     active_storages = Storage.objects.filter(archived=False).count()
     total_finished_jobs = Job.objects.filter(status=2).count()
     open_jobs_created = Job.objects.filter(archived=False, status=0).count()
@@ -106,7 +110,7 @@ def dashboard_data(request):
             "not_delivered": undelivered_carriers,
             "in_storage": carriers_in_storage,
             "in_production": carriers_in_production,
-            "free_slots": free_slots,
+            "free_slots": free_slots_count,
             "storages": active_storages,
             "total_finished_jobs": total_finished_jobs,
             "open_jobs_created": open_jobs_created,
@@ -114,6 +118,37 @@ def dashboard_data(request):
             "open_jobs_finished": open_jobs_finished,
         }
     )
+
+
+def count_logical_free_slots():
+    """
+    Count free slots treating combined slots as one logical slot.
+
+    Algorithm:
+    1. Get all free slots
+    2. For each slot, if it's part of a combined group, only count the "primary" slot
+    3. A primary slot is one that appears first when sorting by name
+    """
+    free_slots = StorageSlot.objects.filter(carrier__isnull=True)
+
+    counted_slots = set()
+    logical_count = 0
+
+    for slot in free_slots:
+        # Skip if we've already counted this slot as part of a group
+        if slot.name in counted_slots:
+            continue
+
+        # Get all slots in this group
+        all_slot_names = slot.get_all_slot_names()
+
+        # Mark all slots in the group as counted
+        counted_slots.update(all_slot_names)
+
+        # Count this group as one logical slot
+        logical_count += 1
+
+    return logical_count
 
 
 @csrf_exempt
