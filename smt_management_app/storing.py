@@ -26,6 +26,57 @@ from .utils.led_shelf_dispatcher import LED_shelf_dispatcher
 from .helpers import find_slot_by_qr_code, slot_matches_qr_code
 
 
+def get_truly_free_slots(storage, min_diameter, min_width):
+    """
+    Get slots that are free AND all their related slots in combined slots are free.
+
+    Args:
+        storage: Storage instance
+        min_diameter: Minimum diameter requirement
+        min_width: Minimum width requirement
+
+    Returns:
+        List of StorageSlot instances that are truly free (including their combined slots)
+    """
+    potentially_free = StorageSlot.objects.filter(
+        carrier__isnull=True,
+        storage=storage,
+        diameter__gte=min_diameter,
+        width__gte=min_width,
+    )
+
+    truly_free = []
+    for slot in potentially_free:
+        # Check if ALL related slots are also free
+        all_slot_names = slot.get_all_slot_names()
+        related_slots = StorageSlot.objects.filter(
+            storage=storage, name__in=all_slot_names
+        )
+
+        # If any related slot is occupied, this slot group is not free
+        if not related_slots.filter(carrier__isnull=False).exists():
+            truly_free.append(slot)
+
+    return truly_free
+
+
+def is_combined_slot_occupied(slot):
+    """
+    Check if ANY slot in the combined group is occupied.
+
+    Args:
+        slot: StorageSlot instance
+
+    Returns:
+        bool: True if any slot in the combined group is occupied
+    """
+    all_slot_names = slot.get_all_slot_names()
+    related_slots = StorageSlot.objects.filter(
+        storage=slot.storage, name__in=all_slot_names
+    )
+    return related_slots.filter(carrier__isnull=False).exists()
+
+
 @csrf_exempt
 def store_carrier(request, carrier_name, storage_name):
     carrier_name = carrier_name.strip()
@@ -65,13 +116,9 @@ def store_carrier(request, carrier_name, storage_name):
         )
     storage = storage_queryset.first()
 
-    free_slots_queryset = StorageSlot.objects.filter(
-        carrier__isnull=True,
-        storage=storage,
-        diameter__gte=carrier.diameter,
-        width__gte=carrier.width,
-    )
-    if not free_slots_queryset:
+    # Use combined-slot-aware free slot detection
+    free_slots = get_truly_free_slots(storage, carrier.diameter, carrier.width)
+    if not free_slots:
         return JsonResponse(
             {
                 "success": False,
@@ -79,13 +126,13 @@ def store_carrier(request, carrier_name, storage_name):
             }
         )
 
-    free_slot = free_slots_queryset.first()
+    free_slot = free_slots[0]  # Get first truly free slot
     free_slot.led_state = 1
 
     # check if another carrier was nominated for this slot if yes clear it
-    if hasattr(free_slot, "nominated_carrier"):
+    if hasattr(free_slot, "nominated_carrier") and free_slot.nominated_carrier:
         other_carrier = free_slot.nominated_carrier
-        free_slot.nominated_carrier.nominated_for_slot = None
+        other_carrier.nominated_for_slot = None
         other_carrier.save()
     free_slot.save()
 
@@ -230,38 +277,38 @@ def store_carrier_choose_slot(request, carrier_name, storage_name):
         return JsonResponse({"success": False, "message": "No storage found."})
     storage = storage_queryset.first()
 
-    free_slot_queryset = StorageSlot.objects.filter(
-        carrier__isnull=True,
-        storage=storage,
-        diameter__gte=carrier.diameter,
-        width__gte=carrier.width,
-    )
-    if len(free_slot_queryset) == 0:
+    # Use combined-slot-aware free slot detection
+    free_slots = get_truly_free_slots(storage, carrier.diameter, carrier.width)
+    if len(free_slots) == 0:
         return JsonResponse(
             {
                 "success": False,
                 "message": f"No free storage slots found in {storage.name}.",
             }
         )
+
     msg = {
         "storage": storage.name,
         "carrier": carrier.name,
-        "slot": [free_slot.qr_value for free_slot in free_slot_queryset],
+        "slot": [free_slot.qr_value for free_slot in free_slots],
         "success": True,
     }
 
-    free_slot_queryset.update(led_state=1)
+    # Update LED state for all free slots
+    free_slot_ids = [slot.id for slot in free_slots]
+    StorageSlot.objects.filter(id__in=free_slot_ids).update(led_state=1)
+
+    # Light up all related LEDs for combined slots
+    lights_dict = {"lamps": {}}
+    for free_slot in free_slots:
+        # Add all related slot LEDs for combined slots
+        all_names = free_slot.get_all_slot_names()
+        for name in all_names:
+            lights_dict["lamps"][name] = "yellow"
 
     Thread(
         target=LED_shelf_dispatcher(storage)._LED_On_Control,
-        kwargs={
-            "lights_dict": {
-                "lamps": {
-                    free_slot.name: "yellow"
-                    for free_slot in free_slot_queryset.filter(storage=storage)
-                }
-            }
-        },
+        kwargs={"lights_dict": lights_dict},
     ).start()
 
     return JsonResponse(msg)
@@ -288,7 +335,8 @@ def store_carrier_choose_slot_confirm(request, carrier_name, storage_name, slot_
     storage = Storage.objects.filter(name=storage_name).first()
     dispatcher = LED_shelf_dispatcher(storage)
 
-    if hasattr(slot, "carrier") and slot.carrier:
+    # Check if ANY slot in the combined group is occupied
+    if is_combined_slot_occupied(slot):
         slot.led_state = 1
         slot.save()
         Thread(
@@ -302,10 +350,32 @@ def store_carrier_choose_slot_confirm(request, carrier_name, storage_name, slot_
             function=dispatcher.led_off,
             kwargs={"lamp": slot.name},
         ).start()
+
+        # Find which specific slot in the group is occupied for error message
+        occupied_slot = None
+        all_slot_names = slot.get_all_slot_names()
+        related_slots = StorageSlot.objects.filter(
+            storage=slot.storage, name__in=all_slot_names, carrier__isnull=False
+        )
+        if related_slots.exists():
+            occupied_slot = related_slots.first()
+
+        error_msg = f"Slot {slot_name} is part of a combined slot group where "
+        if (
+            occupied_slot
+            and hasattr(occupied_slot, "carrier")
+            and occupied_slot.carrier
+        ):
+            error_msg += (
+                f"slot {occupied_slot.name} contains {occupied_slot.carrier.name}."
+            )
+        else:
+            error_msg += "another slot is occupied."
+
         return JsonResponse(
             {
                 "success": False,
-                "message": f"Slot {slot_name} should contain {slot.carrier.name}.",
+                "message": error_msg,
             }
         )
 

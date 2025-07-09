@@ -301,6 +301,140 @@ class StorageSlot(models.Model):
         """Return bool(self.related_names)"""
         return bool(self.related_names)
 
+    def validate_combined_slot_consistency(self):
+        """
+        Validate that combined slot configuration is consistent.
+
+        Raises:
+            ValidationError: If combined slot configuration is invalid
+        """
+        if not self.is_combined_slot():
+            return  # Nothing to validate for non-combined slots
+
+        # Check that all related slot names exist in the same storage
+        try:
+            related_slots = StorageSlot.objects.filter(
+                storage=self.storage, name__in=self.related_names
+            ).exclude(pk=self.pk)
+
+            if related_slots.count() != len(self.related_names):
+                missing_slots = set(self.related_names) - set(
+                    related_slots.values_list("name", flat=True)
+                )
+                raise ValidationError(
+                    f"Combined slot {self.name} references non-existent slots: {missing_slots}"
+                )
+
+        except Exception as e:
+            if self.pk:  # Only validate if this is an existing slot
+                raise ValidationError(f"Error validating combined slot: {str(e)}")
+
+    def validate_combined_slot_occupancy(self):
+        """
+        Validate that if this slot has a carrier, no related slots in combined group are occupied.
+
+        Raises:
+            ValidationError: If combined slot occupancy rules are violated
+        """
+        if not hasattr(self, "carrier") or not self.carrier:
+            return  # No carrier, no occupancy conflict
+
+        if not self.is_combined_slot():
+            return  # Not a combined slot, no validation needed
+
+        # Check if any related slots are occupied
+        try:
+            related_occupied = StorageSlot.objects.filter(
+                storage=self.storage, name__in=self.related_names, carrier__isnull=False
+            ).exclude(pk=self.pk)
+
+            if related_occupied.exists():
+                occupied_slot = related_occupied.first()
+                raise ValidationError(
+                    f"Cannot store carrier in slot {self.name}: "
+                    f"related slot {occupied_slot.name} in combined slot group is occupied by carrier {occupied_slot.carrier.name}"
+                )
+
+        except ValidationError:
+            raise
+        except Exception as e:
+            # Don't fail on database errors during validation - log and continue
+            import logging
+
+            logging.warning(
+                f"Error validating combined slot occupancy for slot {self.name}: {str(e)}"
+            )
+
+    def validate_bidirectional_consistency(self):
+        """
+        Validate that if this slot is combined with others, those slots also reference this one.
+
+        Raises:
+            ValidationError: If bidirectional references are inconsistent
+        """
+        if not self.is_combined_slot():
+            return
+
+        try:
+            # Check that all related slots reference this slot back
+            related_slots = StorageSlot.objects.filter(
+                storage=self.storage, name__in=self.related_names
+            ).exclude(pk=self.pk)
+
+            for related_slot in related_slots:
+                if not related_slot.is_combined_slot():
+                    raise ValidationError(
+                        f"Slot {self.name} references slot {related_slot.name} as combined, "
+                        f"but slot {related_slot.name} is not configured as a combined slot"
+                    )
+
+                if self.name not in related_slot.related_names:
+                    raise ValidationError(
+                        f"Slot {self.name} references slot {related_slot.name} as combined, "
+                        f"but slot {related_slot.name} does not reference slot {self.name} back"
+                    )
+
+        except ValidationError:
+            raise
+        except Exception as e:
+            if self.pk:  # Only validate if this is an existing slot
+                import logging
+
+                logging.warning(
+                    f"Error validating bidirectional consistency for slot {self.name}: {str(e)}"
+                )
+
+    def save(self, *args, **kwargs):
+        """
+        Override save to add combined slot validation.
+        """
+        # Skip validation during bulk operations or when explicitly disabled
+        skip_validation = kwargs.pop("skip_combined_slot_validation", False)
+
+        if not skip_validation:
+            try:
+                # Validate combined slot configuration
+                self.validate_combined_slot_consistency()
+
+                # Validate occupancy rules
+                self.validate_combined_slot_occupancy()
+
+                # Note: Bidirectional validation is skipped during save to avoid recursion
+                # It should be handled at the application level when creating combined slots
+
+            except ValidationError as e:
+                # Re-raise validation errors
+                raise e
+            except Exception as e:
+                # Log other errors but don't fail the save
+                import logging
+
+                logging.warning(
+                    f"Error during combined slot validation for slot {self.name}: {str(e)}"
+                )
+
+        super().save(*args, **kwargs)
+
 
 class Job(AbstractBaseModel):
     STATUS_CHOICES = [
@@ -361,6 +495,7 @@ class BoardArticle(AbstractBaseModel):
 def merge_storage_slots(primary_slot, *additional_slots):
     """
     Combine multiple slots into one, delete additional slots.
+    Improved version that properly handles existing combined slots.
 
     Args:
         primary_slot: The StorageSlot that will remain as the combined slot
@@ -395,44 +530,70 @@ def merge_storage_slots(primary_slot, *additional_slots):
             )
 
     with transaction.atomic():
-        # Collect all QR codes
-        additional_qr_codes = []
+        # Collect all QR codes from all slots (including existing ones in primary)
+        all_qr_codes = []
+
+        # Start with primary slot's existing QR codes
+        if primary_slot.qr_value and primary_slot.qr_value.strip():
+            all_qr_codes.append(primary_slot.qr_value.strip())
+
+        if primary_slot.qr_codes:
+            for qr in primary_slot.qr_codes:
+                if qr and qr.strip() and qr.strip() not in all_qr_codes:
+                    all_qr_codes.append(qr.strip())
+
+        # Add QR codes from additional slots
         for slot in additional_slots:
-            if slot.qr_value and slot.qr_value not in additional_qr_codes:
-                additional_qr_codes.append(slot.qr_value)
+            if slot.qr_value and slot.qr_value.strip():
+                qr = slot.qr_value.strip()
+                if qr not in all_qr_codes:
+                    all_qr_codes.append(qr)
+
             if slot.qr_codes:
                 for qr in slot.qr_codes:
-                    if qr not in additional_qr_codes:
-                        additional_qr_codes.append(qr)
+                    if qr and qr.strip() and qr.strip() not in all_qr_codes:
+                        all_qr_codes.append(qr.strip())
 
         # Collect all related names (LED positions)
-        related_names = []
+        all_related_names = []
+
+        # Start with primary slot's existing related names
+        if primary_slot.related_names:
+            all_related_names.extend(primary_slot.related_names)
+
+        # Add names from additional slots
         for slot in additional_slots:
-            related_names.append(slot.name)
+            # Add the slot's own name
+            if slot.name not in all_related_names:
+                all_related_names.append(slot.name)
+
+            # Add any existing related names from this slot
             if slot.related_names:
-                related_names.extend(slot.related_names)
+                for name in slot.related_names:
+                    if name not in all_related_names:
+                        all_related_names.append(name)
+
+        # Update primary slot with all collected data
+        # Remove the primary QR from the additional list (it stays as qr_value)
+        additional_qr_codes = [qr for qr in all_qr_codes if qr != primary_slot.qr_value]
 
         # Update primary slot
-        if not primary_slot.qr_codes:
-            primary_slot.qr_codes = []
-        primary_slot.qr_codes.extend(additional_qr_codes)
+        primary_slot.qr_codes = additional_qr_codes
+        primary_slot.related_names = all_related_names
 
-        if not primary_slot.related_names:
-            primary_slot.related_names = []
-        primary_slot.related_names.extend(related_names)
-
-        # Remove duplicates
-        primary_slot.qr_codes = list(set(primary_slot.qr_codes))
-        primary_slot.related_names = list(set(primary_slot.related_names))
-
-        # Update dimensions if needed (take maximum)
+        # Update dimensions to maximum values
         for slot in additional_slots:
-            if slot.diameter and slot.diameter > primary_slot.diameter:
+            if slot.diameter and (
+                not primary_slot.diameter or slot.diameter > primary_slot.diameter
+            ):
                 primary_slot.diameter = slot.diameter
-            if slot.width and slot.width > primary_slot.width:
+            if slot.width and (
+                not primary_slot.width or slot.width > primary_slot.width
+            ):
                 primary_slot.width = slot.width
 
-        primary_slot.save()
+        # Save with validation disabled to avoid recursion during merge
+        primary_slot.save(skip_combined_slot_validation=True)
 
         # Delete additional slots
         for slot in additional_slots:
