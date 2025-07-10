@@ -1,5 +1,6 @@
 from smt_management_app.models import *
 import random
+import datetime
 
 
 def run():
@@ -65,6 +66,7 @@ def run():
             )
         )
     storage_slots.extend(storage2_slots)
+
     carriers = []
     for i in range(1, 40):
         if (i - 1) % 3 == 0:
@@ -84,8 +86,41 @@ def run():
                 delivered=True,
             )
         )
-    board = Board.objects.create(name="board123")
-    for article in articles:
-        BoardArticle.objects.create(
-            name=f"123{article.name}", count=2, board=board, article=article
+
+    boards = []
+    for i in range(1, 10):
+        boards.append(Board.objects.create(name=f"board_{i}"))
+        for j, article in enumerate(articles):
+            if j > i:
+                continue
+            BoardArticle.objects.create(
+                name=f"{i}_{article.name}",
+                count=100,
+                board=boards[i - 1],
+                article=article,
+            )
+
+    jobs = []
+    for i in range(1, 10):
+        jobs.append(
+            Job.objects.create(
+                name=f"Job_{i}",
+                description=f"Description of Job_{i}",
+                board=boards[i - 1],
+                count=100,
+                customer=f"Customer_{i}",
+                start_at=datetime.datetime.now() + datetime.timedelta(hours=1 * i),
+                finish_at=datetime.datetime.now() + datetime.timedelta(hours=3 * i),
+            )
         )
+
+    j1 = jobs[0]
+    b1 = j1.board
+    for ba in b1.boardarticle_set.all():
+        c = Carrier.objects.filter(article=ba.article, archived=False).first()
+        j1.carriers.add(c)
+        c.reserved = True
+    if j1.carriers.count() == j1.board.articles.count():
+        j1.status = 1
+
+    j1.save()

@@ -6,6 +6,6 @@ Remove-Item .\smt_management_app\__pycache__ -Recurse
 .\venv\Scripts\python.exe .\manage.py migrate
 $Env:DJANGO_SUPERUSER_PASSWORD = '123456789'
 .\venv\Scripts\python.exe .\manage.py createsuperuser --no-input --username=root --email=test@test.test
-.\venv\Scripts\python.exe .\manage.py runscript import_test_storages_and_data
+.\venv\Scripts\python.exe .\manage.py runscript setup_SD_andus
 cls
 .\venv\Scripts\python.exe .\manage.py runserver

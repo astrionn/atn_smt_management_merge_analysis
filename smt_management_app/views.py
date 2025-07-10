@@ -53,7 +53,9 @@ from .serializers import (
     ProviderNameSerializer,
     ProviderSerializer,
     StorageSerializer,
+    StorageNameSerializer,
     StorageSlotSerializer,
+    StorageSlotNameSerializer,
 )
 
 from .helpers import (
@@ -93,16 +95,31 @@ from .extra_shelf_interactions import test_leds, reset_leds, change_slot_color
 
 
 def assign_carrier_to_job(request, job_name, carrier_name):
+    print("assign_carrier_to_job")
+    print(f"job_name: {job_name}")
+    print(f"carrier_name: {carrier_name}")
+
     job = Job.objects.filter(name=job_name).first()
+    print(f"job: {job}")
+
     carrier = Carrier.objects.filter(name=carrier_name, archived=False).first()
+    print(f"carrier: {carrier}")
 
     if job and carrier:
         job.carriers.add(carrier)
+        print("Carrier added to job")
+
         if job.carriers.count() == job.board.articles.count():
             job.status = 1
+            print("Job status updated to 1")
+
         job.save()
+        print("Job saved")
+
         carrier.reserved = True
         carrier.save()
+        print("Carrier reserved")
+
         return JsonResponse({"success": True})
     else:
         return JsonResponse({"success": False})
@@ -358,7 +375,7 @@ def process_article_file(file_path, delimiter, map_):
         "created": {"article": [], "manufacturer": [], "provider": []},
         "fail": {"article": [], "manufacturer": [], "provider": []},
     }
-    with open(file_path, "r", encoding="utf-8") as f:
+    with open(file_path, "r", encoding="ISO-8859-1") as f:
         csv_reader = csv.reader(f, delimiter=delimiter)
         headers = next(csv_reader)
         for row in csv_reader:
@@ -428,7 +445,7 @@ def process_carrier_file(file_path, delimiter, map_, lot_number):
     print(f"lot_number: {lot_number}")
 
     message = {"created": {"carrier": []}, "fail": {"carrier": []}}
-    with open(file_path, "r", encoding="utf-8") as f:
+    with open(file_path, "r", encoding="ISO-8859-1") as f:
         csv_reader = csv.reader(f, delimiter=delimiter)
         headers = next(csv_reader)
         print("headers")
@@ -511,7 +528,7 @@ def process_board_file(file_path, delimiter, map_, board_name):
 
     board = Board.objects.get(name=board_name)
 
-    with open(file_path, "r", encoding="utf-8") as f:
+    with open(file_path, "r", encoding="ISO-8859-1") as f:
         csv_reader = csv.reader(f, delimiter=delimiter)
         headers = next(csv_reader)
         for row in csv_reader:
@@ -736,6 +753,26 @@ class CarrierNameViewSet(generics.ListAPIView):
         queryset = Carrier.objects.all()
         serializer = CarrierNameSerializer(queryset, many=True)
         data = [{k: v for k, v in c.items()} for c in serializer.data]
+        return JsonResponse(data, safe=False)
+
+
+class StorageNameViewSet(generics.ListAPIView):
+    model = Storage
+
+    def get(self, request):
+        queryset = Storage.objects.all()
+        serializer = StorageNameSerializer(queryset, many=True)
+        data = [{k: v for k, v in s.items()} for s in serializer.data]
+        return JsonResponse(data, safe=False)
+
+
+class StorageSlotNameViewSet(generics.ListAPIView):
+    model = StorageSlot
+
+    def get(self, request):
+        queryset = StorageSlot.objects.all()
+        serializer = StorageSlotNameSerializer(queryset, many=True)
+        data = [{k: v for k, v in s.items()} for s in serializer.data]
         return JsonResponse(data, safe=False)
 
 

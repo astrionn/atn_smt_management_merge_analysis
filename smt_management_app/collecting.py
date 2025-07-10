@@ -54,6 +54,9 @@ def collect_single_carrier(request, carrier_name):
     if not carrier.storage_slot:
         return JsonResponse({"success": False, "message": "Carrier is not stored."})
 
+    # TODO check if the carrier is already in the collect queue
+    # TODO add carrier to the collect queue
+
     # Turn on the LED for the carrier's storage slot.
     carrier.storage_slot.led_state = 1
     carrier.storage_slot.save()
@@ -85,7 +88,7 @@ def collect_single_carrier_confirm(request, carrier_name):
             success: True if the carrier was collected successfully, False otherwise.
             message: An error message if success is False, otherwise empty.
     """
-
+    # TODO handle collecting status of carrier
     # Strip leading and trailing whitespace from the carrier name.
     carrier_name = carrier_name.strip()
 
@@ -124,6 +127,7 @@ def collect_single_carrier_confirm(request, carrier_name):
 
 
 def collect_single_carrier_cancel(request, carrier_name):
+    # TODO handle collecting status of carrier
     # Strip leading and trailing whitespace from the carrier name.
     carrier_name = carrier_name.strip()
 
@@ -383,7 +387,9 @@ def collect_carrier_by_article(request, article_name):
     """
     article_name = article_name.strip()
     slot_queryset = StorageSlot.objects.filter(
-        carrier__article__name=article_name, carrier__archived=False
+        carrier__article__name=article_name,
+        carrier__archived=False,
+        carrier__collecting=False,
     )
 
     if not slot_queryset:
@@ -395,17 +401,25 @@ def collect_carrier_by_article(request, article_name):
         )
 
     # Activate LEDs for slots containing the article
-    # refactor with _LED_On_Control to enable all at once
+
+    # TODO mark carriers as collecting
 
     storage_names = slot_queryset.values_list("storage", flat=True).distinct()
     storages = Storage.objects.filter(pk__in=storage_names)
     dispatchers = {storage.name: LED_shelf_dispatcher(storage) for storage in storages}
+    slots_by_storage = {storage.name: [] for storage in storages}
+
     for slot in slot_queryset:
-        slot.led_state = 1
-        slot.save()
+        slots_by_storage[slot.storage.name].append(slot)
+
+    for storage_name, slots in slots_by_storage.items():
+        lights_dict = {"lamps": {slot.name: "blue" for slot in slots}}
+        StorageSlot.objects.filter(id__in=[slot.id for slot in slots]).update(
+            led_state=1
+        )
         Thread(
-            target=dispatchers[slot.storage.name].led_on,
-            kwargs={"lamp": slot.name, "color": "blue"},
+            target=dispatchers[storage_name]._LED_On_Control,
+            kwargs={"lights_dict": lights_dict},
         ).start()
 
     return JsonResponse({"success": True})
@@ -425,6 +439,7 @@ def collect_carrier_by_article_confirm(request, carrier_name):
     Returns:
     - JsonResponse indicating success or failure
     """
+    # TODO handle collecting status of carriers
     carrier_name = carrier_name.strip()
     carrier_queryset = Carrier.objects.filter(name=carrier_name, archived=False)
     if not carrier_queryset:
@@ -446,12 +461,10 @@ def collect_carrier_by_article_confirm(request, carrier_name):
     carrier.storage = None
     carrier.save()
 
-    slot_queryset = StorageSlot.objects.filter(led_state=1)
-    storage_names = slot_queryset.values_list("storage", flat=True).distinct()
-    storages = Storage.objects.filter(pk__in=storage_names)
+    storages = Storage.objects.all()
     dispatchers = {storage.name: LED_shelf_dispatcher(storage) for storage in storages}
     # Update LED state for all storage slots to off
-    slot_queryset.update(led_state=0)
+    StorageSlot.objects.update(led_state=0)
 
     # Reset LEDs after carrier confirmation
     for storage in storages:
@@ -476,6 +489,7 @@ def collect_carrier_by_article_confirm(request, carrier_name):
 
 
 def collect_carrier_by_article_cancel(request, article_name):
+    # TODO handle collecting status of carriers
     # get all slots that are turned on and have carrier with article_name and filter down to list of storages that need to be reset
     stored_carriers_with_article = Carrier.objects.filter(
         article__name=article_name, storage_slot__isnull=False
@@ -498,6 +512,7 @@ def collect_carrier_by_article_cancel(request, article_name):
 
 
 def collect_job(request, job_name):
+    # TODO handle collecting status of carriers
     job_name = job_name.strip()
 
     job_queryset = Job.objects.filter(name=job_name, archived=False)

@@ -29,7 +29,7 @@ urlpatterns.append(
 urlpatterns.append(
     path(
         "article/<path:pk>/",
-        views.ArticleViewSet.as_view({"patch": "partial_update"}),
+        views.ArticleViewSet.as_view({"patch": "partial_update", "get": "retrieve"}),
     )
 )
 urlpatterns.append(
@@ -46,6 +46,16 @@ urlpatterns.append(
 )
 urlpatterns.append(
     path("providerlist/", views.ProviderNameViewSet.as_view(), name="providerlist")
+)
+urlpatterns.append(
+    path("storagelist/", views.StorageNameViewSet.as_view(), name="storagelist")
+)
+urlpatterns.append(
+    path(
+        "storageslotlist/",
+        views.StorageSlotNameViewSet.as_view(),
+        name="storageslotlist",
+    )
 )
 
 urlpatterns.append(

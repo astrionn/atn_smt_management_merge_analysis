@@ -47,7 +47,8 @@ class NeoLightAPI:
                     raise Exception(f"no valid value for key {k}")
                 for l in lights_dict[k].keys():
                     if not str(l).isdigit() or str(l) == "0":
-                        raise Exception(f"bad value {l} as lamp address")
+                        #raise Exception(f"bad value {l} as lamp address")
+                        print(f"bad value {l} as lamp address")
                     if not lights_dict[k][l] in self.led_colors:
                         raise Exception(
                             f"bad color {lights_dict[k][l]} for led light. possible values are {self.led_colors}"
@@ -70,7 +71,7 @@ class NeoLightAPI:
         req = requests.post(
             urljoin(self.__api_url, "/api/open"), json=request_param_dict
         )
-        # print(f"{req.url}\n{req.request.body}\n{req}\n{req.content}")
+        print(f"LEDCTRL:::{req.url}\n{req.request.body}\n{req}\n{req.content}")
         return req
 
     def _LED_Off_Control(self, lamps=[], statusA=False, statusB=False):

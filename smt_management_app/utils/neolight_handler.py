@@ -102,7 +102,7 @@ class NeoLightAPI:
         req = requests.post(
             urljoin(self.__api_url, "/api/open"), json=request_param_dict
         )
-        # print(f"{req.url}\n{req.request.body}\n{req}\n{req.content}")
+        print(f"LED CONTROL:::{req.url}\n{req.request.body}\n{req}\n{req.content}")
         return req
 
     def _LED_Off_Control(self, lamps=[], statusA=False, statusB=False):
@@ -210,3 +210,9 @@ class NeoLightAPI:
                 self._LED_On_Control({"lamps": {j: color for j in range(1, 1401)}})
                 time.sleep(t * 3)
                 self.reset_leds()
+
+    def test3(self):
+        for i in self.all_leds:
+            self._LED_On_Control({"lamps":{i:"green"}})
+            time.sleep(t)
+        self.reset_leds()

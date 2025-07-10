@@ -1,5 +1,6 @@
 from gc import enable
 import re
+import time
 from pprint import pprint as pp
 from ..models import StorageSlot
 from .shelf_handlers.neolight_handler import NeoLightAPI
@@ -15,6 +16,8 @@ class LED_shelf_dispatcher:
         self.ip_address = None
         self.ip_port = None
         self.COM_address = None
+        self.COM_baudrate = None
+        self.COM_timeout = None
         self.ATNPTL_shelf_id = None
         self.device_handler = None
 
@@ -24,7 +27,13 @@ class LED_shelf_dispatcher:
                 # ATNPTL has no interface to switch multiple lights at once
                 self.COM_address = storage.COM_address
                 self.ATNPTL_shelf_id = storage.ATNPTL_shelf_id
-                self.device_handler = PTL_API(port=self.COM_address)  # COM16
+                self.COM_baudrate = storage.COM_baudrate
+                self.COM_timeout = storage.COM_timeout
+                self.device_handler = PTL_API(
+                    port=self.COM_address,
+                    baudrate=self.COM_baudrate,
+                    timeout=self.COM_timeout,
+                )
             case "NeoLight":
                 # NeoLight has workinglights
                 # NeoLight has an interface to switch multiple lights at once
@@ -129,12 +138,142 @@ class LED_shelf_dispatcher:
                 print(f"LIGHTHOUSE LED OFF {self.storage.name} {statusA=} {statusB=}")
 
     def test_leds(self):
-        print("Testing LEDs is yet to be implemented")
+        """
+        Test all LEDs by cycling through all colors for all slots 5 times.
+        Each hardware type is handled according to its specific requirements.
+        """
+        # Get all slots for this storage from the database
+        all_slots = StorageSlot.objects.filter(storage=self.storage)
+
+        # Define colors to cycle through
+        colors = ["red", "green", "yellow"]
+
+        # Cycle 5 times
+        match self.device_type:
+            case "ATNPTL":
+                # Reset all LEDs before starting
+                self.device_handler.reset_leds(shelf=self.ATNPTL_shelf_id)
+
+                for cycle in range(5):
+                    for color in colors:
+                        # Turn on all slots with current color
+                        for slot in all_slots:
+                            time.sleep(1)
+                            self.device_handler.led_on(
+                                shelf=self.ATNPTL_shelf_id, lamp=slot.name, color=color
+                            )
+
+                        # Wait a bit to make the effect visible
+                        import time
+
+                        time.sleep(1)
+
+                        # Turn off all slots
+                        for slot in all_slots:
+                            self.device_handler.led_off(
+                                slot.name, shelf=self.ATNPTL_shelf_id
+                            )
+
+                # Reset all LEDs after testing
+                self.device_handler.reset_leds(shelf=self.ATNPTL_shelf_id)
+
+            case "NeoLight":
+                # Reset all LEDs before starting
+                self.device_handler.reset_leds(working_light=True)
+
+                for cycle in range(5):
+                    for color in colors:
+                        # Turn on all slots with current color
+                        for slot in all_slots:
+                            self.device_handler.led_on(slot.name, color)
+
+                        # Wait a bit to make the effect visible
+                        import time
+
+                        time.sleep(1)
+
+                        # Turn off all slots
+                        for slot in all_slots:
+                            self.device_handler.led_off(slot.name)
+
+                # Reset all LEDs after testing
+                self.device_handler.reset_leds(working_light=True)
+                self.enable_working_lights_based_on_led_state()
+
+            case "Sophia":
+                # Reset all LEDs before starting
+                self.device_handler.clear_leds()
+                self.device_handler.clear_lhs()
+
+                for cycle in range(5):
+                    for color in colors:
+                        # Turn on all slots with current color
+                        for slot in all_slots:
+                            row, led = self._xgate_slot_to_row_led(slot.name)
+                            self.device_handler.switch_lights(
+                                address=row, lamp=led, col=color, blink=False
+                            )
+
+                        # Wait a bit to make the effect visible
+                        import time
+
+                        time.sleep(1)
+
+                        # Turn off all slots (using "off" color)
+                        for slot in all_slots:
+                            row, led = self._xgate_slot_to_row_led(slot.name)
+                            self.device_handler.switch_lights(
+                                address=row, lamp=led, col="off", blink=False
+                            )
+
+                # Reset all LEDs after testing
+                self.device_handler.clear_leds()
+                self.device_handler.clear_lhs()
+                self._LED_On_Control(
+                    lights_dict={"status": {"A": "green", "B": "green"}}
+                )
+
+            case "Dummy":
+                print(f"Testing LEDs for {self.storage.name}")
+                print(f"Found {len(all_slots)} slots to test")
+                print(f"Colors to test: {colors}")
+
+                for cycle in range(5):
+                    print(f"Starting test cycle {cycle + 1}/5")
+
+                    for color in colors:
+                        print(f"Testing color: {color}")
+
+                        # Turn on all slots with current color
+                        for slot in all_slots:
+                            print(f"led on {self.storage.name} {slot.name=} ; {color=}")
+
+                        # Wait a bit to make the effect visible
+                        import time
+
+                        time.sleep(1)
+
+                        # Turn off all slots
+                        for slot in all_slots:
+                            print(f"led off {self.storage.name} {slot.name=}")
+
+                    print(f"Completed test cycle {cycle + 1}/5")
+
+                print("LED testing completed")
+                self.enable_working_lights_based_on_led_state()
 
     def led_on(self, lamp, color):
         match self.device_type:
             case "ATNPTL":
-                self.device_handler.led_on(lamp, color, shelf=self.ATNPTL_shelf_id)
+                print(
+                    f"led on {self.storage.name} with ID {self.ATNPTL_shelf_id} {lamp=} ; {color=}"
+                )
+                self.device_handler.led_on(
+                    lamp=lamp, color=color, shelf=self.ATNPTL_shelf_id
+                )
+                self.device_handler.led_on(
+                    lamp=lamp, color=color, shelf=self.ATNPTL_shelf_id
+                )
             case "NeoLight":
                 self.device_handler.led_on(lamp, color)
                 self.enable_working_lights_based_on_led_state()
@@ -150,7 +289,7 @@ class LED_shelf_dispatcher:
     def led_off(self, lamp):
         match self.device_type:
             case "ATNPTL":
-                self.device_handler.led_off(lamp, shelf=self.ATNPTL_shelf_id)
+                self.device_handler.led_off(lamp=lamp, shelf=self.ATNPTL_shelf_id)
             case "NeoLight":
                 self.device_handler.led_off(lamp)
                 self.enable_working_lights_based_on_led_state()
@@ -204,7 +343,7 @@ class LED_shelf_dispatcher:
     def reset_leds(self, working_light=False):
         match self.device_type:
             case "ATNPTL":
-                self.device_handler.reset_leds(shelf=self.ATNPTL_shelf_id)
+                self.device_handler.reset_leds(controller=self.ATNPTL_shelf_id)
             case "NeoLight":
                 self.device_handler.reset_leds(working_light=working_light)
                 if working_light:
