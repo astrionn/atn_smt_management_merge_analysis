@@ -907,3 +907,72 @@ class StorageViewSet(viewsets.ModelViewSet):
 class StorageSlotViewSet(viewsets.ModelViewSet):
     queryset = StorageSlot.objects.all()
     serializer_class = StorageSlotSerializer
+
+
+class ListFreeSlotsAPI(generics.ListAPIView):
+    """List Free Storage Slots API - returns slots without carriers"""
+
+    serializer_class = StorageSlotSerializer
+
+    def get_queryset(self):
+        """Retrieve free storage slots for a specific storage"""
+        storage_name = self.kwargs.get("storage")
+        print(f"DEBUG: Finding free slots for storage: '{storage_name}'")
+        
+        # First verify the storage exists
+        try:
+            storage = Storage.objects.get(name=storage_name)
+            print(f"DEBUG: Found storage object: {storage}")
+        except Storage.DoesNotExist:
+            print(f"DEBUG: Storage '{storage_name}' does not exist!")
+            return StorageSlot.objects.none()
+
+        # Get all slots for this storage
+        all_slots = StorageSlot.objects.filter(storage=storage)
+        print(f"DEBUG: Total slots for storage '{storage_name}': {all_slots.count()}")
+        
+        # Find slots without carriers using the correct relationship
+        # Since Carrier has a OneToOneField to StorageSlot, we check if no carrier references this slot
+        free_slots = all_slots.filter(carrier__isnull=True).order_by("name")
+        
+        print(f"DEBUG: Free slots query: {free_slots.query}")
+        print(f"DEBUG: Free slots found: {free_slots.count()}")
+        print(f"DEBUG: First 5 free slots: {list(free_slots.values('id', 'name', 'storage__name')[:5])}")
+
+        return free_slots
+
+    def get(self, request, *args, **kwargs):
+        """Override get method to add additional metadata"""
+        print(f"DEBUG: Processing GET request with kwargs: {kwargs}")
+        
+        storage_name = self.kwargs.get("storage")
+        
+        # Verify storage exists first
+        try:
+            storage = Storage.objects.get(name=storage_name)
+        except Storage.DoesNotExist:
+            return Response({
+                "error": f"Storage '{storage_name}' not found",
+                "available_storages": list(Storage.objects.values_list('name', flat=True))
+            }, status=404)
+        
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset, many=True)
+
+        total_slots = StorageSlot.objects.filter(storage=storage).count()
+        free_slots_count = queryset.count()
+        occupied_slots_count = total_slots - free_slots_count
+
+        print(f"DEBUG: Total slots: {total_slots}")
+        print(f"DEBUG: Free slots: {free_slots_count}")
+        print(f"DEBUG: Occupied slots: {occupied_slots_count}")
+
+        response_data = {
+            "storage_name": storage_name,
+            "total_slots": total_slots,
+            "free_slots_count": free_slots_count,
+            "occupied_slots_count": occupied_slots_count,
+            "free_slots": serializer.data,
+        }
+
+        return Response(response_data)

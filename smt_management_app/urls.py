@@ -60,6 +60,14 @@ urlpatterns.append(
 
 urlpatterns.append(
     path(
+        "get_free_slots/<storage>/",
+        views.ListFreeSlotsAPI.as_view(),
+        name="get_free_slots",
+    )
+)
+
+urlpatterns.append(
+    path(
         "manufacturerlist/",
         views.ManufacturerNameViewSet.as_view(),
         name="manufacturerlist",
