@@ -36,6 +36,7 @@ from .filters import (
     CarrierFilter,
     JobFilter,
     ManufacturerFilter,
+    StorageSlotFilter,
 )
 
 from .serializers import (
@@ -79,6 +80,7 @@ from .collecting import (
     collect_carrier_by_article,
     collect_carrier_by_article_confirm,
     collect_carrier_by_article_cancel,
+    collect_carrier_by_article_select,
     collect_job,
 )
 
@@ -89,6 +91,15 @@ from .storing import (
     store_carrier_choose_slot,
     store_carrier_choose_slot_confirm,
     store_carrier_choose_slot_cancel,
+    # New functions for updated workflow
+    store_carrier_choose_slot_all_storages,
+    store_carrier_choose_slot_confirm_by_qr,
+    store_carrier_choose_slot_cancel_all,
+    fetch_available_storages_for_auto,
+    store_auto_with_storage_selection,
+    # New collect-and-store functions
+    store_carrier_collect_and_store,
+    store_carrier_choose_slot_collect_and_store,
 )
 
 from .extra_shelf_interactions import test_leds, reset_leds, change_slot_color
@@ -625,85 +636,55 @@ class ArticleViewSet(viewsets.ModelViewSet):
     filterset_class = ArticleFilter
     ordering_fields = "__all__"
 
+    def _process_related_object(self, request_data, field_name, model_class):
+        """
+        Helper method to process provider/manufacturer fields with consistent logic
+        """
+        field_data = request_data.pop(field_name, None)
+        print(f"{field_name}", field_data)
+
+        if field_data and field_data not in [
+            [""],
+            {"name": ""},
+            None,
+            {"name": None},
+        ]:
+            print(f"creating {field_name} name: {field_data}")
+
+            # Handle both string and object formats
+            if isinstance(field_data, str):
+                # When user types a new name (freesolo input)
+                name_str = field_data
+            elif isinstance(field_data, dict) and "name" in field_data:
+                # When user selects an existing item from autocomplete
+                name_str = field_data["name"]
+            else:
+                # Fallback - try to convert to string
+                name_str = str(field_data)
+
+            obj, _ = model_class.objects.get_or_create(name=name_str)
+            return obj
+        return None
+
     def create(self, *args, **kwargs):
-
         request_data = self.request.data.copy()
-
         serializer_kwargs = {}
 
-        provider1_name = request_data.pop("provider1", None)
-        print("provider1_name", provider1_name)
-        if provider1_name and provider1_name not in [
-            [""],
-            {"name": ""},
-            None,
-            {"name": None},
-        ]:
-            print(f"creating provider1_name name: {provider1_name}")
-            provider1, _ = Provider.objects.get_or_create(name=provider1_name["name"])
-            serializer_kwargs["provider1"] = provider1
-
-        provider2_name = request_data.pop("provider2", None)
-        print("provider2_name", provider2_name)
-        if provider2_name and provider2_name not in [
-            [""],
-            {"name": ""},
-            None,
-            {"name": None},
-        ]:
-            print(f"creating provider2_name name: {provider2_name}")
-            provider2, _ = Provider.objects.get_or_create(name=provider2_name["name"])
-            serializer_kwargs["provider2"] = provider2
-
-        provider3_name = request_data.pop("provider3", None)
-        print("provider3_name", provider3_name)
-        if provider3_name and provider3_name not in [
-            [""],
-            {"name": ""},
-            None,
-            {"name": None},
-        ]:
-            print(f"creating provider3_name name: {provider3_name}")
-            provider3, _ = Provider.objects.get_or_create(name=provider3_name["name"])
-            serializer_kwargs["provider3"] = provider3
-
-        provider4_name = request_data.pop("provider4", None)
-        print("provider4_name", provider4_name)
-        if provider4_name and provider4_name not in [
-            [""],
-            {"name": ""},
-            None,
-            {"name": None},
-        ]:
-            print(f"creating provider4_name name: {provider4_name}")
-            provider4, _ = Provider.objects.get_or_create(name=provider4_name["name"])
-            serializer_kwargs["provider4"] = provider4
-
-        provider5_name = request_data.pop("provider5", None)
-        print("provider5_name", provider5_name)
-        if provider5_name and provider5_name not in [
-            [""],
-            {"name": ""},
-            None,
-            {"name": None},
-        ]:
-            print(f"creating provider5_name name: {provider5_name}")
-            provider5, _ = Provider.objects.get_or_create(name=provider5_name["name"])
-            serializer_kwargs["provider5"] = provider5
-
-        manufacturer_name = request_data.pop("manufacturer", None)
-        print("manufacturer_name", manufacturer_name)
-        if manufacturer_name and manufacturer_name not in [
-            [""],
-            {"name": ""},
-            None,
-            {"name": None},
-        ]:
-            print(f"creating manufacturer_name name: {manufacturer_name}")
-            manufacturer, _ = Manufacturer.objects.get_or_create(
-                name=manufacturer_name["name"]
+        # Process all providers
+        for i in range(1, 6):
+            provider_field = f"provider{i}"
+            provider_obj = self._process_related_object(
+                request_data, provider_field, Provider
             )
-            serializer_kwargs["manufacturer"] = manufacturer
+            if provider_obj:
+                serializer_kwargs[provider_field] = provider_obj
+
+        # Process manufacturer
+        manufacturer_obj = self._process_related_object(
+            request_data, "manufacturer", Manufacturer
+        )
+        if manufacturer_obj:
+            serializer_kwargs["manufacturer"] = manufacturer_obj
 
         request_data.update(serializer_kwargs)
         serializer = self.get_serializer(data=request_data)
@@ -907,6 +888,17 @@ class StorageViewSet(viewsets.ModelViewSet):
 class StorageSlotViewSet(viewsets.ModelViewSet):
     queryset = StorageSlot.objects.all()
     serializer_class = StorageSlotSerializer
+    filter_backends = (
+        django_filters.rest_framework.DjangoFilterBackend,
+        filters.SearchFilter,
+        filters.OrderingFilter,
+    )
+    filterset_class = StorageSlotFilter
+    ordering_fields = ["name", "led_state", "diameter", "width", "storage__name"]
+    search_fields = [
+        "qr_value",
+        "storage__name",
+    ]
 
 
 class ListFreeSlotsAPI(generics.ListAPIView):
