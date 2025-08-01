@@ -2,7 +2,7 @@ from gc import enable
 import re
 import time
 from pprint import pprint as pp
-from ..models import StorageSlot
+from ..models import StorageSlot, Storage
 from .shelf_handlers.neolight_handler import NeoLightAPI
 from .shelf_handlers.PTL_handler import PTL_API
 from .shelf_handlers.xgate_handler import XGateHandler
@@ -345,7 +345,9 @@ class LED_shelf_dispatcher:
             case "ATNPTL":
                 self.device_handler.reset_leds(controller=self.ATNPTL_shelf_id)
             case "NeoLight":
-                self.device_handler.reset_leds(working_light=working_light)
+                # pass all slot names instae dof hardcoded mapping, to avoid discrepancies bettween 0 indexed and 1 indexed leds
+                all_leds = StorageSlot.objects.filter(storage=self.storage).values_list("name", flat=True)
+                self.device_handler.reset_leds(working_light=working_light,all_leds=all_leds)
                 if working_light:
                     self.storage.lighthouse_A_yellow = False
                     self.storage.lighthouse_B_yellow = False

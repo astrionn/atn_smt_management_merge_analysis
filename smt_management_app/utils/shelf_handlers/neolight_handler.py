@@ -114,11 +114,13 @@ class NeoLightAPI:
         # lamp = self.side_row_lamp_to_led_address(lamp)
         return self._LED_Off_Control([str(lamp)])
 
-    def reset_leds(self, working_light=False):
+    def reset_leds(self, working_light=False, all_leds=[]):
+        if not all_leds:
+            all_leds = self.all_leds
         if working_light:
-            r = self._LED_Off_Control(self.all_leds, True, True)
+            r = self._LED_Off_Control(all_leds, True, True)
         else:
-            r = self._LED_Off_Control(self.all_leds, False, False)
+            r = self._LED_Off_Control(all_leds, False, False)
         return r
 
     def test(self, stop=200):
