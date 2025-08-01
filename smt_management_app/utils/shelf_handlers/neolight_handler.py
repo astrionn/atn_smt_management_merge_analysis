@@ -115,7 +115,7 @@ class NeoLightAPI:
         return self._LED_Off_Control([str(lamp)])
 
     def reset_leds(self, working_light=False, all_leds=[]):
-        print(f"RESET LEDS SLOTS: {all_leds}")
+
         if not all_leds:
             all_leds = self.all_leds
         if working_light:
