@@ -305,9 +305,8 @@ def store_carrier_choose_slot_confirm_by_qr(request, carrier_name, slot_qr):
     StorageSlot.objects.all().update(led_state=0)
     
     # Reset LEDs for all storages that had slots lit up
-    affected_storages = Storage.objects.filter(
-        storageslot__led_state=1
-    ).distinct()
+    affected_storages = Storage.objects.all()
+    print(f"rest for :{affected_storages}")
     
     for affected_storage in affected_storages:
         Thread(target=LED_shelf_dispatcher(affected_storage).reset_leds).start()
@@ -556,9 +555,12 @@ def store_carrier_choose_slot_confirm(request, carrier_name, storage_name, slot_
 
     carrier.storage_slot = slot
     carrier.save()
+    print(f"CONFIRM CHOOSE SLOT START")
+    Thread(target=dispatcher.reset_leds).start()
+    print(f"CONFIRM CHOOSE SLOT END")
     StorageSlot.objects.filter(storage=storage).update(led_state=0)
 
-    Thread(target=dispatcher.reset_leds).start()
+    
 
     slot.led_state = 1
     slot.save()
@@ -574,6 +576,8 @@ def store_carrier_choose_slot_confirm(request, carrier_name, storage_name, slot_
         function=dispatcher.led_off,
         kwargs={"lamp": slot.name},
     ).start()
+
+    
 
     return JsonResponse(
         {
