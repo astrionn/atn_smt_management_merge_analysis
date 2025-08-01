@@ -4,7 +4,7 @@ import random
 
 def run():
     storage = Storage.objects.create(
-        name=f"Storage_1",
+        name=f"Storage_3",
         capacity=1400,
         device="NeoLight",
         ip_address="192.168.178.222",

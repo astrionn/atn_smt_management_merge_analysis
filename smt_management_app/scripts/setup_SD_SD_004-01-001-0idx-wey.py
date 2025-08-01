@@ -3,10 +3,10 @@ from smt_management_app.models import Storage, StorageSlot
 
 def run():
     storage = Storage.objects.create(
-        name=f"Storage_1",
+        name=f"Storage_4",
         capacity=1060,  # Total LEDs: 2×200 + 5×132 = 1060
         device="NeoLight",
-        ip_address="192.168.10.100",
+        ip_address="192.168.178.223",
         ip_port=5000,
     )
 
