@@ -80,6 +80,12 @@ class Storage(AbstractBaseModel):
     def get_absolute_url(self):
         return reverse("smt_management_app:storage-detail", kwargs={"name": self.name})
 
+    def save(self, *args, **kwargs):
+        # Calculate capacity based on associated StorageSlots
+        total_capacity = StorageSlot.objects.filter(storage=self).count()
+        self.capacity = total_capacity
+        super().save(*args, **kwargs)
+
 
 class Manufacturer(models.Model):
     name = models.CharField(primary_key=True, max_length=50, null=False, blank=False)
@@ -258,6 +264,8 @@ class StorageSlot(models.Model):
     storage = models.ForeignKey(Storage, on_delete=models.CASCADE)
     led_state = models.IntegerField(default=0, choices=STATE_CHOICES)
     qr_value = models.CharField(max_length=5000, blank=True, null=True)
+    SIDE_CHOICES = [("A", "A"), ("B", "B")]
+    side = models.CharField(max_length=1, choices=SIDE_CHOICES, blank=True, null=True)
     diameter = models.IntegerField(default=7, null=True, blank=True)
     width = models.IntegerField(default=12, null=True, blank=True)
 

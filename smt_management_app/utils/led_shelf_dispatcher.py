@@ -62,33 +62,37 @@ class LED_shelf_dispatcher:
         enabled_leds = StorageSlot.objects.filter(storage=self.storage, led_state=1)
 
         if enabled_leds:
+            # Use side information if available
+            side_a_leds = [led for led in enabled_leds if led.side == "A"]
+            side_b_leds = [led for led in enabled_leds if led.side == "B"]
 
-            if (
-                all(led.name <= (self.storage.capacity // 2) for led in enabled_leds)
-                and self.storage.lighthouse_B_yellow
-            ):
+            # Fallback to old method if side information is missing
+            if not side_a_leds and not side_b_leds:
+                side_a_leds = [
+                    led
+                    for led in enabled_leds
+                    if led.name <= (self.storage.capacity // 2)
+                ]
+                side_b_leds = [
+                    led
+                    for led in enabled_leds
+                    if led.name > (self.storage.capacity // 2)
+                ]
+
+            if side_b_leds and self.storage.lighthouse_B_yellow:
                 self.storage.lighthouse_B_yellow = False
                 self.storage.save()
                 self.lighthouse_off_control(statusB=True)
-            if (
-                all(led.name > (self.storage.capacity // 2) for led in enabled_leds)
-                and self.storage.lighthouse_A_yellow
-            ):
+            if side_a_leds and self.storage.lighthouse_A_yellow:
                 self.storage.lighthouse_A_yellow = False
                 self.storage.save()
                 self.lighthouse_off_control(statusA=True)
 
-            if (
-                any(led.name <= (self.storage.capacity // 2) for led in enabled_leds)
-                and not self.storage.lighthouse_A_yellow
-            ):
+            if side_a_leds and not self.storage.lighthouse_A_yellow:
                 self.storage.lighthouse_A_yellow = True
                 self.storage.save()
                 self.lighthouse_on_control(lights_dict={"status": {"A": "yellow"}})
-            if (
-                any(led.name > (self.storage.capacity // 2) for led in enabled_leds)
-                and not self.storage.lighthouse_B_yellow
-            ):
+            if side_b_leds and not self.storage.lighthouse_B_yellow:
                 self.storage.lighthouse_B_yellow = True
                 self.storage.save()
                 self.lighthouse_on_control(lights_dict={"status": {"B": "yellow"}})
@@ -347,8 +351,12 @@ class LED_shelf_dispatcher:
                 self.device_handler.reset_leds(controller=self.ATNPTL_shelf_id)
             case "NeoLight":
                 # pass all slot names instae dof hardcoded mapping, to avoid discrepancies bettween 0 indexed and 1 indexed leds
-                all_leds = StorageSlot.objects.filter(storage=self.storage).values_list("name", flat=True)
-                self.device_handler.reset_leds(working_light=working_light,all_leds=all_leds)
+                all_leds = StorageSlot.objects.filter(storage=self.storage).values_list(
+                    "name", flat=True
+                )
+                self.device_handler.reset_leds(
+                    working_light=working_light, all_leds=all_leds
+                )
                 if working_light:
                     self.storage.lighthouse_A_yellow = False
                     self.storage.lighthouse_B_yellow = False

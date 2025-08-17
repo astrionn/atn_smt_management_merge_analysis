@@ -207,7 +207,7 @@ urlpatterns.append(
 
 urlpatterns.append(
     path(
-        "collect_carrier_by_article_select/<path:article_name>/<path:carrier_name>/",
+        "collect_carrier_by_article_select/<path:article_name>/<path:carrier_name>/<path:led_state>/",
         views.collect_carrier_by_article_select,
         name="collect_carrier_by_article_select",
     )
@@ -302,40 +302,6 @@ urlpatterns.append(
         "store_auto_with_storage_selection/<path:carrier_name>/<storage_name>/",
         views.store_auto_with_storage_selection,
         name="store_auto_with_storage_selection",
-    )
-)
-
-# NEW COLLECT-AND-STORE ENDPOINTS
-urlpatterns.append(
-    path(
-        "store_carrier_collect_and_store/<path:carrier_name>/<storage_name>/",
-        views.store_carrier_collect_and_store,
-        name="store_carrier_collect_and_store",
-    )
-)
-
-urlpatterns.append(
-    path(
-        "store_carrier_choose_slot_collect_and_store/<path:carrier_name>/<storage_name>/",
-        views.store_carrier_choose_slot_collect_and_store,
-        name="store_carrier_choose_slot_collect_and_store",
-    )
-)
-
-# NEW COLLECT-AND-STORE ENDPOINTS
-urlpatterns.append(
-    path(
-        "store_carrier_collect_and_store/<path:carrier_name>/<storage_name>/",
-        views.store_carrier_collect_and_store,
-        name="store_carrier_collect_and_store",
-    )
-)
-
-urlpatterns.append(
-    path(
-        "store_carrier_choose_slot_collect_and_store/<path:carrier_name>/<storage_name>/",
-        views.store_carrier_choose_slot_collect_and_store,
-        name="store_carrier_choose_slot_collect_and_store",
     )
 )
 

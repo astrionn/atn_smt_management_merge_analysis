@@ -299,17 +299,15 @@ def collect_carrier_confirm(request, carrier_name, storage_name, slot_name):
 
     # If this is the last carrier to be collected from this storage then turn off the yellow workinglight
     collect_queue_queryset = Carrier.objects.filter(collecting=True, archived=False)
-    
+
     # Check if there are any more carriers being collected from this storage
     remaining_carriers_in_storage = collect_queue_queryset.filter(
         storage_slot__storage=turned_off_slot.storage
     ).count()
-    
+
     # If no more carriers are being collected from this storage, update working lights based on LED state
     if remaining_carriers_in_storage == 0:
-        Thread(
-            target=led_dispatcher.enable_working_lights_based_on_led_state
-        ).start()
+        Thread(target=led_dispatcher.enable_working_lights_based_on_led_state).start()
 
     collect_queue = [
         {
@@ -364,16 +362,12 @@ def collect_carrier_cancel(request, carrier_name):
 
     # Check if there are any more carriers being collected from this storage
     remaining_carriers_in_storage = Carrier.objects.filter(
-        collecting=True, 
-        archived=False,
-        storage_slot__storage=slot.storage
+        collecting=True, archived=False, storage_slot__storage=slot.storage
     ).count()
 
     # If no more carriers are being collected from this storage, update working lights based on LED state
     if remaining_carriers_in_storage == 0:
-        Thread(
-            target=led_dispatcher.enable_working_lights_based_on_led_state
-        ).start()
+        Thread(target=led_dispatcher.enable_working_lights_based_on_led_state).start()
 
     collect_queue_queryset = Carrier.objects.filter(collecting=True, archived=False)
 
@@ -414,7 +408,9 @@ def collect_carrier_by_article(request, article_name):
         carrier__article__name=article_name,
         carrier__archived=False,
         carrier__collecting=False,
-    ).order_by('id')  # Ensure consistent ordering
+    ).order_by(
+        "-carrier__quantity_current"
+    )  # Ensure consistent ordering
 
     if not slot_queryset:
         return JsonResponse(
@@ -424,16 +420,22 @@ def collect_carrier_by_article(request, article_name):
             }
         )
 
+    # Turn off all LEDs for this article
+    for slot in StorageSlot.objects.filter(carrier__article__name=article_name):
+        slot.led_state = 0
+        slot.save()
+
     # Light up only the FIRST carrier's slot in yellow to guide the operator
     first_slot = slot_queryset.first()
-    first_slot.led_state = 1
-    first_slot.save()
+    if first_slot:
+        first_slot.led_state = 1
+        first_slot.save()
 
-    led_dispatcher = LED_shelf_dispatcher(first_slot.storage)
-    Thread(
-        target=led_dispatcher.led_on,
-        kwargs={"lamp": first_slot.name, "color": "yellow"},
-    ).start()
+        led_dispatcher = LED_shelf_dispatcher(first_slot.storage)
+        Thread(
+            target=led_dispatcher.led_on,
+            kwargs={"lamp": first_slot.name, "color": "yellow"},
+        ).start()
 
     return JsonResponse({"success": True})
 
@@ -532,51 +534,39 @@ def collect_carrier_by_article_cancel(request, article_name):
     return JsonResponse({"success": True})
 
 
-def collect_carrier_by_article_select(request, article_name, carrier_name):
+def collect_carrier_by_article_select(request, article_name, carrier_name, led_state):
     """
     Selects a specific carrier from the article collection, highlighting only that carrier's slot.
     """
     article_name = article_name.strip()
     carrier_name = carrier_name.strip()
-    
-    # First reset all LEDs for this article
-    stored_carriers_with_article = Carrier.objects.filter(
-        article__name=article_name, 
-        storage_slot__isnull=False,
-        archived=False
-    )
-    
-    slot_ids = stored_carriers_with_article.values_list("storage_slot__pk", flat=True)
-    slot_queryset = StorageSlot.objects.filter(pk__in=slot_ids)
-    
-    storage_names = slot_queryset.values_list("storage", flat=True).distinct()
-    storages = Storage.objects.filter(pk__in=storage_names)
-    dispatchers = {storage.name: LED_shelf_dispatcher(storage) for storage in storages}
-    
-    # Reset all LEDs first
-    slot_queryset.update(led_state=0)
-    for storage in storages:
-        Thread(target=dispatchers[storage.name].reset_leds).start()
-    
-    # Find the specific carrier and light it up yellow
+    led_state = led_state.strip() == "true"
+
+    # Find the specific carrier
     carrier_queryset = Carrier.objects.filter(name=carrier_name, archived=False)
     if not carrier_queryset:
         return JsonResponse({"success": False, "message": "Carrier not found."})
-    
+
     carrier = carrier_queryset.first()
     if not carrier.storage_slot:
         return JsonResponse({"success": False, "message": "Carrier is not stored."})
-    
-    # Light up only the selected carrier's slot in yellow
-    carrier.storage_slot.led_state = 1
+
+    # Light up or turn off the selected carrier's slot
+    carrier.storage_slot.led_state = int(led_state)
     carrier.storage_slot.save()
-    
+
     led_dispatcher = LED_shelf_dispatcher(carrier.storage_slot.storage)
-    Thread(
-        target=led_dispatcher.led_on,
-        kwargs={"lamp": carrier.storage_slot.name, "color": "yellow"}
-    ).start()
-    
+    if led_state:
+        Thread(
+            target=led_dispatcher.led_on,
+            kwargs={"lamp": carrier.storage_slot.name, "color": "yellow"},
+        ).start()
+    else:
+        Thread(
+            target=led_dispatcher.led_off,
+            kwargs={"lamp": carrier.storage_slot.name},
+        ).start()
+
     return JsonResponse({"success": True})
 
 
