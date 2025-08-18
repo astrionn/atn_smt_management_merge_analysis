@@ -2,7 +2,7 @@ from gc import enable
 import re
 import time
 from pprint import pprint as pp
-from ..models import StorageSlot
+from ..models import StorageSlot, Storage
 from .shelf_handlers.neolight_handler import NeoLightAPI
 from .shelf_handlers.PTL_handler import PTL_API
 from .shelf_handlers.xgate_handler import XGateHandler
@@ -62,33 +62,37 @@ class LED_shelf_dispatcher:
         enabled_leds = StorageSlot.objects.filter(storage=self.storage, led_state=1)
 
         if enabled_leds:
+            # Use side information if available
+            side_a_leds = [led for led in enabled_leds if led.side == "A"]
+            side_b_leds = [led for led in enabled_leds if led.side == "B"]
 
-            if (
-                all(led.name <= (self.storage.capacity // 2) for led in enabled_leds)
-                and self.storage.lighthouse_B_yellow
-            ):
+            # Fallback to old method if side information is missing
+            if not side_a_leds and not side_b_leds:
+                side_a_leds = [
+                    led
+                    for led in enabled_leds
+                    if led.name <= (self.storage.capacity // 2)
+                ]
+                side_b_leds = [
+                    led
+                    for led in enabled_leds
+                    if led.name > (self.storage.capacity // 2)
+                ]
+
+            if side_b_leds and self.storage.lighthouse_B_yellow:
                 self.storage.lighthouse_B_yellow = False
                 self.storage.save()
                 self.lighthouse_off_control(statusB=True)
-            if (
-                all(led.name > (self.storage.capacity // 2) for led in enabled_leds)
-                and self.storage.lighthouse_A_yellow
-            ):
+            if side_a_leds and self.storage.lighthouse_A_yellow:
                 self.storage.lighthouse_A_yellow = False
                 self.storage.save()
                 self.lighthouse_off_control(statusA=True)
 
-            if (
-                any(led.name <= (self.storage.capacity // 2) for led in enabled_leds)
-                and not self.storage.lighthouse_A_yellow
-            ):
+            if side_a_leds and not self.storage.lighthouse_A_yellow:
                 self.storage.lighthouse_A_yellow = True
                 self.storage.save()
                 self.lighthouse_on_control(lights_dict={"status": {"A": "yellow"}})
-            if (
-                any(led.name > (self.storage.capacity // 2) for led in enabled_leds)
-                and not self.storage.lighthouse_B_yellow
-            ):
+            if side_b_leds and not self.storage.lighthouse_B_yellow:
                 self.storage.lighthouse_B_yellow = True
                 self.storage.save()
                 self.lighthouse_on_control(lights_dict={"status": {"B": "yellow"}})
@@ -341,16 +345,24 @@ class LED_shelf_dispatcher:
                 self.enable_working_lights_based_on_led_state()
 
     def reset_leds(self, working_light=False):
+        print(f"HANDLER CONFIRM CHOOSE SLOT START")
         match self.device_type:
             case "ATNPTL":
                 self.device_handler.reset_leds(controller=self.ATNPTL_shelf_id)
             case "NeoLight":
-                self.device_handler.reset_leds(working_light=working_light)
+                # pass all slot names instae dof hardcoded mapping, to avoid discrepancies bettween 0 indexed and 1 indexed leds
+                all_leds = StorageSlot.objects.filter(storage=self.storage).values_list(
+                    "name", flat=True
+                )
+                self.device_handler.reset_leds(
+                    working_light=working_light, all_leds=all_leds
+                )
                 if working_light:
                     self.storage.lighthouse_A_yellow = False
                     self.storage.lighthouse_B_yellow = False
                     self.storage.save()
                 self.lighthouse_on_control()
+                print(f"HANDLER CONFIRM CHOOSE SLOT END")
             case "Sophia":
                 self.device_handler.clear_leds()
                 if working_light:

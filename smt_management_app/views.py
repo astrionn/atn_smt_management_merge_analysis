@@ -36,6 +36,7 @@ from .filters import (
     CarrierFilter,
     JobFilter,
     ManufacturerFilter,
+    StorageSlotFilter,
 )
 
 from .serializers import (
@@ -79,6 +80,7 @@ from .collecting import (
     collect_carrier_by_article,
     collect_carrier_by_article_confirm,
     collect_carrier_by_article_cancel,
+    collect_carrier_by_article_select,
     collect_job,
 )
 
@@ -89,6 +91,15 @@ from .storing import (
     store_carrier_choose_slot,
     store_carrier_choose_slot_confirm,
     store_carrier_choose_slot_cancel,
+    # New functions for updated workflow
+    store_carrier_choose_slot_all_storages,
+    store_carrier_choose_slot_confirm_by_qr,
+    store_carrier_choose_slot_cancel_all,
+    fetch_available_storages_for_auto,
+    store_auto_with_storage_selection,
+    # New collect-and-store functions
+    store_carrier_collect_and_store,
+    store_carrier_choose_slot_collect_and_store,
 )
 
 from .extra_shelf_interactions import test_leds, reset_leds, change_slot_color
@@ -171,176 +182,6 @@ def save_file_and_get_headers(request):
             print(e)
             return JsonResponse({"success": False})
     return JsonResponse({"success": False})
-
-
-@csrf_exempt
-def user_mapping_and_file_processing_old(request):
-    """
-    first of all i am sorry for this monster, feel free to refactor when bored
-    this function is the abstraction for the user uploading csv files to create model instances with them,
-    but the csv headers names do not have to correspond with
-    """
-    # the models field names, because the user creates a mapping from the csv header names to the models field names in the frontend
-
-    if request.method == "POST":
-        file_name = request.POST.get("file_name")
-
-        lf = LocalFile.objects.get(name=file_name)
-
-        map_json = json.loads(request.POST["map"])
-
-        map_l = [
-            (k, v) for k, v in map_json.items() if v
-        ]  # remove fields that have empty values
-
-        msg = {"created": [], "fail": []}
-
-        with open(lf.file_object.path, "r", encoding="ISO-8859-1") as f:
-
-            csv_reader = csv.reader(f, delimiter=lf.delimiter)
-            a_headers = next(csv_reader)
-
-            index_map = {value: index for index, value in enumerate(a_headers)}
-            map_ordered_l = sorted(map_l, key=lambda x: index_map[x[1]])
-
-            for item in csv_reader:
-                if lf.upload_type == "board":
-                    if not lf.board_name or not Board.objects.filter(
-                        name=lf.board_name
-                    ):
-                        msg["fail"].append(f"Board {lf.board_name} does not exist.")
-                        break
-                    board = Board.objects.get(name=lf.board_name)
-
-                    board_article_dict = {
-                        key[0]: item[a_headers.index(key[1])] for key in map_ordered_l
-                    }
-                    board_article_dict["board"] = board
-
-                    article_name = board_article_dict["article"]
-                    article_exists = Article.objects.filter(name=article_name).exists()
-
-                    if not article_exists:
-                        article_count = board_article_dict.get("count")
-                        if not article_count or not article_count.isnumeric():
-                            msg["fail"].append(f"{article_name} has an invalid count.")
-                            break
-
-                        board_article_dict["name"] = f"{board.name}_{article_name}"
-                        BoardArticle.objects.create(**board_article_dict)
-                        msg["created"].append(board_article_dict["name"])
-
-                elif lf.upload_type == "carrier":
-                    carrier_dict = {
-                        key[0]: item[a_headers.index(key[1])] for key in map_ordered_l
-                    }
-
-                    article_name = carrier_dict.get("article")
-                    if article_name:
-
-                        article = Article.objects.filter(name=article_name).first()
-                        if article:
-                            carrier_dict["article"] = article
-                        else:
-                            msg["fail"].append(f"{article_name} does not exist.")
-                            continue
-
-                    # Set default values if not provided
-                    carrier_dict.setdefault("storage_slot", None)
-                    carrier_dict.setdefault("storage", None)
-                    carrier_dict.setdefault("machine_slot", None)
-                    carrier_dict.setdefault("diameter", 7)
-                    carrier_dict.setdefault("width", 8)
-                    carrier_dict.setdefault("quantity_current", 0)
-                    carrier_dict.setdefault("quantity_original", 0)
-
-                    numeric_fields = [
-                        "diameter",
-                        "width",
-                        "quantity_current",
-                        "quantity_original",
-                    ]
-                    for numeric_field in numeric_fields:
-                        try:
-                            carrier_dict[numeric_field] = int(
-                                carrier_dict[numeric_field]
-                            )
-                        except Exception as e:
-                            print(e)
-                            msg["fail"].append(
-                                f"invalid {numeric_field}: {carrier_dict[numeric_field]}"
-                            )
-                            carrier_dict.pop(numeric_field)
-
-                    container_type = carrier_dict.get("container_type", "").lower()
-                    carrier_dict["container_type"] = {
-                        "reel": 0,
-                        "tray": 1,
-                        "bag": 2,
-                        "single": 3,
-                    }.get(container_type, 0)
-
-                    carrier_name = carrier_dict["name"]
-                    if not Carrier.objects.filter(name=carrier_name).exists():
-                        new_carrier = Carrier.objects.create(**carrier_dict)
-                        msg["created"].append(new_carrier.name)
-                    else:
-                        msg["fail"].append(
-                            f" failed to create {carrier_name} ({carrier_dict})"
-                        )
-
-                elif lf.upload_type == "article":
-                    article_dict = {
-                        key[0]: item[a_headers.index(key[1])] for key in map_ordered_l
-                    }
-
-                    manufacturer_name = article_dict.get("manufacturer")
-                    if manufacturer_name:
-                        manufacturer, manufacturer_created = (
-                            Manufacturer.objects.get_or_create(name=manufacturer_name)
-                        )
-                        article_dict["manufacturer"] = manufacturer
-                        if manufacturer_created:
-                            msg["created"].append(manufacturer.name)
-
-                    provider_keys = [
-                        "provider1",
-                        "provider2",
-                        "provider3",
-                        "provider4",
-                        "provider5",
-                    ]
-                    for provider_key in provider_keys:
-                        if provider_key in article_dict and article_dict[provider_key]:
-                            provider, provider_created = Provider.objects.get_or_create(
-                                name=article_dict[provider_key]
-                            )
-                            article_dict[provider_key] = provider
-                            if provider_created:
-                                msg["created"].append(provider.name)
-
-                    if "boardarticle" in article_dict and article_dict["boardarticle"]:
-                        del article_dict["boardarticle"]
-
-                    article_name = article_dict["name"]
-                    article_exists = Article.objects.filter(name=article_name).exists()
-
-                    if not article_exists:
-                        new_article = Article.objects.create(
-                            **{
-                                key: value
-                                for key, value in article_dict.items()
-                                if key and value
-                            }
-                        )
-
-                        if new_article:
-                            msg["created"].append(new_article.name)
-                    else:
-                        msg["fail"].append(article_name)
-
-        return JsonResponse(msg, safe=False)
-    return JsonResponse({"success": "false"})
 
 
 @csrf_exempt
@@ -625,85 +466,55 @@ class ArticleViewSet(viewsets.ModelViewSet):
     filterset_class = ArticleFilter
     ordering_fields = "__all__"
 
+    def _process_related_object(self, request_data, field_name, model_class):
+        """
+        Helper method to process provider/manufacturer fields with consistent logic
+        """
+        field_data = request_data.pop(field_name, None)
+        print(f"{field_name}", field_data)
+
+        if field_data and field_data not in [
+            [""],
+            {"name": ""},
+            None,
+            {"name": None},
+        ]:
+            print(f"creating {field_name} name: {field_data}")
+
+            # Handle both string and object formats
+            if isinstance(field_data, str):
+                # When user types a new name (freesolo input)
+                name_str = field_data
+            elif isinstance(field_data, dict) and "name" in field_data:
+                # When user selects an existing item from autocomplete
+                name_str = field_data["name"]
+            else:
+                # Fallback - try to convert to string
+                name_str = str(field_data)
+
+            obj, _ = model_class.objects.get_or_create(name=name_str)
+            return obj
+        return None
+
     def create(self, *args, **kwargs):
-
         request_data = self.request.data.copy()
-
         serializer_kwargs = {}
 
-        provider1_name = request_data.pop("provider1", None)
-        print("provider1_name", provider1_name)
-        if provider1_name and provider1_name not in [
-            [""],
-            {"name": ""},
-            None,
-            {"name": None},
-        ]:
-            print(f"creating provider1_name name: {provider1_name}")
-            provider1, _ = Provider.objects.get_or_create(name=provider1_name["name"])
-            serializer_kwargs["provider1"] = provider1
-
-        provider2_name = request_data.pop("provider2", None)
-        print("provider2_name", provider2_name)
-        if provider2_name and provider2_name not in [
-            [""],
-            {"name": ""},
-            None,
-            {"name": None},
-        ]:
-            print(f"creating provider2_name name: {provider2_name}")
-            provider2, _ = Provider.objects.get_or_create(name=provider2_name["name"])
-            serializer_kwargs["provider2"] = provider2
-
-        provider3_name = request_data.pop("provider3", None)
-        print("provider3_name", provider3_name)
-        if provider3_name and provider3_name not in [
-            [""],
-            {"name": ""},
-            None,
-            {"name": None},
-        ]:
-            print(f"creating provider3_name name: {provider3_name}")
-            provider3, _ = Provider.objects.get_or_create(name=provider3_name["name"])
-            serializer_kwargs["provider3"] = provider3
-
-        provider4_name = request_data.pop("provider4", None)
-        print("provider4_name", provider4_name)
-        if provider4_name and provider4_name not in [
-            [""],
-            {"name": ""},
-            None,
-            {"name": None},
-        ]:
-            print(f"creating provider4_name name: {provider4_name}")
-            provider4, _ = Provider.objects.get_or_create(name=provider4_name["name"])
-            serializer_kwargs["provider4"] = provider4
-
-        provider5_name = request_data.pop("provider5", None)
-        print("provider5_name", provider5_name)
-        if provider5_name and provider5_name not in [
-            [""],
-            {"name": ""},
-            None,
-            {"name": None},
-        ]:
-            print(f"creating provider5_name name: {provider5_name}")
-            provider5, _ = Provider.objects.get_or_create(name=provider5_name["name"])
-            serializer_kwargs["provider5"] = provider5
-
-        manufacturer_name = request_data.pop("manufacturer", None)
-        print("manufacturer_name", manufacturer_name)
-        if manufacturer_name and manufacturer_name not in [
-            [""],
-            {"name": ""},
-            None,
-            {"name": None},
-        ]:
-            print(f"creating manufacturer_name name: {manufacturer_name}")
-            manufacturer, _ = Manufacturer.objects.get_or_create(
-                name=manufacturer_name["name"]
+        # Process all providers
+        for i in range(1, 6):
+            provider_field = f"provider{i}"
+            provider_obj = self._process_related_object(
+                request_data, provider_field, Provider
             )
-            serializer_kwargs["manufacturer"] = manufacturer
+            if provider_obj:
+                serializer_kwargs[provider_field] = provider_obj
+
+        # Process manufacturer
+        manufacturer_obj = self._process_related_object(
+            request_data, "manufacturer", Manufacturer
+        )
+        if manufacturer_obj:
+            serializer_kwargs["manufacturer"] = manufacturer_obj
 
         request_data.update(serializer_kwargs)
         serializer = self.get_serializer(data=request_data)
@@ -907,3 +718,83 @@ class StorageViewSet(viewsets.ModelViewSet):
 class StorageSlotViewSet(viewsets.ModelViewSet):
     queryset = StorageSlot.objects.all()
     serializer_class = StorageSlotSerializer
+    filter_backends = (
+        django_filters.rest_framework.DjangoFilterBackend,
+        filters.SearchFilter,
+        filters.OrderingFilter,
+    )
+    filterset_class = StorageSlotFilter
+    ordering_fields = ["name", "led_state", "diameter", "width", "storage__name"]
+    search_fields = [
+        "qr_value",
+        "storage__name",
+    ]
+
+
+class ListFreeSlotsAPI(generics.ListAPIView):
+    """List Free Storage Slots API - returns slots without carriers"""
+
+    serializer_class = StorageSlotSerializer
+
+    def get_queryset(self):
+        """Retrieve free storage slots for a specific storage"""
+        storage_name = self.kwargs.get("storage")
+        print(f"DEBUG: Finding free slots for storage: '{storage_name}'")
+        
+        # First verify the storage exists
+        try:
+            storage = Storage.objects.get(name=storage_name)
+            print(f"DEBUG: Found storage object: {storage}")
+        except Storage.DoesNotExist:
+            print(f"DEBUG: Storage '{storage_name}' does not exist!")
+            return StorageSlot.objects.none()
+
+        # Get all slots for this storage
+        all_slots = StorageSlot.objects.filter(storage=storage)
+        print(f"DEBUG: Total slots for storage '{storage_name}': {all_slots.count()}")
+        
+        # Find slots without carriers using the correct relationship
+        # Since Carrier has a OneToOneField to StorageSlot, we check if no carrier references this slot
+        free_slots = all_slots.filter(carrier__isnull=True).order_by("name")
+        
+        print(f"DEBUG: Free slots query: {free_slots.query}")
+        print(f"DEBUG: Free slots found: {free_slots.count()}")
+        print(f"DEBUG: First 5 free slots: {list(free_slots.values('id', 'name', 'storage__name')[:5])}")
+
+        return free_slots
+
+    def get(self, request, *args, **kwargs):
+        """Override get method to add additional metadata"""
+        print(f"DEBUG: Processing GET request with kwargs: {kwargs}")
+        
+        storage_name = self.kwargs.get("storage")
+        
+        # Verify storage exists first
+        try:
+            storage = Storage.objects.get(name=storage_name)
+        except Storage.DoesNotExist:
+            return Response({
+                "error": f"Storage '{storage_name}' not found",
+                "available_storages": list(Storage.objects.values_list('name', flat=True))
+            }, status=404)
+        
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset, many=True)
+
+        total_slots = StorageSlot.objects.filter(storage=storage).count()
+        free_slots_count = queryset.count()
+        occupied_slots_count = total_slots - free_slots_count
+
+        print(f"DEBUG: Total slots: {total_slots}")
+        print(f"DEBUG: Free slots: {free_slots_count}")
+        print(f"DEBUG: Occupied slots: {occupied_slots_count}")
+
+        response_data = {
+            "storage_name": storage_name,
+            "total_slots": total_slots,
+            "free_slots_count": free_slots_count,
+            "occupied_slots_count": occupied_slots_count,
+            "free_slots": serializer.data,
+        }
+
+        return Response(response_data)
