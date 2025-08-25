@@ -47,7 +47,7 @@ class NeoLightAPI:
                     raise Exception(f"no valid value for key {k}")
                 for l in lights_dict[k].keys():
                     if not str(l).isdigit() or str(l) == "0":
-                        #raise Exception(f"bad value {l} as lamp address")
+                        # raise Exception(f"bad value {l} as lamp address")
                         print(f"bad value {l} as lamp address")
                     if not lights_dict[k][l] in self.led_colors:
                         raise Exception(
@@ -114,15 +114,16 @@ class NeoLightAPI:
         # lamp = self.side_row_lamp_to_led_address(lamp)
         return self._LED_Off_Control([str(lamp)])
 
-    def reset_leds(self, working_light=False, all_leds=[]):
-
-        if not all_leds:
-            all_leds = self.all_leds
-        if working_light:
-            r = self._LED_Off_Control(all_leds, True, True)
-        else:
-            r = self._LED_Off_Control(all_leds, False, False)
-        return r
+    def reset_leds(self, working_light=False):
+        """
+        Reset all LEDs by calling the /resetled endpoint directly
+        Args:
+            working_light: Currently unused but kept for compatibility
+        """
+        reset_url = urljoin(self.__api_url, "/resetled")
+        req = requests.post(reset_url)
+        print(f"RESET_LEDS:::{req.url}\n{req}\n{req.content}")
+        return req
 
     def test(self, stop=200):
         IT = self

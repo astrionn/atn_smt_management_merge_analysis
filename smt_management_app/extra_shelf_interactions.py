@@ -51,7 +51,7 @@ def change_slot_color(request, storage_name, slot_name, color):
     color = color.strip()
 
     slot_queryset = StorageSlot.objects.filter(
-        storage__name=storage_name, id=slot_name
+        storage__name=storage_name, name=slot_name
     )
 
     if not slot_queryset:

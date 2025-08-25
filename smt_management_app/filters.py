@@ -159,16 +159,3 @@ class ManufacturerFilter(django_filters.rest_framework.FilterSet):
         fields = {
             "name": ["exact", "contains"],
         }
-
-
-class StorageSlotFilter(django_filters.rest_framework.FilterSet):
-    class Meta:
-        model = StorageSlot
-        fields = {
-            "name": ["exact", "gt", "lt", "lte", "gte"],
-            "led_state": ["exact"],
-            "storage__name": ["exact", "contains"],
-            "qr_value": ["exact", "contains"],
-            "diameter": ["exact", "gt", "lt", "lte", "gte"],
-            "width": ["exact", "gt", "lt", "lte", "gte"],
-        }
