@@ -60,14 +60,6 @@ urlpatterns.append(
 
 urlpatterns.append(
     path(
-        "get_free_slots/<storage>/",
-        views.ListFreeSlotsAPI.as_view(),
-        name="get_free_slots",
-    )
-)
-
-urlpatterns.append(
-    path(
         "manufacturerlist/",
         views.ManufacturerNameViewSet.as_view(),
         name="manufacturerlist",
@@ -191,6 +183,22 @@ urlpatterns.append(
 
 urlpatterns.append(
     path(
+        "collect_carrier_by_article_select/<path:article_name>/<path:carrier_name>/<str:led_state>/",
+        views.collect_carrier_by_article_select,
+        name="collect_carrier_by_article_select",
+    )
+)
+
+urlpatterns.append(
+    path(
+        "collect_carrier_by_article_select/<path:article_name>/<path:carrier_name>/<path:led_state>/",
+        views.collect_carrier_by_article_select,
+        name="collect_carrier_by_article_select",
+    )
+)
+
+urlpatterns.append(
+    path(
         "collect_carrier_by_article_confirm/<path:carrier_name>/",
         views.collect_carrier_by_article_confirm,
         name="collect_carrier_by_article_confirm",
@@ -202,14 +210,6 @@ urlpatterns.append(
         "collect_carrier_by_article_cancel/<path:article_name>/",
         views.collect_carrier_by_article_cancel,
         name="collect_carrier_by_article_cancel",
-    )
-)
-
-urlpatterns.append(
-    path(
-        "collect_carrier_by_article_select/<path:article_name>/<path:carrier_name>/<path:led_state>/",
-        views.collect_carrier_by_article_select,
-        name="collect_carrier_by_article_select",
     )
 )
 urlpatterns.append(
@@ -262,63 +262,11 @@ urlpatterns.append(
     )
 )
 
-# NEW ENDPOINTS FOR UPDATED WORKFLOW
-# Manual storage endpoints
 urlpatterns.append(
     path(
-        "store_carrier_choose_slot_all_storages/<path:carrier_name>/",
-        views.store_carrier_choose_slot_all_storages,
-        name="store_carrier_choose_slot_all_storages",
-    )
-)
-
-urlpatterns.append(
-    path(
-        "store_carrier_choose_slot_confirm_by_qr/<path:carrier_name>/<path:slot_qr>/",
+        "store_carrier_choose_slot_confirm_by_qr/<path:carrier_name>/<path:slot_name>/",
         views.store_carrier_choose_slot_confirm_by_qr,
         name="store_carrier_choose_slot_confirm_by_qr",
-    )
-)
-
-urlpatterns.append(
-    path(
-        "store_carrier_choose_slot_cancel_all/<path:carrier_name>/",
-        views.store_carrier_choose_slot_cancel_all,
-        name="store_carrier_choose_slot_cancel_all",
-    )
-)
-
-# Auto storage endpoints
-urlpatterns.append(
-    path(
-        "fetch_available_storages_for_auto/",
-        views.fetch_available_storages_for_auto,
-        name="fetch_available_storages_for_auto",
-    )
-)
-
-urlpatterns.append(
-    path(
-        "store_auto_with_storage_selection/<path:carrier_name>/<storage_name>/",
-        views.store_auto_with_storage_selection,
-        name="store_auto_with_storage_selection",
-    )
-)
-
-# NEW COLLECT-AND-STORE ENDPOINTS
-urlpatterns.append(
-    path(
-        "store_carrier_collect_and_store/<path:carrier_name>/<storage_name>/",
-        views.store_carrier_collect_and_store,
-        name="store_carrier_collect_and_store",
-    )
-)
-
-urlpatterns.append(
-    path(
-        "store_carrier_choose_slot_collect_and_store/<path:carrier_name>/<storage_name>/",
-        views.store_carrier_choose_slot_collect_and_store,
-        name="store_carrier_choose_slot_collect_and_store",
     )
 )
 ######### extra shelf interactions ###########
@@ -374,5 +322,39 @@ urlpatterns.append(
         "user_mapping_and_file_processing/",
         views.user_mapping_and_file_processing,
         name="user_mapping_and_file_processing",
+    )
+)
+
+# Fix for missing endpoints (Bug 2, 3, 4)
+urlpatterns.append(
+    path(
+        "get_free_slots/<storage_name>/",
+        views.get_free_slots,
+        name="get_free_slots",
+    )
+)
+
+urlpatterns.append(
+    path(
+        "fetch_available_storages_for_auto/",
+        views.fetch_available_storages_for_auto,
+        name="fetch_available_storages_for_auto",
+    )
+)
+
+urlpatterns.append(
+    path(
+        "store_carrier_choose_slot_all_storages/<path:carrier_name>/",
+        views.store_carrier_choose_slot_all_storages,
+        name="store_carrier_choose_slot_all_storages",
+    )
+)
+
+# Auto storage with storage selection endpoint
+urlpatterns.append(
+    path(
+        "store_auto_with_storage_selection/<int:carrier_id>/<storage_name>/",
+        views.store_auto_with_storage_selection,
+        name="store_auto_with_storage_selection",
     )
 )
